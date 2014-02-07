@@ -20,7 +20,6 @@ def depiler(pile, db):
 def streamer(pile, streamco, keywords):
     while True:
         for msg in streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true'):
-            print "TEST"
             if not msg:
                 continue
             if msg.get("disconnect") or msg.get("timeout") or msg.get("hangup"):
@@ -38,14 +37,11 @@ def searcher(pile, searchco, keywords):
     query = " OR ".join([urllib.quote(k.encode('utf-8').replace('@', 'from:'),'') for k in conf['keywords']])
     while True:
         if time.time() - ts > 15*60:
-            print "RESET TIME"
             ts = time.time()
             left = 450
         if not left:
-            print "SLEEP"
             time.sleep(ts + 15*60 - time.time())
             continue
-        print "SEARCH!"
         max_id = 0
         since = since_id
         while left:
@@ -54,11 +50,9 @@ def searcher(pile, searchco, keywords):
                 args['max_id'] = str(max_id)
             if since_id:
                 args['since_id'] = str(since_id)
-            print "QUERY", args
             res = searchco.search.tweets(**args)
             metas = res.get('search_metadata', {})
             tweets = res.get('statuses', [])
-            print "RES", len(tweets)
             if not len(tweets):
                 break
             for tw in tweets:
@@ -71,8 +65,7 @@ def searcher(pile, searchco, keywords):
                     max_id = tid - 1
                 pile.put(dict(tw))
         since_id = since
-        print "SLEEP"
-        time.sleep(5)
+        time.sleep(30)
 
 if __name__=='__main__':
     try:
