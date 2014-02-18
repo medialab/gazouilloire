@@ -79,9 +79,7 @@ def searcher(pile, searchco, keywords, debug=False):
                     max_id = tid - 1
                 pile.put(dict(tw))
         since_id = since
-        t0 = time.time()
-        if t0 < next_reset < t0 + 2*left:
-            time.sleep(5 + max(0, next_reset - t0 - 4*left))
+        time.sleep(5 + max(0, next_reset - time.time() - 4*left))
 
 if __name__=='__main__':
     try:
