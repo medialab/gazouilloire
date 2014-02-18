@@ -7,41 +7,55 @@ from multiprocessing import Process, Queue
 from twitter import Twitter, TwitterStream, OAuth, OAuth2
 from tweets import prepare_tweets
 
-def depiler(pile, db):
+def depiler(pile, db, debug=False):
     while True:
         todo = []
         while not pile.empty():
             todo.append(pile.get())
         save = prepare_tweets(todo)
+        ct = len(save)
         for t in save:
-            tid = db.save(t)
-    #        sys.stderr.write("DEBUG: saved tweet %s\n" % tid)
+             tid = db.save(t)
+        if debug and ct:
+            sys.stderr.write("DEBUG: saved %d tweets\n" % ct)
 
 def streamer(pile, streamco, keywords):
     while True:
-        for msg in streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true'):
+        sys.stderr.write('INFO: Starting stream track\n')
+        for msg in streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true', block=False):
             if not msg:
                 continue
             if msg.get("disconnect") or msg.get("timeout") or msg.get("hangup"):
-                sys.stderrr.write("Stream connection lost, restarting it: %s\n" % msg)
+                sys.stderr.write("INFO: Stream connection lost: %s\n" % msg)
                 break
             if msg.get('text'):
                 pile.put(dict(msg))
             else:
-                sys.stderrr.write("Got special data:\n")
-                sys.stderrr.write(str(msg))
+                sys.stderr.write("INFO: Got special data:\n")
+                sys.stderr.write(str(msg)+"\n")
+        time.sleep(1)
 
-def searcher(pile, searchco, keywords):
-    ts = 0
+def searcher(pile, searchco, keywords, debug=False):
     since_id = 0
-    query = " OR ".join([urllib.quote(k.encode('utf-8').replace('@', 'from:'),'') for k in conf['keywords']])
+    try:
+        rate_limits = searchco.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
+        next_reset = rate_limits['reset']
+        max_per_reset = rate_limits['limit']
+        left = rate_limits['remaining']
+    except:
+        sys.stderr.write("ERROR Connecting to Twitter API via OAuth2 sign, could not get rate limits\n")
+        sys.exit(1)
+    query = " OR ".join([urllib.quote(k.encode('utf-8').replace('@', 'from:'),'') for k in keywords])
     while True:
-        if time.time() - ts > 15*60:
-            ts = time.time()
-            left = 450
+        if time.time() > next_reset:
+            next_reset += 15*60
+            left = max_per_reset
         if not left:
-            time.sleep(ts + 15*60 - time.time())
+            time.sleep(5 + max(0, next_reset - time.time()))
+            if debug:
+                sys.stderr.write("DEBUG: Stalling search queries with rate exceeded for the next %s seconds\n" % max(0, next_reset - time.time()))
             continue
+        sys.stderr.write("INFO: Starting search queries with %d remaining calls for the next %s seconds\n" % (left, next_reset - time.time()))
         max_id = 0
         since = since_id
         while left:
@@ -51,8 +65,8 @@ def searcher(pile, searchco, keywords):
             if since_id:
                 args['since_id'] = str(since_id)
             res = searchco.search.tweets(**args)
-            metas = res.get('search_metadata', {})
             tweets = res.get('statuses', [])
+            left -= 1
             if not len(tweets):
                 break
             for tw in tweets:
@@ -65,7 +79,9 @@ def searcher(pile, searchco, keywords):
                     max_id = tid - 1
                 pile.put(dict(tw))
         since_id = since
-        time.sleep(30)
+        t0 = time.time()
+        if t0 < next_reset < t0 + 2*left:
+            time.sleep(5 + max(0, next_reset - t0 - 4*left))
 
 if __name__=='__main__':
     try:
@@ -89,13 +105,13 @@ if __name__=='__main__':
         sys.exit(1)
 
     pile = Queue()
-    depile = Process(target=depiler, args=((pile), coll,))
+    depile = Process(target=depiler, args=((pile), coll, conf['debug']))
     depile.daemon = True
     depile.start()
     stream = Process(target=streamer, args=((pile), StreamConn, conf['keywords']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=((pile), SearchConn, conf['keywords']))
+    search = Process(target=searcher, args=((pile), SearchConn, conf['keywords'], conf['debug']))
     search.start()
     depile.join()
 
