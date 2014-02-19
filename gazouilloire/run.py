@@ -64,7 +64,11 @@ def searcher(pile, searchco, keywords, debug=False):
                 args['max_id'] = str(max_id)
             if since_id:
                 args['since_id'] = str(since_id)
-            res = searchco.search.tweets(**args)
+            try:
+                res = searchco.search.tweets(**args)
+            except TwitterHTTPError:
+                time.sleep(2)
+                continue
             tweets = res.get('statuses', [])
             left -= 1
             if not len(tweets):
