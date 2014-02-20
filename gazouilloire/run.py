@@ -16,10 +16,8 @@ def depiler(pile, db, debug=False):
         ct = len(save)
         for t in save:
              tid = db.save(t)
-        if debug and ct:
-            sys.stderr.write("DEBUG: saved %d tweets\n" % ct)
 
-def streamer(pile, streamco, keywords):
+def streamer(pile, streamco, keywords, debug=False):
     while True:
         sys.stderr.write('INFO: Starting stream track\n')
         for msg in streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true', block=False):
@@ -30,6 +28,8 @@ def streamer(pile, streamco, keywords):
                 break
             if msg.get('text'):
                 pile.put(dict(msg))
+                if debug:
+                    sys.stderr.write("DEBUG: [stream] +1 tweet\n" % ct)
             else:
                 sys.stderr.write("INFO: Got special data:\n")
                 sys.stderr.write(str(msg)+"\n")
@@ -73,6 +73,8 @@ def searcher(pile, searchco, keywords, debug=False):
             left -= 1
             if not len(tweets):
                 break
+            if debug:
+                sys.stderr.write("DEBUG: [search] +%d tweets\n" % len(tweets))
             for tw in tweets:
                 tid = long(tw.get('id_str', str(tw.get('id', ''))))
                 if not tid:
@@ -110,7 +112,7 @@ if __name__=='__main__':
     depile = Process(target=depiler, args=((pile), coll, conf['debug']))
     depile.daemon = True
     depile.start()
-    stream = Process(target=streamer, args=((pile), StreamConn, conf['keywords']))
+    stream = Process(target=streamer, args=((pile), StreamConn, conf['keywords'], conf['debug']))
     stream.daemon = True
     stream.start()
     search = Process(target=searcher, args=((pile), SearchConn, conf['keywords'], conf['debug']))
