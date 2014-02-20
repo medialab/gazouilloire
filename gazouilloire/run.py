@@ -4,7 +4,7 @@
 import sys, time, re, urllib, json
 import pymongo
 from multiprocessing import Process, Queue
-from twitter import Twitter, TwitterStream, OAuth, OAuth2
+from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from tweets import prepare_tweets
 
 def depiler(pile, db, debug=False):
