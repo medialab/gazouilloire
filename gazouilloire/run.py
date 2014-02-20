@@ -29,7 +29,7 @@ def streamer(pile, streamco, keywords, debug=False):
             if msg.get('text'):
                 pile.put(dict(msg))
                 if debug:
-                    sys.stderr.write("DEBUG: [stream] +1 tweet\n" % ct)
+                    sys.stderr.write("DEBUG: [stream] +1 tweet\n")
             else:
                 sys.stderr.write("INFO: Got special data:\n")
                 sys.stderr.write(str(msg)+"\n")
