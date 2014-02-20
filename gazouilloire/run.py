@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys, time, re, urllib, json
+from httplib import BadStatusLine
 import pymongo
 from multiprocessing import Process, Queue
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
@@ -66,7 +67,7 @@ def searcher(pile, searchco, keywords, debug=False):
                 args['since_id'] = str(since_id)
             try:
                 res = searchco.search.tweets(**args)
-            except TwitterHTTPError:
+            except (TwitterHTTPError, BadStatusLine):
                 time.sleep(2)
                 continue
             tweets = res.get('statuses', [])
