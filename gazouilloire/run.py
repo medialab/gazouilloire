@@ -21,7 +21,7 @@ def depiler(pile, db, debug=False):
 def streamer(pile, streamco, keywords, debug=False):
     while True:
         sys.stderr.write('INFO: Starting stream track\n')
-        for msg in streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true', block=False):
+        for msg in streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true', block=True):
             if not msg:
                 continue
             if msg.get("disconnect") or msg.get("timeout") or msg.get("hangup"):
@@ -36,57 +36,67 @@ def streamer(pile, streamco, keywords, debug=False):
                 sys.stderr.write(str(msg)+"\n")
         time.sleep(1)
 
+chunkize = lambda a, n: [a[i:i+n] for i in xrange(0, len(a), n)]
+
+def get_twitter_rates(conn):
+    rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
+    return rate_limits['reset'], rate_limits['limit'], rate_limits['remaining']
+
 def searcher(pile, searchco, keywords, debug=False):
-    since_id = 0
     try:
-        rate_limits = searchco.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
-        next_reset = rate_limits['reset']
-        max_per_reset = rate_limits['limit']
-        left = rate_limits['remaining']
+        next_reset, max_per_reset, left = get_twitter_rates(searchco)
     except:
         sys.stderr.write("ERROR Connecting to Twitter API via OAuth2 sign, could not get rate limits\n")
         sys.exit(1)
-    query = " OR ".join([urllib.quote(k.encode('utf-8').replace('@', 'from:'),'') for k in keywords])
+    keywords = [urllib.quote(k.encode('utf-8').replace('@', 'from:'),'') for k in keywords]
+    queries = [" OR ".join(a) for a in chunkize(keywords, 4)]
+    timegap = 1 + len(queries)
+    queries_since_id = [0 for _ in queries]
     while True:
         if time.time() > next_reset:
-            next_reset += 15*60
-            left = max_per_reset
+            try:
+                next_reset, _, left = get_twitter_rates(searchco)
+            except:
+                next_reset += 15*60
+                left = max_per_reset
         if not left:
-            time.sleep(5 + max(0, next_reset - time.time()))
             if debug:
                 sys.stderr.write("DEBUG: Stalling search queries with rate exceeded for the next %s seconds\n" % max(0, next_reset - time.time()))
+            time.sleep(timegap + max(0, next_reset - time.time()))
             continue
         sys.stderr.write("INFO: Starting search queries with %d remaining calls for the next %s seconds\n" % (left, next_reset - time.time()))
-        max_id = 0
-        since = since_id
-        while left:
-            args = {'q': query, 'count': 100, 'include_entities': True}
-            if max_id:
-                args['max_id'] = str(max_id)
-            if since_id:
-                args['since_id'] = str(since_id)
-            try:
-                res = searchco.search.tweets(**args)
-            except (TwitterHTTPError, BadStatusLine):
-                time.sleep(2)
-                continue
-            tweets = res.get('statuses', [])
-            left -= 1
-            if not len(tweets):
-                break
-            if debug:
-                sys.stderr.write("DEBUG: [search] +%d tweets\n" % len(tweets))
-            for tw in tweets:
-                tid = long(tw.get('id_str', str(tw.get('id', ''))))
-                if not tid:
+        for i, query in enumerate(queries):
+            since = queries_since_id[i]
+            max_id = 0
+            while left:
+                args = {'q': query, 'count': 100, 'include_entities': True}
+                if max_id:
+                    args['max_id'] = str(max_id)
+                if queries_since_id[i]:
+                    args['since_id'] = str(queries_since_id[i])
+                try:
+                    res = searchco.search.tweets(**args)
+                except (TwitterHTTPError, BadStatusLine):
+                    time.sleep(2)
                     continue
-                if since < tid:
-                    since = tid + 1
-                if not max_id or max_id > tid:
-                    max_id = tid - 1
-                pile.put(dict(tw))
-        since_id = since
-        time.sleep(5 + max(0, next_reset - time.time() - 4*left))
+                tweets = res.get('statuses', [])
+                left -= 1
+                if not len(tweets):
+                    break
+                if debug:
+                    sys.stderr.write("DEBUG: [search] +%d tweets (%s)\n" % (len(tweets), query))
+                for tw in tweets:
+                    tid = long(tw.get('id_str', str(tw.get('id', ''))))
+                    if not tid:
+                        continue
+                    if since < tid:
+                        since = tid + 1
+                    if not max_id or max_id > tid:
+                        max_id = tid - 1
+                    pile.put(dict(tw))
+            queries_since_id[i] = since
+        sys.stderr.write("INFO: Sleeping search queries for %s seconds with %d remaining calls until next reset in %s seconds\n" % (max(timegap, next_reset - time.time() - timegap*left), left, next_reset - time.time()))
+        time.sleep(max(timegap, next_reset - time.time() - timegap*left))
 
 if __name__=='__main__':
     try:
