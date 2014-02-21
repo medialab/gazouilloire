@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, time, re, urllib, json
+import sys, time, urllib, json
 from httplib import BadStatusLine
 import pymongo
 from multiprocessing import Process, Queue
@@ -32,8 +32,7 @@ def streamer(pile, streamco, keywords, debug=False):
                 if debug:
                     sys.stderr.write("DEBUG: [stream] +1 tweet\n")
             else:
-                sys.stderr.write("INFO: Got special data:\n")
-                sys.stderr.write(str(msg)+"\n")
+                sys.stderr.write("INFO: Got special data: %s\n" % str(msg))
         time.sleep(1)
 
 chunkize = lambda a, n: [a[i:i+n] for i in xrange(0, len(a), n)]
@@ -46,7 +45,7 @@ def searcher(pile, searchco, keywords, debug=False):
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco)
     except:
-        sys.stderr.write("ERROR Connecting to Twitter API via OAuth2 sign, could not get rate limits\n")
+        sys.stderr.write("ERROR: Connecting to Twitter API via OAuth2 sign, could not get rate limits\n")
         sys.exit(1)
     keywords = [urllib.quote(k.encode('utf-8').replace('@', 'from:'),'') for k in keywords]
     queries = [" OR ".join(a) for a in chunkize(keywords, 4)]
@@ -60,11 +59,11 @@ def searcher(pile, searchco, keywords, debug=False):
                 next_reset += 15*60
                 left = max_per_reset
         if not left:
-            if debug:
-                sys.stderr.write("DEBUG: Stalling search queries with rate exceeded for the next %s seconds\n" % max(0, next_reset - time.time()))
+            sys.stderr.write("DEBUG: Stalling search queries with rate exceeded for the next %s seconds\n" % max(0, int(next_reset - time.time())))
             time.sleep(timegap + max(0, next_reset - time.time()))
             continue
-        sys.stderr.write("INFO: Starting search queries with %d remaining calls for the next %s seconds\n" % (left, next_reset - time.time()))
+        if debug:
+            sys.stderr.write("INFO: Starting search queries with %d remaining calls for the next %s seconds\n" % (left, int(next_reset - time.time())))
         for i, query in enumerate(queries):
             since = queries_since_id[i]
             max_id = 0
@@ -95,8 +94,7 @@ def searcher(pile, searchco, keywords, debug=False):
                         max_id = tid - 1
                     pile.put(dict(tw))
             queries_since_id[i] = since
-        sys.stderr.write("INFO: Sleeping search queries for %s seconds with %d remaining calls until next reset in %s seconds\n" % (max(timegap, next_reset - time.time() - timegap*left), left, next_reset - time.time()))
-        time.sleep(max(timegap, next_reset - time.time() - timegap*left))
+        time.sleep(max(timegap, next_reset - time.time() - 2*left))
 
 if __name__=='__main__':
     try:
@@ -107,8 +105,7 @@ if __name__=='__main__':
         SearchConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth2, secure=True)
         StreamConn = TwitterStream(domain="stream.twitter.com", api_version="1.1", auth=oauth, secure=True)
     except Exception as e:
-        print type(e), e
-        sys.stderr.write('ERROR: Could not initiate connections to Twitter API\n')
+        sys.stderr.write('ERROR: Could not initiate connections to Twitter API: %s %s\n' % (type(e), e))
         sys.exit(1)
     try:
         db = pymongo.Connection(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]
@@ -120,13 +117,13 @@ if __name__=='__main__':
         sys.exit(1)
 
     pile = Queue()
-    depile = Process(target=depiler, args=((pile), coll, conf['debug']))
+    depile = Process(target=depiler, args=(pile, coll, conf['debug']))
     depile.daemon = True
     depile.start()
-    stream = Process(target=streamer, args=((pile), StreamConn, conf['keywords'], conf['debug']))
+    stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['debug']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=((pile), SearchConn, conf['keywords'], conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['debug']))
     search.start()
     depile.join()
 
