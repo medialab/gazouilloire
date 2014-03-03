@@ -54,7 +54,7 @@ def searcher(pile, searchco, keywords, debug=False):
         sys.stderr.write("ERROR: Connecting to Twitter API via OAuth2 sign, could not get rate limits\n")
         sys.exit(1)
     keywords = [urllib.quote(k.encode('utf-8').replace('@', 'from:'),'') for k in keywords]
-    queries = [" OR ".join(a) for a in chunkize(keywords, 4)]
+    queries = [" OR ".join(a) for a in chunkize(keywords, 3)]
     timegap = 1 + len(queries)
     queries_since_id = [0 for _ in queries]
     while True:
