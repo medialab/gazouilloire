@@ -3,6 +3,7 @@
 
 import sys, time, urllib, json
 from httplib import BadStatusLine
+from urllib2 import URLError
 import pymongo
 from multiprocessing import Process, Queue
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
@@ -21,7 +22,12 @@ def depiler(pile, db, debug=False):
 def streamer(pile, streamco, keywords, debug=False):
     while True:
         sys.stderr.write('INFO: Starting stream track\n')
-        for msg in streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true', block=True):
+        try:
+            streamiter = streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true', block=True)
+        except (TwitterHTTPError, BadStatusLine, URLError):
+            time.sleep(2)
+            continue
+        for msg in streamiter:
             if not msg:
                 continue
             if msg.get("disconnect") or msg.get("timeout") or msg.get("hangup"):
@@ -75,7 +81,7 @@ def searcher(pile, searchco, keywords, debug=False):
                     args['since_id'] = str(queries_since_id[i])
                 try:
                     res = searchco.search.tweets(**args)
-                except (TwitterHTTPError, BadStatusLine):
+                except (TwitterHTTPError, BadStatusLine, URLError):
                     time.sleep(2)
                     continue
                 tweets = res.get('statuses', [])
