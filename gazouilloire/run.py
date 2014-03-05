@@ -4,6 +4,7 @@
 import sys, time, urllib, json
 from httplib import BadStatusLine
 from urllib2 import URLError
+from ssl import SSLError
 import pymongo
 from multiprocessing import Process, Queue
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
@@ -24,7 +25,9 @@ def streamer(pile, streamco, keywords, debug=False):
         sys.stderr.write('INFO: Starting stream track\n')
         try:
             streamiter = streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true', block=True)
-        except (TwitterHTTPError, BadStatusLine, URLError):
+        except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
+            if debug:
+                sys.stderr.write("DEBUG: Stream connection could not be established, retrying in 2 secs (%s: %s)\n" % (type(e), e))
             time.sleep(2)
             continue
         for msg in streamiter:
@@ -81,7 +84,9 @@ def searcher(pile, searchco, keywords, debug=False):
                     args['since_id'] = str(queries_since_id[i])
                 try:
                     res = searchco.search.tweets(**args)
-                except (TwitterHTTPError, BadStatusLine, URLError):
+                except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
+                    if debug:
+                        sys.stderr.write("DEBUG: Search connection could not be established, retrying in 2 secs (%s: %s)\n" % (type(e), e))
                     time.sleep(2)
                     continue
                 tweets = res.get('statuses', [])
