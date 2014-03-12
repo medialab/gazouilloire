@@ -16,7 +16,6 @@ def depiler(pile, db, debug=False):
         while not pile.empty():
             todo.append(pile.get())
         save = prepare_tweets(todo)
-        ct = len(save)
         for t in save:
              tid = db.save(t)
 
