@@ -1,6 +1,5 @@
 {
     'twitter': {
-        'user': 'Gazou_medialab',
         'key': 'xxxxxxxxxxxxxxxxxxxxx',
         'secret': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
         'oauth_token': 'xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
