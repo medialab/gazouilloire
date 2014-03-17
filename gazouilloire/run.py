@@ -25,8 +25,7 @@ def streamer(pile, streamco, keywords, debug=False):
         try:
             streamiter = streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true')
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
-            if debug:
-                sys.stderr.write("DEBUG: Stream connection could not be established, retrying in 2 secs (%s: %s)\n" % (type(e), e))
+            sys.stderr.write("WARNING: Stream connection could not be established, retrying in 2 secs (%s: %s)\n" % (type(e), e))
             time.sleep(2)
             continue
         try:
@@ -72,11 +71,11 @@ def searcher(pile, searchco, keywords, debug=False):
                 next_reset += 15*60
                 left = max_per_reset
         if not left:
-            sys.stderr.write("DEBUG: Stalling search queries with rate exceeded for the next %s seconds\n" % max(0, int(next_reset - time.time())))
+            sys.stderr.write("WARNING: Stalling search queries with rate exceeded for the next %s seconds\n" % max(0, int(next_reset - time.time())))
             time.sleep(timegap + max(0, next_reset - time.time()))
             continue
         if debug:
-            sys.stderr.write("INFO: Starting search queries with %d remaining calls for the next %s seconds\n" % (left, int(next_reset - time.time())))
+            sys.stderr.write("DEBUG: Starting search queries with %d remaining calls for the next %s seconds\n" % (left, int(next_reset - time.time())))
         for i, query in enumerate(queries):
             since = queries_since_id[i]
             max_id = 0
@@ -89,8 +88,7 @@ def searcher(pile, searchco, keywords, debug=False):
                 try:
                     res = searchco.search.tweets(**args)
                 except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
-                    if debug:
-                        sys.stderr.write("DEBUG: Search connection could not be established, retrying in 2 secs (%s: %s)\n" % (type(e), e))
+                    sys.stderr.write("WARNING: Search connection could not be established, retrying in 2 secs (%s: %s)\n" % (type(e), e))
                     time.sleep(2)
                     continue
                 tweets = res.get('statuses', [])
