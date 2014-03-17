@@ -1,2 +1,2 @@
 pymongo
-twitter
+twitter>=1.14.1

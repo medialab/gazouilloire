@@ -5,7 +5,7 @@ import sys, time, urllib, json
 from httplib import BadStatusLine
 from urllib2 import URLError
 from ssl import SSLError
-import pymongo
+import pymongo, socket
 from multiprocessing import Process, Queue
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from tweets import prepare_tweets
@@ -23,25 +23,30 @@ def streamer(pile, streamco, keywords, debug=False):
     while True:
         sys.stderr.write('INFO: Starting stream track\n')
         try:
-            streamiter = streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true', block=True)
+            streamiter = streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true')
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
             if debug:
                 sys.stderr.write("DEBUG: Stream connection could not be established, retrying in 2 secs (%s: %s)\n" % (type(e), e))
             time.sleep(2)
             continue
-        for msg in streamiter:
-            if not msg:
-                continue
-            if msg.get("disconnect") or msg.get("timeout") or msg.get("hangup"):
-                sys.stderr.write("INFO: Stream connection lost: %s\n" % msg)
-                break
-            if msg.get('text'):
-                pile.put(dict(msg))
-                if debug:
-                    sys.stderr.write("DEBUG: [stream] +1 tweet\n")
-            else:
-                sys.stderr.write("INFO: Got special data: %s\n" % str(msg))
-        time.sleep(1)
+        try:
+            for msg in streamiter:
+                if not msg:
+                    continue
+                if msg.get("disconnect") or msg.get("hangup"):
+                    sys.stderr.write("WARNING: Stream connection lost: %s\n" % msg)
+                    break
+                if msg.get("timeout"):
+                    continue
+                if msg.get('text'):
+                    pile.put(dict(msg))
+                    if debug:
+                        sys.stderr.write("DEBUG: [stream] +1 tweet\n")
+                else:
+                    sys.stderr.write("INFO: Got special data: %s\n" % str(msg))
+        except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
+            sys.stderr.write("WARNING: Stream connection lost, reconnecting in a sec... (%s: %s)\n" % (type(e), e))
+        time.sleep(2)
 
 chunkize = lambda a, n: [a[i:i+n] for i in xrange(0, len(a), n)]
 
@@ -113,7 +118,7 @@ if __name__=='__main__':
         oauth = OAuth(conf['twitter']['oauth_token'], conf['twitter']['oauth_secret'], conf['twitter']['key'], conf['twitter']['secret'])
         oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
         SearchConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth2, secure=True)
-        StreamConn = TwitterStream(domain="stream.twitter.com", api_version="1.1", auth=oauth, secure=True)
+        StreamConn = TwitterStream(domain="stream.twitter.com", api_version="1.1", auth=oauth, secure=True, timeout=10, heartbeat_timeout=60)
     except Exception as e:
         sys.stderr.write('ERROR: Could not initiate connections to Twitter API: %s %s\n' % (type(e), e))
         sys.exit(1)
