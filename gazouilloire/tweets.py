@@ -1,10 +1,18 @@
 # -*- coding: utf-8 -*-
 
-import re, htmlentitydefs
+import re
+from htmlentitydefs import name2codepoint
 
 re_entities = re.compile(r'&([^;]+);')
+def decode_entities(x):
+    if x.group(1).startswith('#'):
+        return unichr(int(x.group(1)[1:]))
+    try:
+        return unichr(htmlentitydefs.name2codepoint[x.group(1)])
+    except:
+        return x.group(1)
 def unescape_html(text):
-    return re_entities.sub(lambda x: unichr(int(x.group(1)[1:])) if x.group(1).startswith('#') else unichr(htmlentitydefs.name2codepoint[x.group(1)]), text)
+    return re_entities.sub(decode_entities, text)
 
 def grab_extra_meta(source, result):
     for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "lang", "geo", "coordinates", "source"]:
