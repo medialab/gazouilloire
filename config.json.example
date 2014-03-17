@@ -1,17 +1,17 @@
 {
-    'twitter': {
-        'key': 'xxxxxxxxxxxxxxxxxxxxx',
-        'secret': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-        'oauth_token': 'xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-        'oauth_secret': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+    "twitter": {
+        "key": "xxxxxxxxxxxxxxxxxxxxx",
+        "secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "oauth_token": "xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "oauth_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     },
-    'mongo': {
-        'host': 'localhost',
-        'port': 27017,
-        'db': 'tweets'
+    "mongo": {
+        "host": "localhost",
+        "port": 27017,
+        "db": "tweets"
     },
     "keywords": [
         "bieber"
     ],
-    "debug": False
+    "debug": false
 }
