@@ -54,7 +54,7 @@ def streamer(pile, streamco, keywords, debug=False):
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
             log("WARNING", "Stream connection lost, reconnecting in a sec... (%s: %s)\n" % (type(e), e))
         if debug:
-            log("DEBUG", "Stream stayed alive for %ss" % time.time()-ts)
+            log("DEBUG", "Stream stayed alive for %ss" % str(time.time()-ts))
         time.sleep(2)
 
 chunkize = lambda a, n: [a[i:i+n] for i in xrange(0, len(a), n)]
