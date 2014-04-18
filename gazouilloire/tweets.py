@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import re
+import re, time
 from htmlentitydefs import name2codepoint
 
 re_entities = re.compile(r'&([^;]+);')
@@ -44,6 +44,7 @@ def prepare_tweets(tweets):
                         pass
         tw = {'_id': tweet['id_str'],
               'created_at': tweet['created_at'],
+              'timestamp': time.mktime(time.strptime(tweet['created_at'], '%a %b %d %H:%M:%S +0000 %Y')),
               'text': unescape_html(text),
               'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str'])}
         tw = grab_extra_meta(tweet, tw)
