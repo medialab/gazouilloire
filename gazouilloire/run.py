@@ -85,14 +85,25 @@ def get_twitter_rates(conn):
     rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
     return rate_limits['reset'], rate_limits['limit'], rate_limits['remaining']
 
-def searcher(pile, searchco, keywords, debug=False):
+def searcher(pile, searchco, keywords, timed_keywords, debug=False):
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco)
     except:
         log("ERROR", "Connecting to Twitter API via OAuth2 sign, could not get rate limits")
         sys.exit(1)
-    keywords = [urllib.quote(k.encode('utf-8').replace('@', 'from:'),'') for k in keywords]
+    keywords = [urllib.quote(k.encode('utf-8').replace('@', 'from:'), '') for k in keywords]
     queries = [" OR ".join(a) for a in chunkize(keywords, 3)]
+    now = time.time()
+    lastweek = now - 60*60*24*7
+    for keyw, planning in timed_keywords.items():
+        pass
+        #for times in planning:
+        #    t0 = date_to_time(times[0])
+        #    t1 = date_to_time(times[1])
+        #    if last_week < t0 < now or last_week < t1 < now:
+        #       queries.append((urllib.quote(keyw.encode('utf-8').replace('@', 'from:'), ''), planning))
+        #       break
+
     timegap = 1 + len(queries)
     queries_since_id = [0 for _ in queries]
     while True:
@@ -109,6 +120,9 @@ def searcher(pile, searchco, keywords, debug=False):
         if debug:
             log("DEBUG", "Starting search queries with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
         for i, query in enumerate(queries):
+
+            # TODO: handle tuple queries with planning
+
             since = queries_since_id[i]
             max_id = 0
             while left:
@@ -168,7 +182,7 @@ if __name__=='__main__':
     stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['timed_keywords'], conf['debug']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['timed_keywords'], conf['debug']))
     search.start()
     depile.join()
 
