@@ -26,18 +26,39 @@ def depiler(pile, db, debug=False):
             log("DEBUG", "Saved %s tweets in MongoDB" % len(save))
         time.sleep(2)
 
-def streamer(pile, streamco, keywords, debug=False):
+real_min = lambda x, y: min(x, y) if x else y
+date_to_time = lambda x: datetime.strptime(x[:16], "%Y-%m-%d %H:%M")
+
+def streamer(pile, streamco, keywords, timed_keywords, debug=False):
     while True:
         ts = time.time()
         log('INFO', 'Starting stream track')
+
+        # handle timed keywords and find first date when to stop
+        end_time = None
+        for keyw, planning in timed_keywords.items():
+            for times in planning:
+                t0 = date_to_time(times[0])
+                t1 = date_to_time(times[1])
+                if t0 < ts < t1:
+                    keywords.append(keyw)
+                    end_time = real_min(end_time, t1)
+                    break
+                elif t0 > ts:
+                    end_time = real_min(end_time, t0)
+
         try:
             streamiter = streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true')
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
             log("WARNING", "Stream connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
             time.sleep(2)
             continue
+
         try:
             for msg in streamiter:
+                if end_time and end_time < time.time():
+                    log("INFO", "Reached time to update list of keywords")
+                    break
                 if not msg:
                     continue
                 if msg.get("disconnect") or msg.get("hangup"):
@@ -53,6 +74,7 @@ def streamer(pile, streamco, keywords, debug=False):
                     log("INFO", "Got special data: %s" % str(msg))
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
             log("WARNING", "Stream connection lost, reconnecting in a sec... (%s: %s)" % (type(e), e))
+
         if debug:
             log("DEBUG", "Stream stayed alive for %sh" % str((time.time()-ts)/3600))
         time.sleep(2)
@@ -143,7 +165,7 @@ if __name__=='__main__':
     depile = Process(target=depiler, args=(pile, coll, conf['debug']))
     depile.daemon = True
     depile.start()
-    stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['debug']))
+    stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['timed_keywords'], conf['debug']))
     stream.daemon = True
     stream.start()
     search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['debug']))
