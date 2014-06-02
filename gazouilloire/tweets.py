@@ -2,6 +2,8 @@
 
 import re, time
 from htmlentitydefs import name2codepoint
+from pytz import timezone
+from datetime import datetime
 
 re_entities = re.compile(r'&([^;]+);')
 def decode_entities(x):
@@ -13,6 +15,11 @@ def decode_entities(x):
         return x.group(1)
 def unescape_html(text):
     return re_entities.sub(decode_entities, text)
+
+def get_timestamp(t, locale):
+    utc_date = timezone('UTC').localize(datetime.strptime(t['created_at'], '%a %b %d %H:%M:%S +0000 %Y'))
+    locale_date = utc_date.astimezone(locale)
+    return time.mktime(locale_date.timetuple())
 
 def grab_extra_meta(source, result):
     for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "lang", "geo", "coordinates", "source"]:
@@ -26,7 +33,7 @@ def grab_extra_meta(source, result):
             result[key] = source['user'][meta]
     return result
 
-def prepare_tweets(tweets):
+def prepare_tweets(tweets, locale):
     tosave = []
     for tweet in tweets:
         if not isinstance(tweet, dict):
@@ -44,11 +51,10 @@ def prepare_tweets(tweets):
                         pass
         tw = {'_id': tweet['id_str'],
               'created_at': tweet['created_at'],
-              'timestamp': time.mktime(time.strptime(tweet['created_at'], '%a %b %d %H:%M:%S +0000 %Y')),
+              'timestamp': get_timestamp(tweet, locale),
               'text': unescape_html(text),
               'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str'])}
         tw = grab_extra_meta(tweet, tw)
         tosave.append(tw)
     return tosave
-
 

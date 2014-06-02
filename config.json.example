@@ -24,5 +24,6 @@
             ["2014-05-08 16:00": "2014-05-08 16:05"]
         ]
     },
+    "timezone": "Europe/Paris",
     "debug": false
 }

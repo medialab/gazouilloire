@@ -9,17 +9,18 @@ from ssl import SSLError
 import pymongo, socket
 from multiprocessing import Process, Queue
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
-from tweets import prepare_tweets
+from tweets import prepare_tweets, get_timestamp
+from pytz import timezone
 
 def log(typelog, text):
     sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
 
-def depiler(pile, db, debug=False):
+def depiler(pile, db, locale, debug=False):
     while True:
         todo = []
         while not pile.empty():
             todo.append(pile.get())
-        save = prepare_tweets(todo)
+        save = prepare_tweets(todo, locale)
         for t in save:
              tid = db.save(t)
         if debug and save:
@@ -86,27 +87,19 @@ def get_twitter_rates(conn):
     rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
     return rate_limits['reset'], rate_limits['limit'], rate_limits['remaining']
 
-def searcher(pile, searchco, keywords, timed_keywords, debug=False):
+def searcher(pile, searchco, keywords, timed_keywords, locale, debug=False):
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco)
     except:
         log("ERROR", "Connecting to Twitter API via OAuth2 sign, could not get rate limits")
         sys.exit(1)
-    now = time.time()
-    lastweek = now - 60*60*24*7
-    for keyw, planning in timed_keywords.items():
-        pass
-        #for times in planning:
-        #    t0 = date_to_time(times[0])
-        #    t1 = date_to_time(times[1])
-        #    if last_week < t0 < now or last_week < t1 < now:
-        #       queries.append((urllib.quote(keyw.encode('utf-8').replace('@', 'from:'), ''), planning))
-        #       break
+
     keywords = [urllib.quote(k.encode('utf-8').replace('@', 'from:'), '') for k in keywords]
     queries = [" OR ".join(a) for a in chunkize(keywords, 3)]
+    timed_queries = {}
+    queries_since_id = [0 for _ in queries + timed_keywords.items()]
 
     timegap = 1 + len(queries)
-    queries_since_id = [0 for _ in queries]
     while True:
         if time.time() > next_reset:
             try:
@@ -118,16 +111,34 @@ def searcher(pile, searchco, keywords, timed_keywords, debug=False):
             log("WARNING", "Stalling search queries with rate exceeded for the next %s seconds" % max(0, int(next_reset - time.time())))
             time.sleep(timegap + max(0, next_reset - time.time()))
             continue
+
+        now = time.time()
+        last_week = now - 60*60*24*7
+        for keyw, planning in timed_keywords.items():
+            keyw = urllib.quote(keyw.encode('utf-8').replace('@', 'from:'), '')
+            timed_queries[keyw] = []
+            for times in planning:
+                t0 = date_to_time(times[0])
+                t1 = date_to_time(times[1])
+                if last_week < t0 < now or last_week < t1 < now:
+                    timed_queries[keyw].append([t0, t1])
+
         if debug:
             log("DEBUG", "Starting search queries with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
-        for i, query in enumerate(queries):
 
-            # TODO: handle tuple queries with planning
+        for i, query in enumerate(queries + timed_queries.items()):
+
+            planning = None
+            if type(query) is tuple:
+                planning = query[1]
+                if not planning:
+                    continue
+                query = query[0]
 
             since = queries_since_id[i]
             max_id = 0
             while left:
-                args = {'q': query, 'count': 100, 'include_entities': True}
+                args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent'}
                 if max_id:
                     args['max_id'] = str(max_id)
                 if queries_since_id[i]:
@@ -142,8 +153,7 @@ def searcher(pile, searchco, keywords, timed_keywords, debug=False):
                 left -= 1
                 if not len(tweets):
                     break
-                if debug:
-                    log("DEBUG", "[search] +%d tweets (%s)" % (len(tweets), query))
+                news = 0
                 for tw in tweets:
                     tid = long(tw.get('id_str', str(tw.get('id', ''))))
                     if not tid:
@@ -152,7 +162,21 @@ def searcher(pile, searchco, keywords, timed_keywords, debug=False):
                         since = tid + 1
                     if not max_id or max_id > tid:
                         max_id = tid - 1
+                    if planning is not None:
+                        ts = get_timestamp(tw, locale)
+                        skip = True
+                        for trang in planning:
+                            if trang[0] < ts < trang[1]:
+                                skip = False
+                                break
+                        if skip:
+                            continue
                     pile.put(dict(tw))
+                    news += 1
+                if news == 0:
+                    break
+                if debug:
+                    log("DEBUG", "[search] +%d tweets (%s)" % (news, query))
             queries_since_id[i] = since
         time.sleep(max(timegap, next_reset - time.time() - 2*left))
 
@@ -168,6 +192,12 @@ if __name__=='__main__':
         log('ERROR', 'Could not initiate connections to Twitter API: %s %s' % (type(e), e))
         sys.exit(1)
     try:
+        locale = timezone(conf['timezone'])
+    except:
+        log('ERROR', "\t".join(pytz.all_timezones)+"\n\n")
+        log('ERROR', 'Unknown timezone set in config.json: %s. Please choose one among the above ones.' % conf['timezone'])
+        sys.exit(1)
+    try:
         db = pymongo.Connection(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]
         coll = db['tweets']
         coll.ensure_index([('_id', pymongo.ASCENDING)], background=True)
@@ -177,13 +207,13 @@ if __name__=='__main__':
         sys.exit(1)
 
     pile = Queue()
-    depile = Process(target=depiler, args=(pile, coll, conf['debug']))
+    depile = Process(target=depiler, args=(pile, coll, locale, conf['debug']))
     depile.daemon = True
     depile.start()
     stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['time_limited_keywords'], conf['debug']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['time_limited_keywords'], conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['time_limited_keywords'], locale, conf['debug']))
     search.start()
     depile.join()
 
