@@ -27,7 +27,7 @@ def depiler(pile, db, debug=False):
         time.sleep(2)
 
 real_min = lambda x, y: min(x, y) if x else y
-date_to_time = lambda x: datetime.strptime(x[:16], "%Y-%m-%d %H:%M")
+date_to_time = lambda x: time.mktime(datetime.strptime(x[:16], "%Y-%m-%d %H:%M").timetuple())
 
 def streamer(pile, streamco, keywords, timed_keywords, debug=False):
     while True:
@@ -179,10 +179,10 @@ if __name__=='__main__':
     depile = Process(target=depiler, args=(pile, coll, conf['debug']))
     depile.daemon = True
     depile.start()
-    stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['timed_keywords'], conf['debug']))
+    stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['time_limited_keywords'], conf['debug']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['timed_keywords'], conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['time_limited_keywords'], conf['debug']))
     search.start()
     depile.join()
 
