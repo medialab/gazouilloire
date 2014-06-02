@@ -32,7 +32,7 @@ date_to_time = lambda x: time.mktime(datetime.strptime(x[:16], "%Y-%m-%d %H:%M")
 def streamer(pile, streamco, keywords, timed_keywords, debug=False):
     while True:
         ts = time.time()
-        log('INFO', 'Starting stream track')
+        extra_keywords = []
 
         # handle timed keywords and find first date when to stop
         end_time = None
@@ -41,14 +41,15 @@ def streamer(pile, streamco, keywords, timed_keywords, debug=False):
                 t0 = date_to_time(times[0])
                 t1 = date_to_time(times[1])
                 if t0 < ts < t1:
-                    keywords.append(keyw)
+                    extra_keywords.append(keyw)
                     end_time = real_min(end_time, t1)
                     break
                 elif t0 > ts:
                     end_time = real_min(end_time, t0)
+        log('INFO', 'Starting stream track until %s' % end_time)
 
         try:
-            streamiter = streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords]).encode('utf-8'), filter_level='none', stall_warnings='true')
+            streamiter = streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords + extra_keywords]).encode('utf-8'), filter_level='none', stall_warnings='true')
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
             log("WARNING", "Stream connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
             time.sleep(2)
@@ -91,8 +92,6 @@ def searcher(pile, searchco, keywords, timed_keywords, debug=False):
     except:
         log("ERROR", "Connecting to Twitter API via OAuth2 sign, could not get rate limits")
         sys.exit(1)
-    keywords = [urllib.quote(k.encode('utf-8').replace('@', 'from:'), '') for k in keywords]
-    queries = [" OR ".join(a) for a in chunkize(keywords, 3)]
     now = time.time()
     lastweek = now - 60*60*24*7
     for keyw, planning in timed_keywords.items():
@@ -103,6 +102,8 @@ def searcher(pile, searchco, keywords, timed_keywords, debug=False):
         #    if last_week < t0 < now or last_week < t1 < now:
         #       queries.append((urllib.quote(keyw.encode('utf-8').replace('@', 'from:'), ''), planning))
         #       break
+    keywords = [urllib.quote(k.encode('utf-8').replace('@', 'from:'), '') for k in keywords]
+    queries = [" OR ".join(a) for a in chunkize(keywords, 3)]
 
     timegap = 1 + len(queries)
     queries_since_id = [0 for _ in queries]
