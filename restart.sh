@@ -3,7 +3,7 @@
 cd "$(dirname "$0")"
 source $(which virtualenvwrapper.sh)
 deactivate > /dev/null 2>&1
-workon twitter
+workon gazouilloire
 pkill -9 -f "python gazouilloire/run.py"
 sleep 1
 touch runlog.txt
