@@ -30,7 +30,7 @@ def depiler(pile, db, locale, debug=False):
 real_min = lambda x, y: min(x, y) if x else y
 date_to_time = lambda x: time.mktime(datetime.strptime(x[:16], "%Y-%m-%d %H:%M").timetuple())
 
-def streamer(pile, streamco, keywords, timed_keywords, debug=False):
+def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
     while True:
         ts = time.time()
         extra_keywords = []
@@ -50,7 +50,11 @@ def streamer(pile, streamco, keywords, timed_keywords, debug=False):
         log('INFO', 'Starting stream track until %s' % end_time)
 
         try:
-            streamiter = streamco.statuses.filter(track=",".join([k.lstrip('@').strip().lower() for k in keywords + extra_keywords]).encode('utf-8'), filter_level='none', stall_warnings='true')
+            filter_keywords = [k.lstrip('@').strip().lower().encode('utf-8') for k in keywords + extra_keywords]
+            if geocode:
+                streamiter = streamco.statuses.filter(locations=geocode, filter_level='none', stall_warnings='true')
+            else:
+                streamiter = streamco.statuses.filter(track=",".join(filter_keywords), filter_level='none', stall_warnings='true')
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
             log("WARNING", "Stream connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
             time.sleep(2)
@@ -69,6 +73,15 @@ def streamer(pile, streamco, keywords, timed_keywords, debug=False):
                 if msg.get("timeout"):
                     continue
                 if msg.get('text'):
+                    if geocode:
+                        tmptext = msg.get('text').lower().encode('utf-8')
+                        keep = False
+                        for k in filter_keywords:
+                            if k in tmptext:
+                                keep = True
+                                break
+                        if not keep:
+                            continue
                     pile.put(dict(msg))
                     if debug:
                         log("DEBUG", "[stream] +1 tweet")
@@ -207,6 +220,7 @@ if __name__=='__main__':
     except:
         log('ERROR', 'Could not initiate connection to MongoDB')
         sys.exit(1)
+    streamgeocode = None
     searchgeocode = None
     if "geolocalisation" in conf:
         GeoConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
@@ -216,7 +230,8 @@ if __name__=='__main__':
             log('INFO', 'Limiting tweets search to place "%s" with id "%s"' % (place['full_name'], place['id']))
             y1, x1 = place["bounding_box"]['coordinates'][0][0]
             y2, x2 = place["bounding_box"]['coordinates'][0][2]
-            log('INFO', 'Bounding box: %s/%s -> %s/%s' % (x1,y1,x2,y2))
+            log('INFO', 'Bounding box: %s/%s -> %s/%s' % (x1, y1, x2, y2))
+            streamgeocode = "%s,%s,%s,%s" % (y1, x1, y2, x2)
             x = (x1+x2)/2
             y = (y1+y2)/2
             from math import pi, sin, cos, acos
@@ -224,14 +239,13 @@ if __name__=='__main__':
             log('INFO', 'Disk: %s/%s, %.2fkm' % (x, y, d))
             searchgeocode = "%s,%s,%.2fkm" % (x, y, d)
         except Exception as e:
-            print type(e), e
-            log('ERROR', 'Could not find a place matching geolocalisation %s' % conf["geolocalisation"])
+            log('ERROR', 'Could not find a place matching geolocalisation %s: %s %s' % (conf["geolocalisation"], type(e), e))
             sys.exit(1)
     pile = Queue()
     depile = Process(target=depiler, args=(pile, coll, locale, conf['debug']))
     depile.daemon = True
     depile.start()
-    stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['time_limited_keywords'], conf['debug']))
+    stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['time_limited_keywords'], streamgeocode, conf['debug']))
     stream.daemon = True
     stream.start()
     search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['time_limited_keywords'], locale, searchgeocode, conf['debug']))
