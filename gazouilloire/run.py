@@ -87,7 +87,7 @@ def get_twitter_rates(conn):
     rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
     return rate_limits['reset'], rate_limits['limit'], rate_limits['remaining']
 
-def searcher(pile, searchco, keywords, timed_keywords, locale, debug=False):
+def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, debug=False):
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco)
     except:
@@ -139,6 +139,8 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, debug=False):
             max_id = 0
             while left:
                 args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent'}
+                if geocode:
+                    args['geocode'] = geocode
                 if max_id:
                     args['max_id'] = str(max_id)
                 if queries_since_id[i]:
@@ -232,7 +234,7 @@ if __name__=='__main__':
     stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['time_limited_keywords'], conf['debug']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['time_limited_keywords'], locale, conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['time_limited_keywords'], locale, searchgeocode, conf['debug']))
     search.start()
     depile.join()
 
