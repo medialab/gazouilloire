@@ -1,7 +1,7 @@
 Gazouilloire
 ============
 
-Twitter stream + search API grabber
+Twitter stream + search API grabber handling various config options such as collecting only during specific time periods, or limiting the collection to some locations.
 
 HowTo
 -----
