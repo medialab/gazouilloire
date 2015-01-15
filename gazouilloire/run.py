@@ -10,7 +10,7 @@ import pymongo, socket
 from multiprocessing import Process, Queue
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from tweets import prepare_tweets, get_timestamp
-from pytz import timezone
+from pytz import timezone, all_timezones
 
 def log(typelog, text):
     sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
@@ -194,7 +194,7 @@ if __name__=='__main__':
     try:
         locale = timezone(conf['timezone'])
     except:
-        log('ERROR', "\t".join(pytz.all_timezones)+"\n\n")
+        log('ERROR', "\t".join(all_timezones)+"\n\n")
         log('ERROR', 'Unknown timezone set in config.json: %s. Please choose one among the above ones.' % conf['timezone'])
         sys.exit(1)
     try:
