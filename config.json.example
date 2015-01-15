@@ -24,6 +24,8 @@
             ["2014-05-08 16:00": "2014-05-08 16:05"]
         ]
     },
+    "geolocalisation": "Paris, France",
+    "geolocalisation_type": "admin", "possible_values": "country/admin/city",
     "timezone": "Europe/Paris",
     "debug": false
 }

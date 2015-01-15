@@ -205,7 +205,26 @@ if __name__=='__main__':
     except:
         log('ERROR', 'Could not initiate connection to MongoDB')
         sys.exit(1)
-
+    searchgeocode = None
+    if "geolocalisation" in conf:
+        GeoConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
+        res = GeoConn.geo.search(query=conf["geolocalisation"].replace(" ", "+"), granularity=conf.get("geolocalisation_type", "admin"), max_results=1)
+        try:
+            place = res["result"]["places"][0]
+            log('INFO', 'Limiting tweets search to place "%s" with id "%s"' % (place['full_name'], place['id']))
+            y1, x1 = place["bounding_box"]['coordinates'][0][0]
+            y2, x2 = place["bounding_box"]['coordinates'][0][2]
+            log('INFO', 'Bounding box: %s/%s -> %s/%s' % (x1,y1,x2,y2))
+            x = (x1+x2)/2
+            y = (y1+y2)/2
+            from math import pi, sin, cos, acos
+            d = 6371 * acos(sin(x*pi/180) * sin(x1*pi/180) + cos(x*pi/180) * cos(x1*pi/180) * cos((y1-y)*pi/180))
+            log('INFO', 'Disk: %s/%s, %.2fkm' % (x, y, d))
+            searchgeocode = "%s,%s,%.2fkm" % (x, y, d)
+        except Exception as e:
+            print type(e), e
+            log('ERROR', 'Could not find a place matching geolocalisation %s' % conf["geolocalisation"])
+            sys.exit(1)
     pile = Queue()
     depile = Process(target=depiler, args=(pile, coll, locale, conf['debug']))
     depile.daemon = True
