@@ -50,7 +50,14 @@ def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
         log('INFO', 'Starting stream track until %s' % end_time)
 
         try:
-            filter_keywords = [k.lstrip('@').strip().lower().encode('utf-8') for k in keywords + extra_keywords]
+            filter_keywords = [k.lstrip('@').strip().lower().encode('utf-8') for k in keywords + extra_keywords if " OR " not in k]
+            for k in keywords + extra_keywords:
+                if " OR " in k:
+                    ands = [o.split(' OR ') for o in k.strip('()').split(') (')]
+                    combis = ands[0]
+                    for ors in ands[1:]:
+                        combis = ["%s %s" % (a, b) for a in combis for b in ors]
+                    filter_keywords += combis
             if geocode:
                 streamiter = streamco.statuses.filter(locations=geocode, filter_level='none', stall_warnings='true')
             else:
@@ -77,7 +84,16 @@ def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
                         tmptext = msg.get('text').lower().encode('utf-8')
                         keep = False
                         for k in filter_keywords:
-                            if k in tmptext:
+                            if " " in k:
+                                keep2 = True
+                                for k2 in k.split(" "):
+                                    if k2 not in tmptext:
+                                        keep2 = False
+                                        break
+                                if keep2:
+                                    keep = True
+                                    break
+                            elif k in tmptext:
                                 keep = True
                                 break
                         if not keep:
