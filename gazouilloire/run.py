@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, time, urllib, json
+import sys, time, urllib, json, re
 from datetime import datetime
 from httplib import BadStatusLine
 from urllib2 import URLError
@@ -29,6 +29,7 @@ def depiler(pile, db, locale, debug=False):
 
 real_min = lambda x, y: min(x, y) if x else y
 date_to_time = lambda x: time.mktime(datetime.strptime(x[:16], "%Y-%m-%d %H:%M").timetuple())
+re_andor = re.compile(r'(\([^)]+( OR [^)]+)*\) ?)+$')
 
 def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
     while True:
@@ -53,11 +54,14 @@ def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
             filter_keywords = [k.lstrip('@').strip().lower().encode('utf-8') for k in keywords + extra_keywords if " OR " not in k]
             for k in keywords + extra_keywords:
                 if " OR " in k:
-                    ands = [o.split(' OR ') for o in k.strip('()').split(') (')]
-                    combis = ands[0]
-                    for ors in ands[1:]:
-                        combis = ["%s %s" % (a, b) for a in combis for b in ors]
-                    filter_keywords += combis
+                    if re_andor.match(k):
+                        ands = [o.split(' OR ') for o in k.strip('()').split(') (')]
+                        combis = ands[0]
+                        for ors in ands[1:]:
+                            combis = ["%s %s" % (a, b) for a in combis for b in ors]
+                        filter_keywords += combis
+                    else:
+                        log("WARNING", 'Ignoring keyword %s to streaming API, please use syntax with simple keywords separated by spaces or such as "(KEYW1 OR KEYW2) (KEYW3 OR KEYW4 OR KEYW5) (KEYW6)"' % k)
             if geocode:
                 streamiter = streamco.statuses.filter(locations=geocode, filter_level='none', stall_warnings='true')
             else:
