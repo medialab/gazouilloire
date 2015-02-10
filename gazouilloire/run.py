@@ -31,6 +31,12 @@ real_min = lambda x, y: min(x, y) if x else y
 date_to_time = lambda x: time.mktime(datetime.strptime(x[:16], "%Y-%m-%d %H:%M").timetuple())
 re_andor = re.compile(r'(\([^)]+( OR [^)]+)*\) ?)+$')
 
+def format_keyword(k):
+    if k.startswith('@'):
+        kutf = k.lstrip('@').encode('utf-8')
+        return "from:%s OR to:%s OR @%s" % (kutf, kutf, kutf)
+    return urllib.quote(k.encode('utf-8'), '')
+
 def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
     while True:
         ts = time.time()
@@ -51,6 +57,7 @@ def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
         log('INFO', 'Starting stream track until %s' % end_time)
 
         try:
+            # TODO HANDLE USERS FOR STREAMING VIA GET IDS PUIS FOLLOW
             filter_keywords = [k.lstrip('@').strip().lower().encode('utf-8') for k in keywords + extra_keywords if " OR " not in k]
             for k in keywords + extra_keywords:
                 if " OR " in k:
@@ -127,8 +134,14 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, debug=Fa
         log("ERROR", "Connecting to Twitter API via OAuth2 sign, could not get rate limits")
         sys.exit(1)
 
-    keywords = [urllib.quote(k.encode('utf-8').replace('@', 'from:'), '') for k in keywords]
-    queries = [" OR ".join(a) for a in chunkize(keywords, 3)]
+    queries = []
+    fmtkeywords = []
+    for k in keywords:
+        if k.startswith("@"):
+            queries.append(format_keyword(k))
+        else:
+            fmtkeywords.append(format_keyword(k))
+    queries += [" OR ".join(a) for a in chunkize(fmtkeywords, 3)]
     timed_queries = {}
     queries_since_id = [0 for _ in queries + timed_keywords.items()]
 
@@ -148,7 +161,7 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, debug=Fa
         now = time.time()
         last_week = now - 60*60*24*7
         for keyw, planning in timed_keywords.items():
-            keyw = urllib.quote(keyw.encode('utf-8').replace('@', 'from:'), '')
+            keyw = format_keyword(keyw)
             timed_queries[keyw] = []
             for times in planning:
                 t0 = date_to_time(times[0])
