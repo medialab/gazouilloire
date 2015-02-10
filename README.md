@@ -15,7 +15,44 @@ HowTo
 
 - Copy config.json.example to config.json
 
-- Set your Twitter API keys inside and the list of keywords desired
+- Set your [Twitter API key](https://apps.twitter.com/app/) and generate the related Access Token
+
+```json
+"twitter": {
+   "key": "<Consumer Key (API Key)>xxxxxxxxxxxxxxxxxxxxx",
+   "secret": "<Consumer Secret (API Secret)>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "oauth_token": "<Access Token>xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "oauth_secret": "<Access Token Secret>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+}
+
+```
+
+- Write down the list of desired **keywords** as json array.
+  
+  ```json
+    "keywords": [
+        "amour"
+    ],
+  ```
+  Note that there are two possibilities to filter further:
+  
+  - geolocalisation mode: just add ``"geolocalisation": "Paris, France"` field to to the config with the desired geographical boundaries
+  - time limited keywords mode, in order to filter on specific keywords during planned time period:
+
+  ```json
+  "time_limited_keywords": {
+        "#m6": [
+            ["2014-05-01 16:00", "2014-05-08 16:05"],
+            ["2014-05-08 16:00", "2014-05-08 16:05"],
+            ["2014-05-15 16:00", "2014-05-08 16:05"],
+            ["2014-05-22 16:00", "2014-05-08 16:05"]
+        ],
+        "bieber": [
+            ["2014-05-08 16:00": "2014-05-08 16:05"]
+        ]
+    },
+  ```
+
 
 - Run with:
 
