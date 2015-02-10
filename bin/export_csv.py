@@ -10,11 +10,11 @@ with open('config.json') as confile:
 
 db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
 
-print "url,user_screen_name,text,timestamp,lang,coordinates"
+print "url,user_screen_name,timestamp,lang,coordinates,text"
 for t in db.find(sort=[("_id", -1)]):
     ts = datetime.strptime(t['created_at'], '%a %b %d %H:%M:%S +0000 %Y').isoformat()
     coords = "::".join([str(a) for a in t["geo"]["coordinates"]]) if t["geo"] else ""
-    text = '"' + t["text"].replace('"', '""').replace("\n", " ") + '"'
+    text = '"' + t["text"].replace('"', '""').replace("\n", " ").replace("\r", "") + '"'
     name = t.get("user_screen_name", t.get("user_name", ""))
-    print ",".join([a.encode("utf-8") for a in [t["url"],name,text,ts,t["lang"],coords]])
+    print ",".join([a.encode("utf-8") for a in [t["url"],name,ts,t["lang"],coords,text]])
 
