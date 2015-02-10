@@ -36,8 +36,22 @@ HowTo
   ```
   Note that there are two possibilities to filter further:
   
-  - geolocalisation: just add ``"geolocalisation": "Paris, France"` field to to the config with the desired geographical boundaries
-  
+  - geolocalisation mode: just add ``"geolocalisation": "Paris, France"` field to to the config with the desired geographical boundaries
+  - time limited keywords mode, in order to filter on specific keywords during planned time period:
+
+  ```json
+  "time_limited_keywords": {
+        "#m6": [
+            ["2014-05-01 16:00", "2014-05-08 16:05"],
+            ["2014-05-08 16:00", "2014-05-08 16:05"],
+            ["2014-05-15 16:00", "2014-05-08 16:05"],
+            ["2014-05-22 16:00", "2014-05-08 16:05"]
+        ],
+        "bieber": [
+            ["2014-05-08 16:00": "2014-05-08 16:05"]
+        ]
+    },
+  ```
 
 
 - Run with:
