@@ -21,16 +21,24 @@ def get_timestamp(t, locale):
     locale_date = utc_date.astimezone(locale)
     return time.mktime(locale_date.timetuple())
 
+nostr_field = lambda f: f.replace('_str', '')
+
 def grab_extra_meta(source, result):
-    for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "lang", "geo", "coordinates", "source"]:
+    for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "geo", "coordinates", "source"]:
         if meta in source:
             result[meta] = source[meta]
-    for meta in ['screen_name', 'name', 'friends_count', 'followers_count', 'statuses_count', 'listed_count']:
+        elif nostr_field(meta) in source:
+            result[meta] = str(source[nostr_field(meta)])
+    for meta in ['id_str', 'screen_name', 'name', 'friends_count', 'followers_count', 'statuses_count', 'listed_count', 'profile_image_url', 'location']:
         key = "user_%s" % meta.replace('_count', '')
         if key in source:
             result[key] = source[key]
+        elif nostr_field(key) in source:
+            result[key] = str(source[nostr_field(key)])
         elif 'user' in source and meta in source['user']:
             result[key] = source['user'][meta]
+        elif 'user' in source and nostr_field(meta) in source['user']:
+            result[key] = source['user'][nostr_field(meta)]
     return result
 
 def prepare_tweets(tweets, locale):
