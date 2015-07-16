@@ -22,7 +22,7 @@ def wrapper(route, args={}, tryouts=50):
         routestr = '/'.join(route.uriparts[1:])
         if e.e.code == 429:
             reset = int(e.e.headers["x-rate-limit-reset"])
-            sleeptime = int(reset - time() + 1)
+            sleeptime = int(reset - time() + 2)
             print "REACHED API LIMITS on %s %s, will wait for the next %ss" % (routestr, args, sleeptime)
             sleep(sleeptime)
             return wrapper(route, args, tryouts-1)
