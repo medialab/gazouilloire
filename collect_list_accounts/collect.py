@@ -57,7 +57,7 @@ for i, row in enumerate(data):
     user.update(metas)
     db.users.update({'_id': user['twitter']}, {"$set": user}, upsert=True)
     if user['protected']:
-        print "SKIPPING tweets for %s whose account is unfortunately protected" % user['_id']
+        print "SKIPPING tweets for %s whose account is unfortunately protected" % user['twitter']
         continue
     api_args['count'] = 200
     api_args['trim_user'] = 1
