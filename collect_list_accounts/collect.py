@@ -56,6 +56,9 @@ for i, row in enumerate(data):
     cleaner(data)
     user.update(metas)
     db.users.update({'_id': user['twitter']}, {"$set": user}, upsert=True)
+    if user['protected']:
+        print "SKIPPING tweets for %s whose account is unfortunately protected" % user['_id']
+        continue
     api_args['count'] = 200
     api_args['trim_user'] = 1
     api_args['contributor_details'] = 1
@@ -66,6 +69,6 @@ for i, row in enumerate(data):
             api_args['max_id'] = min(api_args.get('max_id', tw['id']), tw['id']-1)
             cleaner(tw)
             db.tweets.update({'_id': tw['id']}, {"$set": tw}, upsert=True)
-        print "...collected %s new tweets for %s" % (len(tweets), user['twitter'])
+        print "...collected %s new tweets" % len(tweets)
         tweets = wrapper(api.statuses.user_timeline, api_args)
     db.users.update({'_id': user['twitter']}, {"$set": {"done": True}})
