@@ -44,7 +44,7 @@ def cleaner(data):
 for i, row in enumerate(data):
     user = {}
     for k in row.keys():
-        user[k.decode(CSV_ENCODING)] = row[k].decode(CSV_ENCODING)
+        user[k.decode(CSV_ENCODING)] = row[k].decode(CSV_ENCODING).replace(u' ', ' ').strip()
     user['twitter'] = user[CSV_TWITTER_FIELD].lstrip('@').lower()
     print "- WORKING ON %s" % user['twitter'], user
     if db.users.count({'_id': user['twitter'], 'done': True}, limit=1):
