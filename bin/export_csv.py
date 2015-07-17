@@ -16,5 +16,6 @@ for t in db.find(sort=[("_id", -1)]):
     coords = "::".join([str(a) for a in t["geo"]["coordinates"]]) if t["geo"] else ""
     text = '"' + t["text"].replace('"', '""').replace("\n", " ").replace("\r", "") + '"'
     name = t.get("user_screen_name", t.get("user_name", ""))
-    print ",".join([a.encode("utf-8") for a in [t["url"],name,ts,t["lang"],coords,text]])
+    url = t["url"] if "url" in t else "https://twitter.com/%s/status/%s" % (name, t["_id"])
+    print ",".join([a.encode("utf-8") for a in [url,name,ts,t["lang"],coords,text]])
 
