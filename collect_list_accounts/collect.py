@@ -47,7 +47,7 @@ for i, row in enumerate(data):
         user[k.decode(CSV_ENCODING)] = row[k].decode(CSV_ENCODING).replace(u' ', ' ').strip()
     user['twitter'] = user[CSV_TWITTER_FIELD].lstrip('@').lower()
     print "- WORKING ON %s" % user['twitter'], user
-    if db.users.count({'_id': user['twitter'], 'done': True}, limit=1):
+    if db.users.find({'_id': user['twitter'], 'done': True}, limit=1).count():
         print "  ALREADY DONE!"
         continue
     user['done'] = False
