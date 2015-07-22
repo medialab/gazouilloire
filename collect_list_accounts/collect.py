@@ -6,6 +6,7 @@ from time import time, sleep
 from pymongo import MongoClient
 from twitter import Twitter, OAuth2, TwitterHTTPError
 from config import CSV_SOURCE, CSV_ENCODING, CSV_TWITTER_FIELD, MONGO_DATABASE, TWITTER
+from gazouilloire.tweets import prepare_tweet
 
 with open(CSV_SOURCE) as f:
     data = list(csv.DictReader(f, delimiter=';'))
@@ -60,14 +61,18 @@ for i, row in enumerate(data):
         print "SKIPPING tweets for %s whose account is unfortunately protected" % user['twitter']
         continue
     api_args['count'] = 200
-    api_args['trim_user'] = 1
     api_args['contributor_details'] = 1
     api_args['include_rts'] = 1
     tweets = wrapper(api.statuses.user_timeline, api_args)
     while tweets:
         for tw in tweets:
             api_args['max_id'] = min(api_args.get('max_id', tw['id']), tw['id']-1)
-            cleaner(tw)
+            metas = prepare_tweet(tw)
+            metas.pop('_id')
+            tw.update(metas)
+            for po in ['user', 'entities', 'extended_entities']:
+                if po in tw:
+                    tw.pop(po)
             db.tweets.update({'_id': tw['id']}, {"$set": tw}, upsert=True)
         print "...collected %s new tweets" % len(tweets)
         tweets = wrapper(api.statuses.user_timeline, api_args)

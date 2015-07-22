@@ -17,9 +17,12 @@ def unescape_html(text):
     return re_entities.sub(decode_entities, text)
 
 def get_timestamp(t, locale):
-    utc_date = timezone('UTC').localize(datetime.strptime(t['created_at'], '%a %b %d %H:%M:%S +0000 %Y'))
-    locale_date = utc_date.astimezone(locale)
-    return time.mktime(locale_date.timetuple())
+    tim = datetime.strptime(t['created_at'], '%a %b %d %H:%M:%S +0000 %Y')
+    if locale:
+        utc_date = timezone('UTC').localize(tim)
+        locale_date = utc_date.astimezone(locale)
+        return time.mktime(locale_date.timetuple())
+    return tim.isoformat()
 
 nostr_field = lambda f: f.replace('_str', '')
 
@@ -46,23 +49,27 @@ def prepare_tweets(tweets, locale):
     for tweet in tweets:
         if not isinstance(tweet, dict):
             continue
-        if "retweeted_status" in tweet and tweet['retweeted_status']['id_str'] != tweet['id_str']:
-            text = "RT @%s: %s" % (tweet['retweeted_status']['user']['screen_name'], tweet['retweeted_status']['text'])
-        else:
-            text = tweet['text']
-        if 'entities' in tweet:
-            for entity in tweet['entities'].get('media', []) + tweet['entities'].get('urls', []):
-                if 'expanded_url' in entity and 'url' in entity and entity['expanded_url']:
-                    try:
-                        text = text.replace(entity['url'], entity['expanded_url'])
-                    except:
-                        pass
-        tw = {'_id': tweet['id_str'],
-              'created_at': tweet['created_at'],
-              'timestamp': get_timestamp(tweet, locale),
-              'text': unescape_html(text),
-              'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str'])}
-        tw = grab_extra_meta(tweet, tw)
+        tw = prepare_tweet(tweet, locale)
         tosave.append(tw)
     return tosave
+
+def prepare_tweet(tweet, locale=None):
+    if "retweeted_status" in tweet and tweet['retweeted_status']['id_str'] != tweet['id_str']:
+        text = "RT @%s: %s" % (tweet['retweeted_status']['user']['screen_name'], tweet['retweeted_status']['text'])
+    else:
+        text = tweet['text']
+    if 'entities' in tweet:
+        for entity in tweet['entities'].get('media', []) + tweet['entities'].get('urls', []):
+            if 'expanded_url' in entity and 'url' in entity and entity['expanded_url']:
+                try:
+                    text = text.replace(entity['url'], entity['expanded_url'])
+                except:
+                    pass
+    tw = {'_id': tweet['id_str'],
+          'created_at': tweet['created_at'],
+          'timestamp': get_timestamp(tweet, locale),
+          'text': unescape_html(text),
+          'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str'])}
+    tw = grab_extra_meta(tweet, tw)
+    return tw
 
