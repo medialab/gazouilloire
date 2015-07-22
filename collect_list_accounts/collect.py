@@ -37,7 +37,10 @@ def cleaner(data):
         for k in data['entities']:
             if 'urls' in data['entities'][k]:
                 for url in data['entities'][k]['urls']:
-                    data[k] = data[k].replace(url['url'], url['expanded_url'])
+                    try:
+                        data[k] = data[k].replace(url['url'], url['expanded_url'])
+                    except:
+                        print "WARNING, couldn't process entity", url, k, data[k]
         data.pop('entities')
     if 'status' in data:
         data.pop('status')
