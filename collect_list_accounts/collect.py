@@ -53,7 +53,7 @@ for i, row in enumerate(data):
     user['done'] = False
     api_args = {'screen_name': user['twitter']}
     metas = wrapper(api.users.show, api_args)
-    cleaner(data)
+    cleaner(metas)
     user.update(metas)
     db.users.update({'_id': user['twitter']}, {"$set": user}, upsert=True)
     if user['protected']:
