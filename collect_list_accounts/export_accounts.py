@@ -14,7 +14,7 @@ format_txt = lambda x: '"' + x.replace('"', '""').replace("\n", " ").replace("\r
 format_spe = lambda x: str(x).lower() if x else ""
 format_field = lambda x: format_txt(x).encode('utf-8') if type(x) == unicode else format_spe(x)
 
-print ",".join(headers)
+print (",".join(headers)).encode('utf-8')
 for t in db.find(sort=[("_id", 1)]):
     t["created_at"] = datetime.strptime(t['created_at'], '%a %b %d %H:%M:%S +0000 %Y').isoformat().decode("utf8")
     print ",".join([format_field(t[a]) for a in headers])
