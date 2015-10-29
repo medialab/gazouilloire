@@ -77,3 +77,14 @@ for i, row in enumerate(data):
     user.update(metas)
     user['done'] = True
     db.users.update({'_id': user['twitter']}, {"$set": user}, upsert=True)
+
+corpus_ids = {}
+for u in db.users.find():
+    corpus_ids[u['id']] = u['_id']
+
+for u in db.users.find():
+    follows = []
+    for f in u['friends']:
+        if f in corpus_ids:
+            follows.append(corpus_ids[f])
+    db.users.update({'_id': u['_id']}, {"$set": {"follows": follows}})
