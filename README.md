@@ -48,7 +48,7 @@ HowTo
             ["2014-05-22 16:00", "2014-05-08 16:05"]
         ],
         "bieber": [
-            ["2014-05-08 16:00": "2014-05-08 16:05"]
+            ["2014-05-08 16:00", "2014-05-08 16:05"]
         ]
     },
   ```
@@ -60,4 +60,12 @@ HowTo
     ./gazouilloire/run.py
 ``` 
 
-- Data is stored in your mongo
+- Data is stored in your mongo, you can also export it easily with simple scripts such as those in the `bin` directory:
+
+```bash
+# To export a csv with the most useful fields:
+bin/export_csv.py
+# To export the whole text content of the tweets:
+bin/export_all_text.py
+```
+

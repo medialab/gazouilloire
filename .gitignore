@@ -1,4 +1,8 @@
+config.py
 config.json
 *.pyc
 backups
 runlog.txt*
+*.csv
+*.zip
+*.tmp

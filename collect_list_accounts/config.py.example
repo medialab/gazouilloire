@@ -1,0 +1,10 @@
+CSV_SOURCE = 'Liste_elus_ile-de-france.csv'
+CSV_ENCODING = 'iso-8859-15'
+CSV_TWITTER_FIELD = 'Compte twitter'
+MONGO_DATABASE = 'twitter-corpus'
+TWITTER = {
+  'KEY': 'xxxxxxxxxxxxxxxxxxxxx',
+  'SECRET': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  'OAUTH_TOKEN': 'xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  'OAUTH_SECRET': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+}
