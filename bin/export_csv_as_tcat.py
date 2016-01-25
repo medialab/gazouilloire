@@ -10,7 +10,12 @@ with open('config.json') as confile:
 
 db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
 
-print "id,time,created_at,from_user_name,text,filter_level,possibly_sensitive,withheld_copyright,withheld_scope,truncated,retweet_count,favorite_count,lang,to_user_name,in_reply_to_status_id,source,location,lat,lng,from_user_id,from_user_realname,from_user_verified,from_user_description,from_user_url,from_user_profile_image_url,from_user_utcoffset,from_user_timezone,from_user_lang,from_user_tweetcount,from_user_followercount,from_user_friendcount,from_user_favourites_count,from_user_listed,from_user_withheld_scope,from_user_created_at"
+def get_coords(tw):
+    if 'coordinates' not in tw or not tw['coordinates']:
+        tw['coordinates'] = {}
+    if 'coordinates' not in tw['coordinates'] or not tw['coordinates']['coordinates']:
+        tw['coordinates']['coordinates'] = ['', '']
+    return tw['coordinates']['coordinates']
 
 isodate = lambda x: datetime.strptime(x, '%a %b %d %H:%M:%S +0000 %Y').isoformat()
 
@@ -33,8 +38,8 @@ corresp_fields = {
     "in_reply_to_status_id": "in_reply_to_status_id_str",
     "source": str,
     "location": "user_location",
-    "lat": lambda x: x.get('coordinates', {}).get('coordinates', ['', ''])[1],
-    "lng": lambda x: x.get('coordinates', {}).get('coordinates', [''])[0],
+    "lat": lambda x: get_coords(x)[1],
+    "lng": lambda x: get_coords(x)[0],
     "from_user_id": "user_id_str",
     "from_user_realname": "user_name",
     "from_user_verified": "user_verified",
@@ -51,19 +56,14 @@ corresp_fields = {
     "from_user_listed": "user_listed",
     "from_user_withheld_scope": "user_withheld_scope",
     "from_user_withheld_countries": lambda x: x.get("user_withheld_countries", []),      # Added since this is the most interesting info from withheld fields
-    "created_at": lambda x: isodate(x['user_created_at'])
+    "from_user_created_at": lambda x: isodate(x['user_created_at'])
 }
-
-def format_field(val):
-    if type(val) == bool:
-        return 1 if val else 0
-    if type(val) == list:
-        return "|".join(val)
-    return val
 
 def search_field(field, tweet):
     if field not in corresp_fields:
         return tweet.get(field, '')
+    if not corresp_fields[field]:
+        return ''
     if corresp_fields[field] == bool:
         return tweet.get(field, False)
     if corresp_fields[field] == int:
@@ -75,14 +75,60 @@ def search_field(field, tweet):
     else:
         return corresp_fields[field](tweet)
 
+def format_field(val):
+    if type(val) == bool:
+        return "1" if val else "0"
+    if type(val) == list:
+        return "|".join([v.encode('utf-8') for v in val])
+    if val == None:
+        return ''
+    return val if type(val) == unicode else unicode(val)
+
 def get_field(field, tweet):
-    return format_field(search_field(field, tweet))
+    return format_field(search_field(field, tweet)).replace('\n', ' ').replace('\r', ' ')
 
+format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val else val).encode('utf-8')
 
+keys = [
+  "id",
+  "time",
+  "created_at",
+  "from_user_name",
+  "text",
+  "filter_level",
+  "possibly_sensitive",
+  "withheld_copyright",
+  "withheld_scope",
+  "withheld_countries",
+  "truncated",
+  "retweet_count",
+  "favorite_count",
+  "lang",
+  "to_user_name",
+  "in_reply_to_status_id",
+  "source",
+  "location",
+  "lat",
+  "lng",
+  "from_user_id",
+  "from_user_realname",
+  "from_user_verified",
+  "from_user_description",
+  "from_user_url",
+  "from_user_profile_image_url",
+  "from_user_utcoffset",
+  "from_user_timezone",
+  "from_user_lang",
+  "from_user_tweetcount",
+  "from_user_followercount",
+  "from_user_friendcount",
+  "from_user_favourites_count",
+  "from_user_listed",
+  "from_user_withheld_scope",
+  "from_user_withheld_countries",
+  "from_user_created_at"
+]
+print ",".join(keys)
 for t in db.find(sort=[("_id", -1)]):
-    ts = datetime.strptime(t['created_at'], '%a %b %d %H:%M:%S +0000 %Y').isoformat()
-    coords = "::".join([str(a) for a in t["geo"]["coordinates"]]) if t["geo"] else ""
-    text = '"' + t["text"].replace('"', '""').replace("\n", " ").replace("\r", "") + '"'
-    name = t.get("user_screen_name", t.get("user_name", ""))
-    print ",".join([a.encode("utf-8") for a in [t["url"],name,ts,t["lang"],coords,text]])
+    print ",".join(format_csv(get_field(k, t)) for k in keys)
 
