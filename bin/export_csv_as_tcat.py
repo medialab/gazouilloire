@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json, sys
+import json, sys, re
 from datetime import datetime
 from pymongo import MongoClient
 
@@ -129,6 +129,9 @@ keys = [
   "from_user_created_at"
 ]
 print ",".join(keys)
-for t in db.find(sort=[("_id", -1)]):
+query = {}
+if len(sys.argv) > 1:
+    query = {"text": re.compile(sys.argv[1].replace(' ', '\s+'), re.I)}
+for t in db.find(query, sort=[("_id", -1)]):
     print ",".join(format_csv(get_field(k, t)) for k in keys)
 
