@@ -40,6 +40,8 @@ def format_keyword(k):
     if k.startswith('@'):
         kutf = k.lstrip('@').encode('utf-8')
         return "from:%s OR to:%s OR @%s" % (kutf, kutf, kutf)
+    if " AND " in k or " + " in k:
+        k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
     return urllib.quote(k.encode('utf-8'), '')
 
 def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
