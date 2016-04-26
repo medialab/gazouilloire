@@ -87,7 +87,7 @@ def format_field(val):
 def get_field(field, tweet):
     return format_field(search_field(field, tweet)).replace('\n', ' ').replace('\r', ' ')
 
-format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val else val).encode('utf-8')
+format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val).encode('utf-8')
 
 keys = [
   "id",
