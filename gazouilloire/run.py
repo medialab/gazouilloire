@@ -6,7 +6,12 @@ from datetime import datetime
 from httplib import BadStatusLine
 from urllib2 import URLError
 from ssl import SSLError
-import pymongo, socket
+import socket
+from pymongo import ASCENDING
+try:
+    from pymongo import MongoClient
+except:
+    from pymongo import Connection as MongoClient
 from multiprocessing import Process, Queue
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from tweets import prepare_tweets, get_timestamp
@@ -35,6 +40,8 @@ def format_keyword(k):
     if k.startswith('@'):
         kutf = k.lstrip('@').encode('utf-8')
         return "from:%s OR to:%s OR @%s" % (kutf, kutf, kutf)
+    if " AND " in k or " + " in k:
+        k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
     return urllib.quote(k.encode('utf-8'), '')
 
 def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
@@ -246,12 +253,12 @@ if __name__=='__main__':
         log('ERROR', 'Unknown timezone set in config.json: %s. Please choose one among the above ones.' % conf['timezone'])
         sys.exit(1)
     try:
-        db = pymongo.Connection(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]
+        db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]
         coll = db['tweets']
-        coll.ensure_index([('_id', pymongo.ASCENDING)], background=True)
-        coll.ensure_index([('timestamp', pymongo.ASCENDING)], background=True)
-    except:
-        log('ERROR', 'Could not initiate connection to MongoDB')
+        coll.ensure_index([('_id', ASCENDING)], background=True)
+        coll.ensure_index([('timestamp', ASCENDING)], background=True)
+    except Exception as e:
+        log('ERROR', 'Could not initiate connection to MongoDB: %s %s' % (type(e), e))
         sys.exit(1)
     streamgeocode = None
     searchgeocode = None
