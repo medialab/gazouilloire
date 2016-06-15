@@ -130,8 +130,12 @@ keys = [
 ]
 print ",".join(keys)
 query = {}
-if len(sys.argv) > 1:
+if len(sys.argv) == 2:
     query = {"text": re.compile(sys.argv[1].replace(' ', '\s+'), re.I)}
+elif len(sys.argv) > 2:
+    query["$or"] = []
+    for arg in sys.argv[1:]:
+        query["$or"].append({"text": re.compile(arg.replace(' ', '\s+'), re.I)})
 for t in db.find(query, sort=[("_id", -1)]):
     print ",".join(format_csv(get_field(k, t)) for k in keys)
 
