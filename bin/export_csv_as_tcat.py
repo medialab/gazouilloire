@@ -87,7 +87,7 @@ def format_field(val):
 def get_field(field, tweet):
     return format_field(search_field(field, tweet)).replace('\n', ' ').replace('\r', ' ')
 
-format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val else val).encode('utf-8')
+format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val).encode('utf-8')
 
 keys = [
   "id",
@@ -130,8 +130,12 @@ keys = [
 ]
 print ",".join(keys)
 query = {}
-if len(sys.argv) > 1:
+if len(sys.argv) == 2:
     query = {"text": re.compile(sys.argv[1].replace(' ', '\s+'), re.I)}
+elif len(sys.argv) > 2:
+    query["$or"] = []
+    for arg in sys.argv[1:]:
+        query["$or"].append({"text": re.compile(arg.replace(' ', '\s+'), re.I)})
 for t in db.find(query, sort=[("_id", -1)]):
     print ",".join(format_csv(get_field(k, t)) for k in keys)
 
