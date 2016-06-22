@@ -36,7 +36,7 @@ HowTo
   ```
   Note that there are two possibilities to filter further:
   
-  - geolocalisation mode: just add ``"geolocalisation": "Paris, France"` field to to the config with the desired geographical boundaries
+  - geolocalisation mode: just add ``"geolocalisation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box as shown in the config example file
   - time limited keywords mode, in order to filter on specific keywords during planned time period:
 
   ```json

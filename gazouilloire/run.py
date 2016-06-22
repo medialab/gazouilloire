@@ -16,6 +16,7 @@ from multiprocessing import Process, Queue
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from tweets import prepare_tweets, get_timestamp
 from pytz import timezone, all_timezones
+from math import pi, sin, cos, acos
 
 def log(typelog, text):
     sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
@@ -235,6 +236,16 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, debug=Fa
             queries_since_id[i] = since
         time.sleep(max(timegap, next_reset - time.time() - 2*left))
 
+def generate_geoloc_strings(x1, y1, x2, y2):
+    streamgeocode = "%s,%s,%s,%s" % (y1, x1, y2, x2)
+    log('INFO', 'Stream Bounding box: %s/%s -> %s/%s' % (x1, y1, x2, y2))
+    x = (x1 + x2) / 2
+    y = (y1 + y2) / 2
+    d = 6371 * acos(sin(x*pi/180) * sin(x1*pi/180) + cos(x*pi/180) * cos(x1*pi/180) * cos((y1-y)*pi/180))
+    searchgeocode = "%s,%s,%.2fkm" % (x, y, d)
+    log('INFO', 'Search Disk: %s/%s, %.2fkm' % (x, y, d))
+    return streamgeocode, searchgeocode
+
 if __name__=='__main__':
     try:
         with open('config.json') as confile:
@@ -263,24 +274,25 @@ if __name__=='__main__':
     streamgeocode = None
     searchgeocode = None
     if "geolocalisation" in conf:
-        GeoConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
-        res = GeoConn.geo.search(query=conf["geolocalisation"].replace(" ", "+"), granularity=conf.get("geolocalisation_type", "admin"), max_results=1)
-        try:
-            place = res["result"]["places"][0]
-            log('INFO', 'Limiting tweets search to place "%s" with id "%s"' % (place['full_name'], place['id']))
-            y1, x1 = place["bounding_box"]['coordinates'][0][0]
-            y2, x2 = place["bounding_box"]['coordinates'][0][2]
-            log('INFO', 'Bounding box: %s/%s -> %s/%s' % (x1, y1, x2, y2))
-            streamgeocode = "%s,%s,%s,%s" % (y1, x1, y2, x2)
-            x = (x1+x2)/2
-            y = (y1+y2)/2
-            from math import pi, sin, cos, acos
-            d = 6371 * acos(sin(x*pi/180) * sin(x1*pi/180) + cos(x*pi/180) * cos(x1*pi/180) * cos((y1-y)*pi/180))
-            log('INFO', 'Disk: %s/%s, %.2fkm' % (x, y, d))
-            searchgeocode = "%s,%s,%.2fkm" % (x, y, d)
-        except Exception as e:
-            log('ERROR', 'Could not find a place matching geolocalisation %s: %s %s' % (conf["geolocalisation"], type(e), e))
-            sys.exit(1)
+        if type(conf["geolocalisation"]) == list:
+            try:
+                x1, y1, x2, y2 = conf["geolocalisation"]
+                streamgeocode, searchgeocode = generate_geoloc_strings(x1, y1, x2, y2)
+            except Exception as e:
+                log('ERROR', 'geolocalisation is wrongly formatted, should be something such as ["Lat1", "Long1", "Lat2", "Long2"]')
+                sys.exit(1)
+        else:
+            GeoConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
+            res = GeoConn.geo.search(query=conf["geolocalisation"].replace(" ", "+"), granularity=conf.get("geolocalisation_type", "admin"), max_results=1)
+            try:
+                place = res["result"]["places"][0]
+                log('INFO', 'Limiting tweets search to place "%s" with id "%s"' % (place['full_name'], place['id']))
+                y1, x1 = place["bounding_box"]['coordinates'][0][0]
+                y2, x2 = place["bounding_box"]['coordinates'][0][2]
+                streamgeocode, searchgeocode = generate_geoloc_strings(x1, y1, x2, y2)
+            except Exception as e:
+                log('ERROR', 'Could not find a place matching geolocalisation %s: %s %s' % (conf["geolocalisation"], type(e), e))
+                sys.exit(1)
     pile = Queue()
     depile = Process(target=depiler, args=(pile, coll, locale, conf['debug']))
     depile.daemon = True
