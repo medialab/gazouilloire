@@ -21,14 +21,16 @@ from math import pi, sin, cos, acos
 def log(typelog, text):
     sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
 
-def depiler(pile, db, locale, debug=False):
+def depiler(pile, mongoconf, locale, debug=False):
+    db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
+    coll = db['tweets']
     while True:
         todo = []
         while not pile.empty():
             todo.append(pile.get())
         save = prepare_tweets(todo, locale)
         for t in save:
-             tid = db.save(t)
+            tid = coll.save(t)
         if debug and save:
             log("DEBUG", "Saved %s tweets in MongoDB" % len(save))
         time.sleep(2)
@@ -294,7 +296,7 @@ if __name__=='__main__':
                 log('ERROR', 'Could not find a place matching geolocalisation %s: %s %s' % (conf["geolocalisation"], type(e), e))
                 sys.exit(1)
     pile = Queue()
-    depile = Process(target=depiler, args=(pile, coll, locale, conf['debug']))
+    depile = Process(target=depiler, args=(pile, conf['mongo'], locale, conf['debug']))
     depile.daemon = True
     depile.start()
     stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['time_limited_keywords'], streamgeocode, conf['debug']))
