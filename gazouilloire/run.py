@@ -21,7 +21,7 @@ from math import pi, sin, cos, acos
 def log(typelog, text):
     sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
 
-def depiler(pile, mongoconf, locale, debug=False):
+def depiler(pile, pile_extra, mongoconf, locale, debug=False):
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     coll = db['tweets']
     while True:
@@ -30,10 +30,35 @@ def depiler(pile, mongoconf, locale, debug=False):
             todo.append(pile.get())
         save = prepare_tweets(todo, locale)
         for t in save:
+            if pile_extra and t["in_reply_to_status_id_str"]:
+                if not coll.find_one({"_id": t["in_reply_to_status_id_str"]}):
+                    pile_extra.put(t["in_reply_to_status_id_str"])
             tid = coll.save(t)
         if debug and save:
             log("DEBUG", "Saved %s tweets in MongoDB" % len(save))
         time.sleep(2)
+
+
+def resolver(pile, pile_extra, twitterco, debug=False):
+    while True:
+        todo = []
+        while not pile_extra.empty() and len(todo) < 100:
+            todo.append(pile_extra.get())
+        if todo:
+            try:
+                tweets = twitterco.statuses.lookup(_id=",".join(todo), _method="POST")
+            except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
+                log("WARNING", "API connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
+                for t in todo:
+                    pile_extra.put(t)
+                time.sleep(10)
+                continue
+            if debug and tweets:
+                log("DEBUG", "[conversations] +%d tweets" % len(tweets))
+            for t in tweets:
+                pile.put(dict(t))
+        time.sleep(5)
+
 
 real_min = lambda x, y: min(x, y) if x else y
 date_to_time = lambda x: time.mktime(datetime.strptime(x[:16], "%Y-%m-%d %H:%M").timetuple())
@@ -255,6 +280,7 @@ if __name__=='__main__':
         oauth = OAuth(conf['twitter']['oauth_token'], conf['twitter']['oauth_secret'], conf['twitter']['key'], conf['twitter']['secret'])
         oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
         SearchConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth2, secure=True)
+        ResConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
         StreamConn = TwitterStream(domain="stream.twitter.com", api_version="1.1", auth=oauth, secure=True, block=False, timeout=10)
     except Exception as e:
         log('ERROR', 'Could not initiate connections to Twitter API: %s %s' % (type(e), e))
@@ -295,10 +321,16 @@ if __name__=='__main__':
             except Exception as e:
                 log('ERROR', 'Could not find a place matching geolocalisation %s: %s %s' % (conf["geolocalisation"], type(e), e))
                 sys.exit(1)
+    grab_conversations = "grab_conversations" in conf and conf["grab_conversations"]
     pile = Queue()
-    depile = Process(target=depiler, args=(pile, conf['mongo'], locale, conf['debug']))
+    pile_extra = Queue() if grab_conversations else None
+    depile = Process(target=depiler, args=(pile, pile_extra, conf['mongo'], locale, conf['debug']))
     depile.daemon = True
     depile.start()
+    if grab_conversations:
+        resolve = Process(target=resolver, args=(pile, pile_extra, ResConn, conf['debug']))
+        resolve.daemon = True
+        resolve.start()
     stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['time_limited_keywords'], streamgeocode, conf['debug']))
     stream.daemon = True
     stream.start()

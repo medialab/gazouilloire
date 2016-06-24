@@ -27,6 +27,7 @@
     "geolocalisation": "Paris, France",
     "geolocalisation": [49.00274483644453, 2.1533203125, 48.70908786918211, 2.610626220703125],
     "geolocalisation_type": "admin", "possible_values": "country/admin/city",
+    "grab_conversations": false,
     "timezone": "Europe/Paris",
     "debug": false
 }
