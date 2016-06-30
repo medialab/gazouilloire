@@ -336,7 +336,7 @@ if __name__=='__main__':
         sys.exit(1)
     streamgeocode = None
     searchgeocode = None
-    if "geolocalisation" in conf:
+    if "geolocalisation" in conf and conf["geolocalisation"]:
         if type(conf["geolocalisation"]) == list:
             try:
                 x1, y1, x2, y2 = conf["geolocalisation"]
