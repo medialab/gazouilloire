@@ -2,3 +2,5 @@ virtualenvwrapper
 pymongo
 twitter>=1.14.1
 pytz
+requests
+urllib3[secure]

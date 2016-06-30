@@ -65,23 +65,30 @@ def prepare_tweets(tweets, locale):
     return tosave
 
 def prepare_tweet(tweet, locale=None):
+    text = tweet['text']
+    rti = None
+    rtu = None
     if "retweeted_status" in tweet and tweet['retweeted_status']['id_str'] != tweet['id_str']:
         text = "RT @%s: %s" % (tweet['retweeted_status']['user']['screen_name'], tweet['retweeted_status']['text'])
-    else:
-        text = tweet['text']
+        rti = tweet['retweeted_status']['id_str']
+        rtu = tweet['retweeted_status']['user']['screen_name']
     medias = []
     links = []
     if 'entities' in tweet:
+        source_id = rti or tweet['id_str']
         for entity in tweet.get('extended_entities', tweet['entities']).get('media', []) + tweet['entities'].get('urls', []):
             if 'expanded_url' in entity and 'url' in entity and entity['expanded_url']:
                 try:
                     text = text.replace(entity['url'], entity['expanded_url'])
                 except:
                     pass
-            if "video_info" in entity:
-                medias.append(sorted(entity["video_info"]["variants"], key=lambda x: x.get("bitrate", 0))[-1]["url"])
-            elif "media_url" in entity:
-                medias.append(entity["media_url"])
+            if "media_url" in entity:
+                if "video_info" in entity:
+                    med_url = sorted(entity["video_info"]["variants"], key=lambda x: x.get("bitrate", 0))[-1]["url"]
+                else:
+                    med_url = entity["media_url_https"]
+                med_name = med_url.split('/')[-1]
+                medias.append(["%s_%s" % (source_id, med_name), med_url])
             else:
                 links.append(entity["expanded_url"])
     tw = {
@@ -90,6 +97,8 @@ def prepare_tweet(tweet, locale=None):
         'timestamp': get_timestamp(tweet, locale),
         'text': unescape_html(text),
         'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str']),
+        'retweet_id': rti,
+        'retweet_user': rtu,
         'medias': medias,
         'links': links
     }

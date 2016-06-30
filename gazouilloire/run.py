@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, time, urllib, json, re
+import os, sys, time, urllib, json, re
 from datetime import datetime
 from httplib import BadStatusLine
 from urllib2 import URLError
 from ssl import SSLError
 import socket
+import requests
 from pymongo import ASCENDING
 try:
     from pymongo import MongoClient
@@ -21,7 +22,7 @@ from math import pi, sin, cos, acos
 def log(typelog, text):
     sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
 
-def depiler(pile, pile_extra, mongoconf, locale, debug=False):
+def depiler(pile, pile_catchup, pile_medias, mongoconf, locale, debug=False):
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     coll = db['tweets']
     while True:
@@ -30,27 +31,61 @@ def depiler(pile, pile_extra, mongoconf, locale, debug=False):
             todo.append(pile.get())
         save = prepare_tweets(todo, locale)
         for t in save:
-            if pile_extra and t["in_reply_to_status_id_str"]:
+            if pile_medias and t["medias"]:
+                pile_medias.put(t)
+            if pile_catchup and t["in_reply_to_status_id_str"]:
                 if not coll.find_one({"_id": t["in_reply_to_status_id_str"]}):
-                    pile_extra.put(t["in_reply_to_status_id_str"])
+                    pile_catchup.put(t["in_reply_to_status_id_str"])
             tid = coll.save(t)
         if debug and save:
             log("DEBUG", "Saved %s tweets in MongoDB" % len(save))
         time.sleep(2)
 
+def download_media(tweet, media_id, media_url, medias_dir="medias"):
+    subdir = os.path.join(medias_dir, media_id.split('_')[0][:-15])
+    if not os.path.exists(subdir):
+        os.makedirs(subdir)
+    filepath = os.path.join(subdir, media_id)
+    if os.path.exists(filepath):
+        return 0
+    try:
+        r = requests.get(media_url, stream=True)
+        with open(filepath, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+        return 1
+    except Exception as e:
+        log("WARNING", "Could not download media %s for tweet %s (%s: %s)" % (media_url, tweet["url"], type(e), e))
+        return 0
 
-def resolver(pile, pile_extra, twitterco, debug=False):
+def downloader(pile_medias, medias_dir, debug=False):
     while True:
         todo = []
-        while not pile_extra.empty() and len(todo) < 100:
-            todo.append(pile_extra.get())
+        while not pile_medias.empty():
+            todo.append(pile_medias.get())
+        if not todo:
+            time.sleep(2)
+            continue
+        done = 0
+        for tweet in todo:
+            for media_id, media_url in tweet["medias"]:
+                done += download_media(tweet, media_id, media_url, medias_dir)
+        if debug and done:
+            log("DEBUG", "[medias] +%s files" % done)
+
+def catchupper(pile, pile_catchup, twitterco, debug=False):
+    while True:
+        todo = []
+        while not pile_catchup.empty() and len(todo) < 100:
+            todo.append(pile_catchup.get())
         if todo:
             try:
                 tweets = twitterco.statuses.lookup(_id=",".join(todo), _method="POST")
             except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
                 log("WARNING", "API connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
                 for t in todo:
-                    pile_extra.put(t)
+                    pile_catchup.put(t)
                 time.sleep(10)
                 continue
             if debug and tweets:
@@ -322,15 +357,25 @@ if __name__=='__main__':
                 log('ERROR', 'Could not find a place matching geolocalisation %s: %s %s' % (conf["geolocalisation"], type(e), e))
                 sys.exit(1)
     grab_conversations = "grab_conversations" in conf and conf["grab_conversations"]
+    dl_medias = "download_medias" in conf and conf["download_medias"]
+    if dl_medias:
+        medias_dir = conf.get("medias_directory", "medias")
+        if not os.path.exists(medias_dir):
+            os.makedirs(medias_dir)
     pile = Queue()
-    pile_extra = Queue() if grab_conversations else None
-    depile = Process(target=depiler, args=(pile, pile_extra, conf['mongo'], locale, conf['debug']))
+    pile_catchup = Queue() if grab_conversations else None
+    pile_medias = Queue() if dl_medias else None
+    depile = Process(target=depiler, args=(pile, pile_catchup, pile_medias, conf['mongo'], locale, conf['debug']))
     depile.daemon = True
     depile.start()
     if grab_conversations:
-        resolve = Process(target=resolver, args=(pile, pile_extra, ResConn, conf['debug']))
-        resolve.daemon = True
-        resolve.start()
+        catchup = Process(target=catchupper, args=(pile, pile_catchup, ResConn, conf['debug']))
+        catchup.daemon = True
+        catchup.start()
+    if dl_medias:
+        download = Process(target=downloader, args=(pile_medias, medias_dir, conf['debug']))
+        download.daemon = True
+        download.start()
     stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['time_limited_keywords'], streamgeocode, conf['debug']))
     stream.daemon = True
     stream.start()
