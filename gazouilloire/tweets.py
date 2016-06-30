@@ -69,19 +69,29 @@ def prepare_tweet(tweet, locale=None):
         text = "RT @%s: %s" % (tweet['retweeted_status']['user']['screen_name'], tweet['retweeted_status']['text'])
     else:
         text = tweet['text']
+    medias = []
+    links = []
     if 'entities' in tweet:
-        for entity in tweet['entities'].get('media', []) + tweet['entities'].get('urls', []):
+        for entity in tweet.get('extended_entities', tweet['entities']).get('media', []) + tweet['entities'].get('urls', []):
             if 'expanded_url' in entity and 'url' in entity and entity['expanded_url']:
                 try:
                     text = text.replace(entity['url'], entity['expanded_url'])
                 except:
                     pass
+            if "video_info" in entity:
+                medias.append(sorted(entity["video_info"]["variants"], key=lambda x: x.get("bitrate", 0))[-1]["url"])
+            elif "media_url" in entity:
+                medias.append(entity["media_url"])
+            else:
+                links.append(entity["expanded_url"])
     tw = {
         '_id': tweet['id_str'],
         'created_at': tweet['created_at'],
         'timestamp': get_timestamp(tweet, locale),
         'text': unescape_html(text),
-        'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str'])
+        'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str']),
+        'medias': medias,
+        'links': links
     }
     tw = grab_extra_meta(tweet, tw)
     return tw
