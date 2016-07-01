@@ -8,6 +8,8 @@ from urllib2 import URLError
 from ssl import SSLError
 import socket
 import requests
+from multiprocessing import Process, Queue, Event
+import signal
 from urlsresolver import resolve_url as resolve_redirects
 from fake_useragent import UserAgent
 from pymongo import ASCENDING
@@ -15,7 +17,6 @@ try:
     from pymongo import MongoClient
 except:
     from pymongo import Connection as MongoClient
-from multiprocessing import Process, Queue
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from tweets import prepare_tweets, get_timestamp
 from pytz import timezone, all_timezones
@@ -24,10 +25,10 @@ from math import pi, sin, cos, acos
 def log(typelog, text):
     sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
 
-def depiler(pile, pile_catchup, pile_links, pile_medias, mongoconf, locale, debug=False):
+def depiler(pile, pile_catchup, pile_links, pile_medias, mongoconf, locale, exit_event, debug=False):
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     coll = db['tweets']
-    while True:
+    while not exit_event.is_set() or not pile.empty():
         todo = []
         while not pile.empty():
             todo.append(pile.get())
@@ -44,6 +45,7 @@ def depiler(pile, pile_catchup, pile_links, pile_medias, mongoconf, locale, debu
         if debug and save:
             log("DEBUG", "Saved %s tweets in MongoDB" % len(save))
         time.sleep(2)
+    log("INFO", "FINISHED depiler")
 
 def download_media(tweet, media_id, media_url, medias_dir="medias"):
     subdir = os.path.join(medias_dir, media_id.split('_')[0][:-15])
@@ -63,8 +65,8 @@ def download_media(tweet, media_id, media_url, medias_dir="medias"):
         log("WARNING", "Could not download media %s for tweet %s (%s: %s)" % (media_url, tweet["url"], type(e), e))
         return 0
 
-def downloader(pile_medias, medias_dir, debug=False):
-    while True:
+def downloader(pile_medias, medias_dir, exit_event, debug=False):
+    while not exit_event.is_set() or not pile_medias.empty():
         todo = []
         while not pile_medias.empty():
             todo.append(pile_medias.get())
@@ -77,9 +79,10 @@ def downloader(pile_medias, medias_dir, debug=False):
                 done += download_media(tweet, media_id, media_url, medias_dir)
         if debug and done:
             log("DEBUG", "[medias] +%s files" % done)
+    log("INFO", "FINISHED downloader")
 
-def catchupper(pile, pile_catchup, twitterco, debug=False):
-    while True:
+def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
+    while not exit_event.is_set() or not pile_catchup.empty():
         todo = []
         while not pile_catchup.empty() and len(todo) < 100:
             todo.append(pile_catchup.get())
@@ -97,6 +100,7 @@ def catchupper(pile, pile_catchup, twitterco, debug=False):
             for t in tweets:
                 pile.put(dict(t))
         time.sleep(5)
+    log("INFO", "FINISHED catchupper")
 
 re_clean_mobile_twitter = re.compile(r'^(https?://)mobile\.(twitter\.)')
 def resolve_url(url, retries=5, user_agent=None):
@@ -109,13 +113,13 @@ def resolve_url(url, retries=5, user_agent=None):
         log("ERROR", "Could not resolve redirection for url %s (%s: %s)" % (url, type(e), e))
         return url
 
-def resolver(pile_links, mongoconf, debug=False):
+def resolver(pile_links, mongoconf, exit_event, debug=False):
     ua = UserAgent()
     ua.update()
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     linkscoll = db['links']
     tweetscoll = db['tweets']
-    while True:
+    while not exit_event.is_set() or not pile_links.empty():
         todo = []
         while not pile_links.empty() and len(todo) < 25:
             todo.append(pile_links.get())
@@ -138,6 +142,7 @@ def resolver(pile_links, mongoconf, debug=False):
             tweetscoll.update({'_id': tweet['_id']}, {'$set': {'proper_links': gdlinks}}, upsert=False)
         if debug and done:
             log("DEBUG", "[links] +%s links resolved (out of %s)" % (done, len(todo)))
+    log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
 date_to_time = lambda x: time.mktime(datetime.strptime(x[:16], "%Y-%m-%d %H:%M").timetuple())
@@ -151,8 +156,8 @@ def format_keyword(k):
         k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
     return urllib.quote(k.encode('utf-8'), '')
 
-def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
-    while True:
+def streamer(pile, streamco, keywords, timed_keywords, geocode, exit_event, debug=False):
+    while not exit_event.is_set():
         ts = time.time()
         extra_keywords = []
 
@@ -187,6 +192,9 @@ def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
                 streamiter = streamco.statuses.filter(locations=geocode, filter_level='none', stall_warnings='true')
             else:
                 streamiter = streamco.statuses.filter(track=",".join(filter_keywords), filter_level='none', stall_warnings='true')
+        except KeyboardInterrupt:
+            log("INFO", "closing streamer...")
+            exit_event.set()
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
             log("WARNING", "Stream connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
             time.sleep(2)
@@ -228,12 +236,16 @@ def streamer(pile, streamco, keywords, timed_keywords, geocode, debug=False):
                         log("DEBUG", "[stream] +1 tweet")
                 else:
                     log("INFO", "Got special data: %s" % str(msg))
+        except KeyboardInterrupt:
+            log("INFO", "closing streamer...")
+            exit_event.set()
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
             log("WARNING", "Stream connection lost, reconnecting in a sec... (%s: %s)" % (type(e), e))
 
         if debug:
             log("DEBUG", "Stream stayed alive for %sh" % str((time.time()-ts)/3600))
         time.sleep(2)
+    log("INFO", "FINISHED streamer")
 
 chunkize = lambda a, n: [a[i:i+n] for i in xrange(0, len(a), n)]
 
@@ -241,7 +253,7 @@ def get_twitter_rates(conn):
     rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
     return rate_limits['reset'], rate_limits['limit'], rate_limits['remaining']
 
-def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, debug=False):
+def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_event, debug=False):
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco)
     except:
@@ -260,7 +272,8 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, debug=Fa
     queries_since_id = [0 for _ in queries + timed_keywords.items()]
 
     timegap = 1 + len(queries)
-    while True:
+    while not exit_event.is_set():
+      try:
         if time.time() > next_reset:
             try:
                 next_reset, _, left = get_twitter_rates(searchco)
@@ -297,7 +310,7 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, debug=Fa
 
             since = queries_since_id[i]
             max_id = 0
-            while left:
+            while left and not exit_event.is_set():
                 args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent'}
                 if geocode:
                     args['geocode'] = geocode
@@ -340,7 +353,11 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, debug=Fa
                 if debug:
                     log("DEBUG", "[search] +%d tweets (%s)" % (news, query))
             queries_since_id[i] = since
-        time.sleep(max(timegap, next_reset - time.time() - 2*left))
+            time.sleep(max(timegap, next_reset - time.time() - 2*left))
+      except KeyboardInterrupt:
+        log("INFO", "closing searcher...")
+        exit_event.set()
+    log("INFO", "FINISHED searcher")
 
 def generate_geoloc_strings(x1, y1, x2, y2):
     streamgeocode = "%s,%s,%s,%s" % (y1, x1, y2, x2)
@@ -411,25 +428,32 @@ if __name__=='__main__':
     pile_catchup = Queue() if grab_conversations else None
     pile_links = Queue() if resolve_links else None
     pile_medias = Queue() if dl_medias else None
-    depile = Process(target=depiler, args=(pile, pile_catchup, pile_links, pile_medias, conf['mongo'], locale, conf['debug']))
+    default_handler = signal.getsignal(signal.SIGINT)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    exit_event = Event()
+    depile = Process(target=depiler, args=(pile, pile_catchup, pile_links, pile_medias, conf['mongo'], locale, exit_event, conf['debug']))
     depile.daemon = True
     depile.start()
     if grab_conversations:
-        catchup = Process(target=catchupper, args=(pile, pile_catchup, ResConn, conf['debug']))
+        catchup = Process(target=catchupper, args=(pile, pile_catchup, ResConn, exit_event, conf['debug']))
         catchup.daemon = True
         catchup.start()
     if resolve_links:
-        resolve = Process(target=resolver, args=(pile_links, conf['mongo'], conf['debug']))
+        resolve = Process(target=resolver, args=(pile_links, conf['mongo'], exit_event, conf['debug']))
         resolve.daemon = True
         resolve.start()
     if dl_medias:
-        download = Process(target=downloader, args=(pile_medias, medias_dir, conf['debug']))
+        download = Process(target=downloader, args=(pile_medias, medias_dir, exit_event, conf['debug']))
         download.daemon = True
         download.start()
-    stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['time_limited_keywords'], streamgeocode, conf['debug']))
+    signal.signal(signal.SIGINT, default_handler)
+    stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['time_limited_keywords'], streamgeocode, exit_event, conf['debug']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['time_limited_keywords'], locale, searchgeocode, conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['time_limited_keywords'], locale, searchgeocode, exit_event, conf['debug']))
     search.start()
-    depile.join()
-
+    try:
+        depile.join()
+    except KeyboardInterrupt:
+        exit_event.set()
+        depile.join()

@@ -4,7 +4,7 @@ cd "$(dirname "$0")"
 source $(which virtualenvwrapper.sh)
 deactivate > /dev/null 2>&1
 workon gazouilloire
-pkill -9 -f "python gazouilloire/run.py $(pwd)"
+pkill -2 -f "python gazouilloire/run.py $(pwd)"
 sleep 1
 touch runlog.txt
 mv -f runlog.txt runlog.txt.old
