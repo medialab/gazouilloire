@@ -8,6 +8,8 @@ from urllib2 import URLError
 from ssl import SSLError
 import socket
 import requests
+from urlsresolver import resolve_url as resolve_redirects
+from fake_useragent import UserAgent
 from pymongo import ASCENDING
 try:
     from pymongo import MongoClient
@@ -22,7 +24,7 @@ from math import pi, sin, cos, acos
 def log(typelog, text):
     sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
 
-def depiler(pile, pile_catchup, pile_medias, mongoconf, locale, debug=False):
+def depiler(pile, pile_catchup, pile_links, pile_medias, mongoconf, locale, debug=False):
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     coll = db['tweets']
     while True:
@@ -37,6 +39,8 @@ def depiler(pile, pile_catchup, pile_medias, mongoconf, locale, debug=False):
                 if not coll.find_one({"_id": t["in_reply_to_status_id_str"]}):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
             tid = coll.save(t)
+            if pile_links and t["links"]:
+                pile_links.put(t)
         if debug and save:
             log("DEBUG", "Saved %s tweets in MongoDB" % len(save))
         time.sleep(2)
@@ -94,6 +98,46 @@ def catchupper(pile, pile_catchup, twitterco, debug=False):
                 pile.put(dict(t))
         time.sleep(5)
 
+re_clean_mobile_twitter = re.compile(r'^(https?://)mobile\.(twitter\.)')
+def resolve_url(url, retries=5, user_agent=None):
+    try:
+        good = resolve_redirects(url, user_agent=user_agent.random)
+        return re_clean_mobile_twitter.sub(r'\1\2', good)
+    except Exception as e:
+        if retries:
+            return resolve_url(url, retries-1, user_agent=user_agent)
+        log("ERROR", "Could not resolve redirection for url %s (%s: %s)" % (url, type(e), e))
+        return url
+
+def resolver(pile_links, mongoconf, debug=False):
+    ua = UserAgent()
+    ua.update()
+    db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
+    linkscoll = db['links']
+    tweetscoll = db['tweets']
+    while True:
+        todo = []
+        while not pile_links.empty() and len(todo) < 25:
+            todo.append(pile_links.get())
+        if not todo:
+            time.sleep(1)
+            continue
+        done = 0
+        for tweet in todo:
+            gdlinks = []
+            for link in tweet["links"]:
+                good = linkscoll.find_one({'_id': link})
+                if good:
+                    gdlinks.append(good['real'])
+                    continue
+                good = resolve_url(link, user_agent=ua)
+                gdlinks.append(good)
+                linkscoll.save({'_id': link, 'real': good})
+                if link != good:
+                    done += 1
+            tweetscoll.update({'_id': tweet['_id']}, {'$set': {'proper_links': gdlinks}}, upsert=False)
+        if debug and done:
+            log("DEBUG", "[links] +%s links resolved (out of %s)" % (done, len(todo)))
 
 real_min = lambda x, y: min(x, y) if x else y
 date_to_time = lambda x: time.mktime(datetime.strptime(x[:16], "%Y-%m-%d %H:%M").timetuple())
@@ -357,6 +401,7 @@ if __name__=='__main__':
                 log('ERROR', 'Could not find a place matching geolocalisation %s: %s %s' % (conf["geolocalisation"], type(e), e))
                 sys.exit(1)
     grab_conversations = "grab_conversations" in conf and conf["grab_conversations"]
+    resolve_links = "resolve_redirected_links" in conf and conf["resolve_redirected_links"]
     dl_medias = "download_medias" in conf and conf["download_medias"]
     if dl_medias:
         medias_dir = conf.get("medias_directory", "medias")
@@ -364,14 +409,19 @@ if __name__=='__main__':
             os.makedirs(medias_dir)
     pile = Queue()
     pile_catchup = Queue() if grab_conversations else None
+    pile_links = Queue() if resolve_links else None
     pile_medias = Queue() if dl_medias else None
-    depile = Process(target=depiler, args=(pile, pile_catchup, pile_medias, conf['mongo'], locale, conf['debug']))
+    depile = Process(target=depiler, args=(pile, pile_catchup, pile_links, pile_medias, conf['mongo'], locale, conf['debug']))
     depile.daemon = True
     depile.start()
     if grab_conversations:
         catchup = Process(target=catchupper, args=(pile, pile_catchup, ResConn, conf['debug']))
         catchup.daemon = True
         catchup.start()
+    if resolve_links:
+        resolve = Process(target=resolver, args=(pile_links, conf['mongo'], conf['debug']))
+        resolve.daemon = True
+        resolve.start()
     if dl_medias:
         download = Process(target=downloader, args=(pile_medias, medias_dir, conf['debug']))
         download.daemon = True

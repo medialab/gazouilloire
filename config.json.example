@@ -27,6 +27,7 @@
     "geolocalisation": "Paris, France",
     "geolocalisation": [48.70908786918211, 2.1533203125, 49.00274483644453, 2.610626220703125],
     "geolocalisation_type": "admin", "possible_values": "country/admin/city",
+    "resolve_redirected_links": true,
     "grab_conversations": false,
     "download_medias": false,
     "medias_directory": "medias",
