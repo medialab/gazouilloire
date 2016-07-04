@@ -56,7 +56,9 @@ corresp_fields = {
     "from_user_listed": "user_listed",
     "from_user_withheld_scope": "user_withheld_scope",
     "from_user_withheld_countries": lambda x: x.get("user_withheld_countries", []),      # Added since this is the most interesting info from withheld fields
-    "from_user_created_at": lambda x: isodate(x['user_created_at'])
+    "from_user_created_at": lambda x: isodate(x['user_created_at']),
+    "links": lambda x: x.get("proper_links", x.get("links", [])),
+    "medias": lambda x: [_id for _id,_url in x.get("medias", [])]
 }
 
 def search_field(field, tweet):
@@ -79,7 +81,7 @@ def format_field(val):
     if type(val) == bool:
         return "1" if val else "0"
     if type(val) == list:
-        return "|".join([v.encode('utf-8') for v in val])
+        return u"|".join([v for v in val])
     if val == None:
         return ''
     return val if type(val) == unicode else unicode(val)
@@ -126,7 +128,9 @@ keys = [
   "from_user_listed",
   "from_user_withheld_scope",
   "from_user_withheld_countries",
-  "from_user_created_at"
+  "from_user_created_at",
+  "links",
+  "medias"
 ]
 print ",".join(keys)
 query = {}
