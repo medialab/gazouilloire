@@ -6,3 +6,4 @@ requests
 urllib3[secure]
 urlsresolver
 fake-useragent
+csvkit
