@@ -22,5 +22,7 @@ except:
     sys.stderr.write('ERROR %s' % "\t".join(all_timezones)+"\n\n")
     sys.exit('ERROR: Unknown timezone set in config.json: %s. Please choose one among the above ones.' % conf['timezone'])
 
-pprint(prepare_tweet(t1.statuses.show(_id=sys.argv[1]), locale))
+t = t1.statuses.show(_id=sys.argv[1])
+pprint(t)
+pprint(prepare_tweet(t, locale))
 
