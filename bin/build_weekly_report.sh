@@ -57,7 +57,7 @@ No tweet found for this query this week.
 " >> $report
     continue
   fi
-  totalrts=$((`csvcut -c "text" $outdir/$filter_name.csv | grep "^RT @\S\+: " | wc -l` - 1))
+  totalrts=$((`csvcut -c "text" $outdir/$filter_name.csv | grep "^RT @\S\+: " | wc -l`))
   csvcut -c "links" $outdir/$filter_name.csv | grep -v '""\|^medias_urls' | tr '|' '\n' | sort | uniq -c | sort -rn > /tmp/$filter_name.links
   nlinks=$((`cat /tmp/$filter_name.links | wc -l`))
   grep "^id,\|https\?://twitter.com/\S\+/photo/[0-9]" $outdir/$filter_name.csv | csvcut -c "medias_urls" | grep -v '""\|^medias_urls' | tr '|' '\n' | sort | uniq -c | sort -rn > /tmp/$filter_name.photos
@@ -74,7 +74,17 @@ Total different images:  $nimages
 Total different videos:  $nvideos
 
 Most RTs:" >> $report
-  csvsort -rc "retweet_count" $outdir/$filter_name.csv | csvcut -c "retweet_count,text,id,from_user_name" | grep -v '^retweet_count,\|[0-9]\+,"\?RT @\S\+: ' | sed -r 's/^([0-9]+),/\t\1\t/' | sed -r 's|,([0-9]+),([a-z_]+)$|\t\thttps://twitter.com/\2/statuses/\1|i' | head -3 >> $report
+  ct=0
+  csvcut -c "text" $outdir/$filter_name.csv | grep -v '^text$' | sed 's/^"\?RT @\S\+: //' | sort | uniq -c | sort -gr | head -n 50 | while read line; do
+    rts=$((`echo $line | sed 's/ .*$//'` - 1))
+    if [ "$rts" -eq 0 ] || [ $ct -ge 3 ]; then break; fi
+    text=$(echo $line | sed 's/^[0-9]\+ //')
+    if grep ",\"\?$text," $outdir/$filter_name.csv > /tmp/retweet.tmp; then
+      echo $rts $text $(head -1 /tmp/retweet.tmp | sed -r 's|^([0-9]+),[^,]+,[^,]+,([^,]+),.*$|https://twitter.com/\2/statuses/\1|') >> $report
+      ct=$(($ct+1))
+    fi
+  done
+  #csvsort -rc "retweet_count" $outdir/$filter_name.csv | csvcut -c "retweet_count,text,id,from_user_name" | grep -v '^retweet_count,\|[0-9]\+,"\?RT @\S\+: ' | sed -r 's/^([0-9]+),/\t\1\t/' | sed -r 's|,([0-9]+),([a-z_]+)$|\t\thttps://twitter.com/\2/statuses/\1|i' | head -3 >> $report
   echo "
 Most tweeted links:" >> $report
   head -3 /tmp/$filter_name.links >> $report
