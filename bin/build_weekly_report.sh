@@ -35,7 +35,8 @@ echo "GAZOUILLOIRE TWEETS REPORT $prev_date 00:00:00 → $yesterday 23:59:59
 " > $report
 
 if ! test -z "$reporturl"; then
-  echo "CSV files, medias and report available online at $reporturl/$curr_date
+  echo "CSV files and report available online at $reporturl/$curr_date
+medias at $reporturl/media/
 
 " >> $report
 fi
