@@ -19,8 +19,12 @@ fi
 
 reporturl=$3
 
-curr_date=$(date +%Y-%m-%d)
-curr_time=$(date -d "$cur_date 00:00:00" +%s)
+curr_date=$4
+
+if [ -z "$curr_date" ]; then
+  curr_date=$(date +%Y-%m-%d)
+fi
+curr_time=$(date -d "$curr_date 00:00:00" +%s)
 prev_time=$(($curr_time - 3600 * 24 * 7))
 prev_date=$(date -d "@$prev_time" +%Y-%m-%d)
 yest_time=$(($curr_time - 1))
