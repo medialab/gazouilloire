@@ -16,4 +16,6 @@ touch runlog.txt
 mv -f runlog.txt runlog.txt.old
 python gazouilloire/run.py $(pwd) > runlog.txt 2>&1 &
 deactivate
-tail -f runlog.txt
+if ! [ -z "$1"]; then
+  tail -f runlog.txt
+fi
