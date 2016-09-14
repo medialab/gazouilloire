@@ -83,8 +83,8 @@ Most RTs:" >> $report
   csvcut -c "text" $outdir/$filter_name.csv | grep -v '^text$' | sed 's/^"\?RT @\S\+: //' | sort | uniq -c | sort -gr | head -n 50 | while read line; do
     rts=$((`echo $line | sed 's/ .*$//'` - 1))
     if [ "$rts" -eq 0 ] || [ $ct -ge 3 ]; then break; fi
-    text=$(echo $line | sed 's/^[0-9]\+ //')
-    if grep ",\"\?$text," $outdir/$filter_name.csv > /tmp/retweet.tmp; then
+    text=$(echo $line | sed 's/^[0-9]\+ //' | sed -r 's/(\[|\])/./g')
+    if grep ",\"\?$text\"?," $outdir/$filter_name.csv > /tmp/retweet.tmp; then
       echo $rts $text $(head -1 /tmp/retweet.tmp | sed -r 's|^([0-9]+),[^,]+,[^,]+,([^,]+),.*$|https://twitter.com/\2/statuses/\1|') >> $report
       ct=$(($ct+1))
     fi
