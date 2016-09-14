@@ -1,0 +1,10 @@
+{
+  "name": "Gazouilloire",
+  "authors": ["Benjamin Ooghe-Tabanou"],
+  "url": "",
+  "source": "https://github.com/medialab/gazouilloire",
+  "licence": "LGPL/CECILL-C",
+  "visual": "",
+  "description": "Gazouilloire is a simple backend tool to collect within a Mongo database all tweets matching a list of keywords, optionnally with a planning of periods of collect for each keyword. For better completion, it collects tweets from both Twitter's Search API and Stream API.",
+  "doc": ""
+}
