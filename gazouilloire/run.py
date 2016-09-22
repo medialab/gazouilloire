@@ -91,7 +91,7 @@ def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
             todo.append(pile_catchup.get())
         if todo:
             try:
-                tweets = twitterco.statuses.lookup(_id=",".join(todo), _method="POST")
+                tweets = twitterco.statuses.lookup(_id=",".join(todo), tweet_mode="extended", _method="POST")
             except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
                 log("WARNING", "API connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
                 for t in todo:
@@ -322,7 +322,7 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_eve
             since = queries_since_id[i]
             max_id = 0
             while left and not exit_event.is_set():
-                args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent'}
+                args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent', 'tweet_mode': 'extended'}
                 if geocode:
                     args['geocode'] = geocode
                 if max_id:

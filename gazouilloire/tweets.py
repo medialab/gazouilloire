@@ -65,16 +65,16 @@ def prepare_tweets(tweets, locale):
     return tosave
 
 def prepare_tweet(tweet, locale=None):
-    text = tweet['text']
+    text = tweet.get('full_text', tweet['text'])
     rti = None
     rtu = None
     if "retweeted_status" in tweet and tweet['retweeted_status']['id_str'] != tweet['id_str']:
-        text = "RT @%s: %s" % (tweet['retweeted_status']['user']['screen_name'], tweet['retweeted_status']['text'])
+        text = "RT @%s: %s" % (tweet['retweeted_status']['user']['screen_name'], tweet['retweeted_status'].get('full_text', tweet['retweeted_status']['text'])
         rti = tweet['retweeted_status']['id_str']
         rtu = tweet['retweeted_status']['user']['screen_name']
     medias = []
     links = []
-    if 'entities' in tweet:
+    if 'entities' in tweet or 'extended_entities' in tweet:
         source_id = rti or tweet['id_str']
         for entity in tweet.get('extended_entities', tweet['entities']).get('media', []) + tweet['entities'].get('urls', []):
             if 'expanded_url' in entity and 'url' in entity and entity['expanded_url']:
