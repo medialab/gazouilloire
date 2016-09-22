@@ -65,6 +65,9 @@ def prepare_tweets(tweets, locale):
     return tosave
 
 def prepare_tweet(tweet, locale=None):
+    if "extended_tweet" in tweet:
+        for field in tweet["extended_tweet"]:
+            tweet[field] = tweet["extended_tweet"][field]
     text = tweet.get('full_text', tweet['text'])
     rti = None
     rtu = None
