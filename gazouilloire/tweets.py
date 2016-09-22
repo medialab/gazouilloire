@@ -68,7 +68,7 @@ def prepare_tweet(tweet, locale=None):
     if "extended_tweet" in tweet:
         for field in tweet["extended_tweet"]:
             tweet[field] = tweet["extended_tweet"][field]
-    text = tweet.get('full_text', tweet['text'])
+    text = tweet.get('full_text', tweet.get('text', ''))
     rti = None
     rtu = None
     if "retweeted_status" in tweet and tweet['retweeted_status']['id_str'] != tweet['id_str']:
@@ -105,6 +105,8 @@ def prepare_tweet(tweet, locale=None):
         'medias': medias,
         'links': links
     }
+    if not tw["text"]:
+        print "WARNING, no text for tweet %s" % tw["url"]
     tw = grab_extra_meta(tweet, tw)
     return tw
 
