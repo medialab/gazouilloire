@@ -84,7 +84,7 @@ def format_field(val):
     if type(val) == bool:
         return "1" if val else "0"
     if type(val) == list:
-        return u"|".join([v for v in val])
+        return u"|".join([v for v in val if v])
     if val == None:
         return ''
     return val if type(val) == unicode else unicode(val)
