@@ -1,0 +1,9 @@
+- bootstrap
+- date input modern
+- handle multi values query/filters as tags
+- prod wsgi
+- sugar : 
+ + stats total tweets
+ + most hashtags
+ + brush time
+ + networks

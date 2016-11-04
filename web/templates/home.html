@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block content %}
+  <div class="jumbo">
+    <h2>Export tweets<h2>
+  </div>
+
+  {% if errors %}
+    <h3>Warning!</h3>
+    <ul>
+    {% for error in errors %}
+      <li>{{error}}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+
+  <form action="{{url_for('download')}}" method="get">
+    Start date: <input type="text" name="startdate" value="{{startdate}}"></input>
+    End date: <input type="text" name="enddate" value="{{enddate}}"></input>
+    <br/>
+    Separate multiple filters or queries using ';'<br/>
+    Query: <input type="text" name="query" value="{{query}}"></input>
+    Filters: <input type="text" name="filters" value="{{filters}}"></input>
+    <br/>
+    <input type="submit" value="Download"/>
+  </form>
+
+{% endblock %}
