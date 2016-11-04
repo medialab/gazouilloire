@@ -28,10 +28,8 @@
     </nav>
 
     <div class="container">
-      <div class="starter-template">
-        {% block content %}
-        {% endblock %}
-      </div>
+      {% block content %}
+      {% endblock %}
     </div>
 
     <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
