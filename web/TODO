@@ -1,5 +1,3 @@
-- bootstrap
-- date input modern
 - handle multi values query/filters as tags
 - prod wsgi
 - sugar : 

@@ -53,6 +53,8 @@ def download():
                 args[arg.replace("date", "time")] = time.mktime(d.timetuple())
             except Exception as e:
                 args["errors"].append(u'Field "%s": « %s » is not a valid date (%s: %s)' % (arg, args[arg], type(e), e))
+    if args.get("starttime", 0) > args.get("endtime", 0):
+        args["errors"].append('Field "startdate" should be older than field "enddate"')
     if args["errors"]:
         return render_template("home.html", **args)
     query = {
