@@ -1,0 +1,8 @@
+- handle multi values query/filters as tags
+- localstorage keep filters
+- prod wsgi
+- sugar : 
+ + stats total tweets
+ + most hashtags
+ + brush time
+ + networks
