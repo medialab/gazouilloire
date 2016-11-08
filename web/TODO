@@ -1,4 +1,3 @@
-- handle multi values query/filters as tags
 - localstorage keep filters
 - prod wsgi
 - sugar : 

@@ -35,8 +35,6 @@ def init_args():
 def home():
     return render_template("home.html", **init_args())
 
-mult_queries = re.compile("\s*;\s*")
-
 @app.route("/download")
 def download():
     args = init_args()
@@ -64,12 +62,12 @@ def download():
       ]
     }
     if args["query"]:
-        for q in mult_queries.split(args["query"]):
+        for q in args["query"].split('|'):
             query["$and"].append({
               "text": re.compile(r"%s" % q, re.I)
             })
     if args["filters"]:
-        for q in mult_queries.split(args["filters"]):
+        for q in args["filters"].split('|'):
             query["$and"].append({
               "text": {"$not": re.compile(r"%s" % q, re.I)}
             })

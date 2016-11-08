@@ -14,12 +14,12 @@ h3 {
   margin: 5px 0px;
   clear: both;
 }
-form label {
+label {
   text-align: right;
   padding-top: 8px;
 }
 .pullright {
   float: right;
-  padding-right: 10%;
+  margin-right: 5%;
   margin-bottom: 15px;
 }

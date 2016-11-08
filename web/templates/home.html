@@ -13,6 +13,7 @@
           <span class="input-group-addon"><i class="glyphicon glyphicon-calendar"></i></span>
         </div>
       </div>
+
       <div class="row">
         <label class="col-md-4 col-xs-4 control-label">End date:</label>
         <div class="col-md-8 col-xs-8 input-group date" id="enddate" data-date="{{enddate}}" data-date-format="yyyy-mm-dd">
@@ -20,20 +21,25 @@
           <span class="input-group-addon"><i class="glyphicon glyphicon-calendar"></i></span>
         </div>
       </div>
-      <div class="row">
-        <label class="col-md-4 col-xs-4 control-label">Query:</label>
-        <input class="col-md-8 col-xs-8" type="text" name="query" value="{{query}}"/>
-      </div>
-      <div class="row">
-        <label class="col-md-4 col-xs-4 control-label">Filters:</label>
-        <input class="col-md-8 col-xs-8" type="text" name="filters" value="{{filters}}"/></p>
-      </div>
-      <div class="row">
-      <div class="pullright">
-        <p><small><em>Separate multiple filters or queries using ';'</em></small></p>
-        <input class="pullright" type="submit" value="Download"/>
-      </div>
+
+      <input type="hidden" id="filters_val" name="query" value="{{query}}"></select>
+      <input type="hidden" id="filters_val" name="filters" value="{{filters}}"></select>
     </form>
+
+    <div class="row">
+      <label class="col-md-4 col-xs-4 control-label">Query:</label>
+      <select multiple id="query"></select>
+    </div>
+
+    <div class="row">
+      <label class="col-md-4 col-xs-4 control-label">Filters:</label>
+      <select multiple id="filters"></select>
+    </div>
+
+    <div class="row pullright">
+      <input id="submit" class="pullright" type="submit" value="Download"/>
+    </div>
+
     {% if errors %}
     <div class="row alert alert-danger">
       <h3>Warning!</h3>
@@ -50,6 +56,40 @@
 {% endblock %}
 
 {% block js %}
-$('#startdate').datepicker({format: 'yyyy-mm-dd'});
-$('#enddate').datepicker({format: 'yyyy-mm-dd'});
+(function(ns){
+  ns.addDatePicker = function(id){
+    $('#'+id).datepicker({format: 'yyyy-mm-dd'});
+  }
+  ns.addTagSelect = function(id, initVals){
+    var input = $('#'+id),
+      hid = $('input[name='+id+']'),
+      getHid = function(){ return hid.val().split(/\|/)},
+      formatHid = function(vals){
+        console.log(vals)
+        hid.val(vals.filter(function(v){ return v }).join('|'));
+      };
+    input.tagsinput();
+    initVals.split(/\|/).forEach(function(val){
+      input.tagsinput('add', val);
+    });
+    $(input).on('itemAdded', function(e){
+      var values = getHid();
+      values.push(e.item);
+      formatHid(values);
+    }).on('itemRemoved', function(e){
+      formatHid(getHid().filter(function(v){ return v !== e.item }))
+    });
+  }
+  ns.submit = function(){
+    $('form').submit();
+  }
+  $(document).ready(function(){
+    ns.addDatePicker('startdate');
+    ns.addDatePicker('enddate');
+    ns.addTagSelect('query', "{{query}}");
+    ns.addTagSelect('filters', "{{filters}}");
+    $('#submit').on('click', ns.submit);
+    $('.bootstrap-tagsinput').addClass('col-md-8 col-xs-8')
+  });
+})(window.gazouilloireExportForm = window.gazouilloireExportForm || {});
 {% endblock %}
