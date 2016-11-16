@@ -153,6 +153,6 @@ elif len(sys.argv) > 2:
         query["$or"].append({"text": re.compile(arg.replace(' ', '\s+'), re.I)})
 
 print ",".join(keys)
-for t in db.find(query, sort=[("_id", -1)]):
+for t in db.find(query, sort=[("_id", 1)]):
     print ",".join(format_csv(get_field(k, t)) for k in keys)
 

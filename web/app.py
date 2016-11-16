@@ -71,7 +71,7 @@ def download():
             query["$and"].append({
               "text": {"$not": re.compile(r"%s" % q, re.I)}
             })
-    mongoiterator = mongodb.find(query, sort=[("_id", -1)])
+    mongoiterator = mongodb.find(query, sort=[("_id", 1)])
     csv = export_csv(mongoiterator)
     res = make_response(csv)
     res.headers["Content-Type"] = "text/csv; charset=UTF-8"
