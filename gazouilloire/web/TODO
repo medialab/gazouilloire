@@ -1,5 +1,4 @@
 - localstorage keep filters
-- prod wsgi
 - sugar : 
  + stats total tweets
  + most hashtags

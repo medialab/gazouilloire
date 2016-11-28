@@ -6,3 +6,5 @@ runlog.txt*
 *.csv
 *.zip
 *.tmp
+gazouilloire/web/apache.conf
+gazouilloire/web/web.wsgi

@@ -8,7 +8,7 @@ from tweets import export_csv
 from flask import Flask, render_template, request, make_response
 
 try:
-    with open(os.path.join(os.path.dirname(__file__), '..', 'config.json')) as confile:
+    with open(os.path.join(os.path.dirname(__file__), '..', '..', 'config.json')) as confile:
          conf = json.loads(confile.read())
 except Exception as e:
     sys.stderr.write("ERROR: Impossible to read config.json: %s %s" % (type(e), e))
