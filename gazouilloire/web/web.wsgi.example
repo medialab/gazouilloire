@@ -1,0 +1,9 @@
+import os
+
+# Here set up the absolute path of gazouilloire's virtualenv
+venv_path = '/home/gazou/.virtualenvs/gazouilloire/'
+
+activate_this = os.path.expanduser(os.path.join(venv_path, 'bin', 'activate_this.py'))
+execfile(activate_this, dict(__file__=activate_this))
+
+from gazouilloire.web.app import app as application
