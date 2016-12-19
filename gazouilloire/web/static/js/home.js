@@ -77,5 +77,6 @@
       $("#selected_val").val(d.currentTarget.checked ? "checked" : "");
     });
     $('.bootstrap-tagsinput').addClass('col-md-8 col-xs-8')
+    $('form').on('change', function(){console.log("WOUP")});
   });
 })(window.gazouilloire = window.gazouilloire || {});
