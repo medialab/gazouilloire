@@ -32,14 +32,9 @@
       {% block content %}
       {% endblock %}
     </div>
-
     <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/bootstrap-datepicker.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/bootstrap-tagsinput.min.js') }}"></script>
-    <script>
-      {% block js %}
-      {% endblock %}
-    </script>
+    {% block importJS %}
+    {% endblock %}
   </body>
 </html>

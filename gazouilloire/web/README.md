@@ -1,5 +1,14 @@
-#Install
+# Gazouilloire Web exports tool
 
+Using the same virtualenv/dependencies as gazouilloire
+
+## Development
+
+```
+python app.py
+```
+
+## Production
 
 - Install mod_wsgi
 

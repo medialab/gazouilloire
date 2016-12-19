@@ -22,7 +22,7 @@
         </div>
       </div>
 
-      <input type="hidden" id="filters_val" name="query" value="{{query}}"></select>
+      <input type="hidden" id="query_val" name="query" value="{{query}}"></select>
       <input type="hidden" id="filters_val" name="filters" value="{{filters}}"></select>
     </form>
 
@@ -55,41 +55,8 @@
   <div class="col-md-3"></div>
 {% endblock %}
 
-{% block js %}
-(function(ns){
-  ns.addDatePicker = function(id){
-    $('#'+id).datepicker({format: 'yyyy-mm-dd'});
-  }
-  ns.addTagSelect = function(id, initVals){
-    var input = $('#'+id),
-      hid = $('input[name='+id+']'),
-      getHid = function(){ return hid.val().split(/\|/)},
-      formatHid = function(vals){
-        console.log(vals)
-        hid.val(vals.filter(function(v){ return v }).join('|'));
-      };
-    input.tagsinput();
-    initVals.split(/\|/).forEach(function(val){
-      input.tagsinput('add', val);
-    });
-    $(input).on('itemAdded', function(e){
-      var values = getHid();
-      values.push(e.item);
-      formatHid(values);
-    }).on('itemRemoved', function(e){
-      formatHid(getHid().filter(function(v){ return v !== e.item }))
-    });
-  }
-  ns.submit = function(){
-    $('form').submit();
-  }
-  $(document).ready(function(){
-    ns.addDatePicker('startdate');
-    ns.addDatePicker('enddate');
-    ns.addTagSelect('query', "{{query}}");
-    ns.addTagSelect('filters', "{{filters}}");
-    $('#submit').on('click', ns.submit);
-    $('.bootstrap-tagsinput').addClass('col-md-8 col-xs-8')
-  });
-})(window.gazouilloireExportForm = window.gazouilloireExportForm || {});
+{% block importJS %}
+  <script src="{{ url_for('static', filename='js/bootstrap-datepicker.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/bootstrap-tagsinput.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/home.js') }}"></script>
 {% endblock %}
