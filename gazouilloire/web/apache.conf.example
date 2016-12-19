@@ -1,8 +1,8 @@
 WSGISocketPrefix run/wsgi
 <VirtualHost *:80>
     WSGIDaemonProcess gazouilloire.web user=apache group=apache threads=5
-    WSGIScriptAlias /gazouilloire /home/gazou/gazouilloire/gazouilloire/web/web.wsgi
-    <Directory /home/gazou/gazouilloire/gazouilloire/web>
+    WSGIScriptAlias /gazouilloire PATH_TO_GAZOUILLOIRE/gazouilloire/web/web.wsgi
+    <Directory PATH_TO_GAZOUILLOIRE/gazouilloire/web>
         WSGIProcessGroup gazouilloire.web
         WSGIApplicationGroup %{GLOBAL}
         Order allow,deny
