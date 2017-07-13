@@ -187,7 +187,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
 
         try:
             # keywords tracked on stream
-            filter_keywords = [k.lstrip('@').strip().lower().encode('utf-8') for k in keywords + extra_keywords if " OR " not in k]
+            filter_keywords = [k.strip().lower().encode('utf-8') for k in keywords + extra_keywords if " OR " not in k and not k.startswith('@')]
             for k in keywords + extra_keywords:
                 if " OR " in k:
                     if re_andor.match(k):
