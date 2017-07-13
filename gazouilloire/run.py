@@ -26,10 +26,14 @@ from math import pi, sin, cos, acos
 def log(typelog, text):
     sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
 
-def depiler(pile, pile_catchup, pile_links, pile_medias, mongoconf, locale, exit_event, debug=False):
+def depiler(pile, pile_deleted, pile_catchup, pile_links, pile_medias, mongoconf, locale, exit_event, debug=False):
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     coll = db['tweets']
-    while not exit_event.is_set() or not pile.empty():
+    while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
+        while not pile_deleted.empty():
+            todelete = pile_deleted.get()
+            coll.update(spec={'_id': todelete}, document={'$set': {'deleted': True}})
+
         todo = []
         while not pile.empty():
             todo.append(pile.get())
@@ -162,7 +166,7 @@ def format_keyword(k):
         k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
     return urllib.quote(k.encode('utf-8'), '')
 
-def streamer(pile, streamco, keywords, timed_keywords, geocode, exit_event, debug=False):
+def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geocode, exit_event, debug=False):
     while not exit_event.is_set():
         ts = time.time()
         extra_keywords = []
@@ -182,7 +186,7 @@ def streamer(pile, streamco, keywords, timed_keywords, geocode, exit_event, debu
         log('INFO', 'Starting stream track until %s' % end_time)
 
         try:
-            # TODO HANDLE USERS FOR STREAMING VIA GET IDS PUIS FOLLOW
+            # keywords tracked on stream
             filter_keywords = [k.lstrip('@').strip().lower().encode('utf-8') for k in keywords + extra_keywords if " OR " not in k]
             for k in keywords + extra_keywords:
                 if " OR " in k:
@@ -194,10 +198,26 @@ def streamer(pile, streamco, keywords, timed_keywords, geocode, exit_event, debu
                         filter_keywords += combis
                     else:
                         log("WARNING", 'Ignoring keyword %s to streaming API, please use syntax with simple keywords separated by spaces or such as "(KEYW1 OR KEYW2) (KEYW3 OR KEYW4 OR KEYW5) (KEYW6)"' % k)
+
+            # users followed on stream
+            users = [k.lstrip('@').strip().lower().encode('utf-8') for k in keywords + extra_keywords if k.startswith('@')]
+            keep_users = list(users)
+            filter_users = []
+            while users:
+                for u in resco.users.lookup(screen_name=','.join(users[0:100]), include_entities=False):
+                    filter_users.append(u['id_str'])
+                users = users[100:]
+
+            # prepare stream query arguments
+            args = {'filter_level': 'none', 'stall_warnings': 'true'}
             if geocode:
-                streamiter = streamco.statuses.filter(locations=geocode, filter_level='none', stall_warnings='true')
+                args['locations'] = geocode
             else:
-                streamiter = streamco.statuses.filter(track=",".join(filter_keywords), filter_level='none', stall_warnings='true')
+                if filter_keywords:
+                    args['track'] = ",".join(filter_keywords)
+                if filter_users:
+                    args['follow'] = ",".join(filter_users)
+            streamiter = streamco.statuses.filter(**args)
         except KeyboardInterrupt:
             log("INFO", "closing streamer...")
             exit_event.set()
@@ -239,12 +259,23 @@ def streamer(pile, streamco, keywords, timed_keywords, geocode, exit_event, debu
                                 keep = True
                                 break
                         if not keep:
+                            tmpauthor = msg.get('screen_name').lower()
+                            for u in keep_users:
+                                if "@%s" % u in tmptext or u == tmpauthor:
+                                    keep = True
+                                    break
+                        if not keep:
                             continue
                     pile.put(dict(msg))
                     if debug:
                         log("DEBUG", "[stream] +1 tweet")
                 else:
-                    log("INFO", "Got special data: %s" % str(msg))
+                    if 'delete' in msg and 'status' in msg['delete'] and 'id_str' in msg['delete']['status']:
+                        pile_deleted.put(msg['delete']['status']['id_str'])
+                        if debug:
+                            log("DEBUG", "[stream] -1 tweet (deleted by user)")
+                    else:
+                        log("INFO", "Got special data: %s" % str(msg))
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
             log("WARNING", "Stream connection lost, reconnecting in a sec... (%s: %s)" % (type(e), e))
         except:
@@ -442,6 +473,7 @@ if __name__=='__main__':
         if not os.path.exists(medias_dir):
             os.makedirs(medias_dir)
     pile = Queue()
+    pile_deleted = Queue()
     pile_catchup = Queue() if grab_conversations else None
     pile_links = Queue() if resolve_links else None
     pile_medias = Queue() if dl_medias else None
@@ -449,7 +481,7 @@ if __name__=='__main__':
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     exit_event = Event()
-    depile = Process(target=depiler, args=(pile, pile_catchup, pile_links, pile_medias, conf['mongo'], locale, exit_event, conf['debug']))
+    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_links, pile_medias, conf['mongo'], locale, exit_event, conf['debug']))
     depile.daemon = True
     depile.start()
     if grab_conversations:
@@ -465,7 +497,7 @@ if __name__=='__main__':
         download.daemon = True
         download.start()
     signal.signal(signal.SIGINT, default_handler)
-    stream = Process(target=streamer, args=(pile, StreamConn, conf['keywords'], conf['time_limited_keywords'], streamgeocode, exit_event, conf['debug']))
+    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['time_limited_keywords'], streamgeocode, exit_event, conf['debug']))
     stream.daemon = True
     stream.start()
     search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['time_limited_keywords'], locale, searchgeocode, exit_event, conf['debug']))

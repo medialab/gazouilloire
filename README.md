@@ -27,11 +27,12 @@ HowTo
 
 ```
 
-- Write down the list of desired **keywords** as json array.
+- Write down the list of desired **keywords** and **@users** as json array.
   
   ```json
     "keywords": [
-        "amour"
+        "amour",
+        "@medialab_scpo"
     ],
   ```
   Note that there are two possibilities to filter further:
