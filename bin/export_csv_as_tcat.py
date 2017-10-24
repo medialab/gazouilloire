@@ -4,6 +4,7 @@
 import json, sys, re
 from datetime import datetime
 from pymongo import MongoClient
+import progressbar
 
 with open('config.json') as confile:
     conf = json.loads(confile.read())
@@ -156,7 +157,8 @@ elif len(sys.argv) > 2:
     for arg in sys.argv[1:]:
         query["$or"].append({"text": re.compile(arg.replace(' ', '\s+'), re.I)})
 
+bar = progressbar.ProgressBar(max_value=db.count(query))
 print ",".join(keys)
-for t in db.find(query, sort=[("_id", 1)]):
+for t in bar(db.find(query, sort=[("_id", 1)])):
     print ",".join(format_csv(get_field(k, t)) for k in keys)
 

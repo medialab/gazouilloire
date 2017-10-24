@@ -6,5 +6,6 @@ requests
 urllib3[secure]
 urlsresolver
 fake-useragent
+progressbar2
 csvkit
 flask
