@@ -60,6 +60,9 @@
     ns.addTagSelect('filters', $('#filters_val').val());
     $('#submit').on('click', ns.submit);
     $('#download').on('click', ns.download);
+    $('#selected').on('change', function(d){
+      $("#selected_val").val(d.currentTarget.checked ? "checked" : "");
+    });
     $('.bootstrap-tagsinput').addClass('col-md-8 col-xs-8')
     $('form').on('change', function(d){console.log("WOUP", d)});
   });

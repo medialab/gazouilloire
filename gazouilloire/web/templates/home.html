@@ -23,6 +23,7 @@
         </div>
       </div>
 
+      <input type="hidden" id="selected_val" name="selected" value="{{selected}}"></select>
       <input type="hidden" id="query_val" name="query" value="{{query}}"></select>
       <input type="hidden" id="filters_val" name="filters" value="{{filters}}"></select>
     </form>
@@ -38,6 +39,11 @@
     </div>
 
     <div class="row pullright">
+      {% if selected_option %}
+      <input id="selected" name="selected" type="checkbox" {{selected}}>
+      <label for="selected">Only selected</label>
+      {% endif %}
+
       <input id="submit" class="pullright" type="submit" value="Preview"/>
     </div>
 

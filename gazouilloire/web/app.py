@@ -15,6 +15,7 @@ try:
 except Exception as e:
     sys.stderr.write("ERROR: Impossible to read config.json: %s %s" % (type(e), e))
     exit(1)
+selected_field =  conf.get('export', {}).get('selected_field', None)
 
 try:
     mongodb = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
@@ -32,6 +33,8 @@ def init_args():
       'enddate': date.today().isoformat(),
       'query': '',
       'filters': '',
+      'selected_option': selected_field is not None,
+      'selected': "checked" if selected_field else None,
       'errors': []
     }
 
@@ -56,6 +59,8 @@ def download():
                 args[arg.replace("date", "time")] = time.mktime(d.timetuple())
             except Exception as e:
                 args["errors"].append(u'Field "%s": « %s » is not a valid date (%s: %s)' % (arg, args[arg], type(e), e))
+    if selected_field:
+        args['selected'] = request.args.get('selected')
     if args.get("starttime", 0) >= args.get("endtime", 0):
         args["errors"].append('Field "startdate" should be older than field "enddate"')
     if args["errors"]:
@@ -80,6 +85,8 @@ def queryData(args):
             query["$and"].append({
               "text": {"$not": re.compile(r"%s" % q, re.I)}
             })
+    if selected_field and args['selected'] == 'checked':
+        query["$and"].append({selected_field: True})
     mongoiterator = mongodb.find(query, sort=[("_id", 1)])
     csv = export_csv(mongoiterator)
     res = make_response(csv)
