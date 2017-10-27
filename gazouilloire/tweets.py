@@ -69,6 +69,8 @@ def prepare_tweet(tweet, locale=None):
         for field in tweet["extended_tweet"]:
             tweet[field] = tweet["extended_tweet"][field]
     text = tweet.get('full_text', tweet.get('text', ''))
+    if not text:
+        print "WARNING, no text for tweet %s" % "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str'])
     rti = None
     rtu = None
     if "retweeted_status" in tweet and tweet['retweeted_status']['id_str'] != tweet['id_str']:
