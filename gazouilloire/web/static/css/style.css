@@ -26,11 +26,14 @@ label {
 html input[type=submit][disabled] {
   opacity: 0.5;
 }
+input[type=checkbox] {
+  margin: 12px 0px;
+}
 #loader {
   display: none;
   position: absolute;
   left: 50%;
 }
-#preview {
+#errors, #preview, #nomatch {
   display: none;
 }

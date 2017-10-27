@@ -38,25 +38,21 @@
       <select multiple id="filters"></select>
     </div>
 
-    <div class="row pullright">
-      {% if selected_option %}
+    {% if selected_option %}
+    <div class="row">
+      <label class="col-md-4 col-xs-4 control-label">Only selected</label>
       <input id="selected" name="selected" type="checkbox" {{selected}}>
-      <label for="selected">Only selected</label>
-      {% endif %}
+    </div>
+    {% endif %}
 
+    <div class="row pullright">
       <input id="submit" class="pullright" type="submit" value="Preview"/>
     </div>
 
-    {% if errors %}
-    <div class="row alert alert-danger">
+    <div id="errors" class="row alert alert-danger">
       <h3>Warning!</h3>
-      <ul>
-      {% for error in errors %}
-        <li>{{error}}</li>
-      {% endfor %}
-      </ul>
+      <ul></ul>
     </div>
-    {% endif %}
 
   </div>
   <div class="col-md-3"></div>
@@ -64,6 +60,9 @@
   <div class="row">
   <div class="col-md-12">
     <img id="loader" src="{{ url_for('static', filename='img/loader.gif') }}"/>
+    <div id="nomatch">
+      <h3>No match!</h3>
+    </div>
     <div id="preview">
       <h3><input id="download" type="submit" value="Download"/></h3>
       <table></table>

@@ -8,7 +8,6 @@
       hid = $('input[name='+id+']'),
       getHid = function(){ return hid.val().split(/\|/)},
       formatHid = function(vals){
-        console.log(vals)
         hid.val(vals.filter(function(v){ return v }).join('|'));
       };
     input.tagsinput();
@@ -27,6 +26,9 @@
     var dataUrl = $("form").attr("action") + "?" + $("form").serialize();
     $('#loader').show();
     $('#submit').attr("disabled", "disabled");
+    $('#errors').hide();
+    $('#errors ul').empty();
+    $('#nomatch').hide();
     if (ns.table) {
       $('#preview').hide();
       ns.table.destroy();
@@ -34,10 +36,21 @@
     }
     d3.csv(dataUrl, function(d){
       return d;
-    }, function(data){
+    }, function(error, data){
       $('#loader').hide();
       $('#submit').attr("disabled", null);
-      if (!data.length) return;
+      if (error)
+        return console.log(data, error);
+      if (data.columns[0] === "error") {
+        $('#errors').show();
+        return d3.select('#errors ul')
+          .selectAll('li')
+          .data(data).enter()
+          .append('li')
+          .text(function(d){ return d.error});
+      }
+      if (!data.length)
+        return $('#nomatch').show();
       $('#preview').show();
       ns.table = $('#preview table').DataTable({
         data: data,
@@ -64,6 +77,5 @@
       $("#selected_val").val(d.currentTarget.checked ? "checked" : "");
     });
     $('.bootstrap-tagsinput').addClass('col-md-8 col-xs-8')
-    $('form').on('change', function(d){console.log("WOUP", d)});
   });
 })(window.gazouilloire = window.gazouilloire || {});

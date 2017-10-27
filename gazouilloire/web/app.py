@@ -35,8 +35,7 @@ def init_args():
       'query': '',
       'filters': '',
       'selected_option': selected_field is not None,
-      'selected': "checked" if selected_field else None,
-      'errors': []
+      'selected': "checked" if selected_field else None
     }
 
 @app.route("/")
@@ -47,10 +46,11 @@ def home():
 @app.route("/download")
 def download():
     args = init_args()
+    errors = []
     for arg in ['startdate', 'enddate', 'query', 'filters']:
         args[arg] = request.args.get(arg)
         if args[arg] is None:
-            args["errors"].append('Field "%s" missing' % arg)
+            errors.append('Field "%s" missing' % arg)
             args[arg] = ''
         if arg.endswith('date'):
             try:
@@ -59,13 +59,13 @@ def download():
                     d += timedelta(days=1)
                 args[arg.replace("date", "time")] = time.mktime(d.timetuple())
             except Exception as e:
-                args["errors"].append(u'Field "%s": « %s » is not a valid date (%s: %s)' % (arg, args[arg], type(e), e))
+                errors.append(u'Field "%s": « %s » is not a valid date (%s: %s)' % (arg, args[arg], type(e), e))
     if selected_field:
         args['selected'] = request.args.get('selected')
     if args.get("starttime", 0) >= args.get("endtime", 0):
-        args["errors"].append('Field "startdate" should be older than field "enddate"')
-    if args["errors"]:
-        return render_template("home.html", **args)
+        errors.append('Field "startdate" should be older than field "enddate"')
+    if errors:
+        return make_response("\n".join(["error"] + errors))
     return queryData(args)
 
 @cache.memoize(1800)
