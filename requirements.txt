@@ -10,3 +10,4 @@ progressbar2
 csvkit
 flask
 Flask-Caching
+flask-compress

@@ -7,6 +7,7 @@ from pymongo import MongoClient
 from export import export_csv
 from flask import Flask, render_template, request, make_response
 from flask_caching import Cache
+from flask_compress import Compress
 
 try:
     with open(os.path.join(os.path.dirname(__file__), '..', '..', 'config.json')) as confile:
@@ -22,6 +23,7 @@ except Exception as e:
     exit(1)
 
 app = Flask(__name__)
+Compress(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 def init_args():
