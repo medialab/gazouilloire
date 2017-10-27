@@ -3,6 +3,7 @@
 {% block content %}
   <h1>Export tweets</h1>
 
+  <div class="row">
   <div class="col-md-3"></div>
   <div class="col-md-6 form-group well">
     <form action="{{url_for('download')}}" method="get">
@@ -37,7 +38,7 @@
     </div>
 
     <div class="row pullright">
-      <input id="submit" class="pullright" type="submit" value="Download"/>
+      <input id="submit" class="pullright" type="submit" value="Preview"/>
     </div>
 
     {% if errors %}
@@ -53,6 +54,17 @@
 
   </div>
   <div class="col-md-3"></div>
+  </div>
+  <div class="row">
+  <div class="col-md-12">
+    <img id="loader" src="{{ url_for('static', filename='img/loader.gif') }}"/>
+    <div id="preview">
+      <h3><input id="download" type="submit" value="Download"/></h3>
+      <table></table>
+    </div>
+  </div>
+  </div>
+
 {% endblock %}
 
 {% block importJS %}

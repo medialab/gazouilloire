@@ -2,7 +2,7 @@
   ns.addDatePicker = function(id){
     $('#'+id).datepicker({format: 'yyyy-mm-dd'})
     .on('changeDate', function(e){console.log(e)});
-  }
+  };
   ns.addTagSelect = function(id, initVals){
     var input = $('#'+id),
       hid = $('input[name='+id+']'),
@@ -22,19 +22,45 @@
     }).on('itemRemoved', function(e){
       formatHid(getHid().filter(function(v){ return v !== e.item }))
     });
-  }
+  };
   ns.submit = function(){
+    var dataUrl = $("form").attr("action") + "?" + $("form").serialize();
+    $('#loader').show();
+    $('#submit').attr("disabled", "disabled");
+    if (ns.table) {
+      $('#preview').hide();
+      ns.table.destroy();
+      $('#preview table').empty();
+    }
+    d3.csv(dataUrl, function(d){
+      return d;
+    }, function(data){
+      $('#loader').hide();
+      $('#submit').attr("disabled", null);
+      if (!data.length) return;
+      $('#preview').show();
+      ns.table = $('#preview table').DataTable({
+        data: data,
+        columns: [
+          { data: 'id' },
+          { data: 'from_user_name' },
+          { data: 'text' },
+          { data: 'created_at' }
+        ]
+      });
+    });
+  };
+  ns.download = function(){
     $('form').submit();
-  }
+  };
   $(document).ready(function(){
     ns.addDatePicker('startdate');
     ns.addDatePicker('enddate');
     ns.addTagSelect('query', $('#query_val').val());
     ns.addTagSelect('filters', $('#filters_val').val());
     $('#submit').on('click', ns.submit);
+    $('#download').on('click', ns.download);
     $('.bootstrap-tagsinput').addClass('col-md-8 col-xs-8')
-    $('form').on('change', function(){console.log("WOUP")});
-    d3.csv('/api/histo').get(function(data){
-    })
+    $('form').on('change', function(d){console.log("WOUP", d)});
   });
-})(window.gazouilloireExportForm = window.gazouilloireExportForm || {});
+})(window.gazouilloire = window.gazouilloire || {});
