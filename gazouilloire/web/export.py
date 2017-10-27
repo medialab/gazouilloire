@@ -136,9 +136,10 @@ def get_coords(tw):
 
 isodate = lambda x: datetime.strptime(x, '%a %b %d %H:%M:%S +0000 %Y').isoformat()
 
-def export_csv(queryiterator):
+def export_csv(queryiterator, extra_fields=[]):
     output = []
-    output.append(",".join(fields))
+    out_fields = fields + extra_fields
+    output.append(",".join(out_fields))
     for t in queryiterator:
-        output.append(",".join(format_csv(get_field(k, t)) for k in fields))
+        output.append(",".join(format_csv(get_field(k, t)) for k in out_fields).decode('utf-8'))
     return "\n".join(output)

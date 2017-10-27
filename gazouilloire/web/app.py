@@ -16,6 +16,7 @@ except Exception as e:
     sys.stderr.write("ERROR: Impossible to read config.json: %s %s" % (type(e), e))
     exit(1)
 selected_field =  conf.get('export', {}).get('selected_field', None)
+extra_fields =  conf.get('export', {}).get('extra_fields', [])
 
 try:
     mongodb = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
@@ -88,7 +89,7 @@ def queryData(args):
     if selected_field and args['selected'] == 'checked':
         query["$and"].append({selected_field: True})
     mongoiterator = mongodb.find(query, sort=[("_id", 1)])
-    csv = export_csv(mongoiterator)
+    csv = export_csv(mongoiterator, extra_fields)
     res = make_response(csv)
     res.headers["Content-Type"] = "text/csv; charset=UTF-8"
     res.headers["Content-Disposition"] = "attachment; filename=tweets-%s-%s-%s.csv" % (args['startdate'], args['enddate'], args['query'])

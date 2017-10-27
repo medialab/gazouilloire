@@ -34,7 +34,8 @@
     "medias_directory": "medias",
     "timezone": "Europe/Paris",
     "export": {
-        "selected_field": "selected"
+        "selected_field": "selected",
+        "extra_fields": ["selected"]
     },
     "debug": false
 }
