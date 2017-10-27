@@ -8,3 +8,4 @@ runlog.txt*
 *.tmp
 gazouilloire/web/apache.conf
 gazouilloire/web/web.wsgi
+exclude_filters.txt
