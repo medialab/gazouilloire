@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import re
 from datetime import datetime
 
 fields = [
@@ -21,6 +22,8 @@ fields = [
   "to_user_name",
   "in_reply_to_status_id",
   "source",
+  "source_name",
+  "source_url",
   "location",
   "lat",
   "lng",
@@ -65,6 +68,8 @@ corresp_fields = {
     "to_user_name": "in_reply_to_screen_name",
     "in_reply_to_status_id": "in_reply_to_status_id_str",
     "source": str,
+    "source_name": lambda x: re.split(r"[<>]", x.get("source", "<>"))[2],
+    "source_url": lambda x: x.get("source", '"').split('"')[1],
     "location": "user_location",
     "lat": lambda x: get_coords(x)[1],
     "lng": lambda x: get_coords(x)[0],
