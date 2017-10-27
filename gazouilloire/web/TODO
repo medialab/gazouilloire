@@ -1,4 +1,7 @@
 - localstorage keep filters
+- export only IN
+- include extra_fields in output
+- Bonus : query on other fields
 - sugar : 
  + stats total tweets
  + most hashtags

@@ -9,3 +9,4 @@ fake-useragent
 progressbar2
 csvkit
 flask
+Flask-Caching

@@ -6,6 +6,7 @@ from datetime import date, timedelta, datetime
 from pymongo import MongoClient
 from export import export_csv
 from flask import Flask, render_template, request, make_response
+from flask_caching import Cache
 
 try:
     with open(os.path.join(os.path.dirname(__file__), '..', '..', 'config.json')) as confile:
@@ -21,6 +22,7 @@ except Exception as e:
     exit(1)
 
 app = Flask(__name__)
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 def init_args():
     return {
@@ -32,6 +34,7 @@ def init_args():
     }
 
 @app.route("/")
+@cache.cached(timeout=3600)
 def home():
     return render_template("home.html", **init_args())
 
@@ -55,6 +58,10 @@ def download():
         args["errors"].append('Field "startdate" should be older than field "enddate"')
     if args["errors"]:
         return render_template("home.html", **args)
+    return queryData(args)
+
+@cache.memoize(1800)
+def queryData(args):
     query = {
       "$and": [
         {"timestamp": {"$gte": args["starttime"]}},
