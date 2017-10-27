@@ -1,5 +1,4 @@
 - localstorage keep filters
-- include extra_fields in output
 - Bonus : query on other fields
 - sugar : 
  + stats total tweets
