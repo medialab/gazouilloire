@@ -27,7 +27,7 @@ def get_timestamp(t, locale, field='created_at'):
 nostr_field = lambda f: f.replace('_str', '')
 
 def grab_extra_meta(source, result):
-    for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "geo", "coordinates", "source", "truncated", "possibly_sensitive", "withheld_copyright", "withheld_scope", "withheld_countries", "retweet_count", "favorite_count"]:
+    for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "geo", "coordinates", "source", "truncated", "possibly_sensitive", "withheld_copyright", "withheld_scope", "withheld_countries", "retweet_count", "favorite_count", "reply_count"]:
         if meta in source:
             result[meta] = source[meta]
         elif nostr_field(meta) in source:
