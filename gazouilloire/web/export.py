@@ -18,6 +18,7 @@ fields = [
   "truncated",
   "retweet_count",
   "favorite_count",
+  "reply_count",
   "lang",
   "to_user_name",
   "in_reply_to_status_id",
@@ -64,6 +65,7 @@ corresp_fields = {
     "truncated": bool,       # unnecessary since we rebuild text from RTs
     "retweet_count": int,
     "favorite_count": int,
+    "reply_count": int,
     "lang": str,
     "to_user_name": "in_reply_to_screen_name",
     "in_reply_to_status_id": "in_reply_to_status_id_str",
