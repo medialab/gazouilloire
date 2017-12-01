@@ -26,8 +26,9 @@ elif len(sys.argv) > 2:
     for arg in sys.argv[1:]:
         query["$or"].append({"text": re.compile(arg.replace(' ', '\s+'), re.I)})
 
-bar = progressbar.ProgressBar(max_value=db.count(query) - 1)
+count = db.count(query)
+bar = progressbar.ProgressBar(max_value=count)
 print ",".join(fields)
-for t in bar(db.find(query, sort=[("_id", 1)])):
+for t in bar(db.find(query, sort=[("_id", 1)], limit=count)):
     print ",".join(format_csv(get_field(k, t)) for k in fields)
 
