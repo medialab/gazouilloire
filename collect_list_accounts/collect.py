@@ -66,6 +66,7 @@ for i, row in enumerate(data):
     api_args['count'] = 200
     api_args['contributor_details'] = 1
     api_args['include_rts'] = 1
+    api_args['tweet_mode'] = "extended"
     tweets = wrapper(api.statuses.user_timeline, api_args)
     while tweets:
         for tw in tweets:
