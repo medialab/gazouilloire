@@ -54,7 +54,7 @@ fields = [
 corresp_fields = {
     "id": "_id",
     "time": "timestamp",
-    "created_at": lambda x: isodate(x['created_at']),
+    "created_at": lambda x: isodate(x.get("created_at", "")),
     "from_user_name": lambda x: x.get("user_screen_name", x.get("user_name", "")),
     "text": str,
     "filter_level": None,   # WTF is this?
@@ -91,7 +91,7 @@ corresp_fields = {
     "from_user_listed": "user_listed",
     "from_user_withheld_scope": "user_withheld_scope",
     "from_user_withheld_countries": lambda x: x.get("user_withheld_countries", []),      # Added since this is the most interesting info from withheld fields
-    "from_user_created_at": lambda x: isodate(x['user_created_at']),
+    "from_user_created_at": lambda x: isodate(x.get("user_created_at", "")),
     # Our extra fields:
     "retweeted_id": "retweet_id",
     "links": lambda x: x.get("proper_links", x.get("links", [])),
@@ -113,7 +113,11 @@ def search_field(field, tweet):
     if type(corresp_fields[field]) == str:
         return tweet.get(corresp_fields[field], 0 if field.endswith('count') else '')
     else:
-        return corresp_fields[field](tweet)
+        try:
+            return corresp_fields[field](tweet)
+        except Exception as e:
+            print >> sys.stderr, "WARNING: Can't apply export fonction for field %s to tweet %s\n%s: %s" % (field, tweet, type(e), e)
+            return ""
 
 def format_field(val):
     if type(val) == bool:
