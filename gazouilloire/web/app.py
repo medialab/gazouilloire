@@ -4,6 +4,7 @@
 import os, json, sys, re, time
 from datetime import date, timedelta, datetime
 from pymongo import MongoClient
+from bson.code import Code
 from export import export_csv
 from flask import Flask, render_template, request, make_response
 from flask_caching import Cache
@@ -42,6 +43,40 @@ def init_args():
 @cache.cached(timeout=3600)
 def home():
     return render_template("home.html", **init_args())
+
+@app.route("/api/histo")
+def timeline():
+
+    # TODO parse arg level + query
+    level = "day"
+
+    buildDate = "date.getFullYear()"
+    if level in "month day hour minute":
+        buildDate += "+'-'+(date.getMonth()+1)"
+    if level in "day hour minute":
+        buildDate += "+'-'+date.getDate()"
+    if level in "hour minute":
+        buildDate += "+' '+date.getHours()+'H'"
+    if level in "minute":
+        buildDate += "+date.getMinutes()"
+    dateKey = Code("""
+      function(doc){
+        var date = new Date(doc.created_at);
+        var dateKey = """+buildDate+""";
+        return {dat: dateKey};
+      }
+    """)
+
+    simpleSum = Code("""
+      function(doc, prev){
+        prev.ct++;
+      }
+    """)
+
+    # condition = parsedQuery
+    stats = mongodb.group(key=dateKey, condition={}, initial={"ct": 0}, reduce=simpleSum)
+    return make_response("time,count\n" + "\n".join(["%s,%s" % (el["dat"], el["ct"]) for el in stats]))
+
 
 @app.route("/download")
 def download():

@@ -37,3 +37,10 @@ input[type=checkbox] {
 #errors, #preview, #nomatch {
   display: none;
 }
+.bar rect {
+  fill: steelblue;
+}
+.bar text {
+  fill: #fff;
+  font: 10px sans-serif;
+}
