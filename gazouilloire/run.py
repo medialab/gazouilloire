@@ -125,7 +125,10 @@ def resolve_url(url, retries=5, user_agent=None):
         log("ERROR", "Could not resolve redirection for url %s (%s: %s)" % (url, type(e), e))
         return url
 
-# TODO store resolver state to fill missing links after restart
+# TODO :
+# - store resolver state to fill missing links after restart
+# - use goodlinks in exports
+# - add finalize task to run resolver on all tweets in DB with links but no proper_links
 def resolver(pile_links, mongoconf, exit_event, debug=False):
     ua = UserAgent()
     ua.update()
@@ -134,21 +137,22 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
     tweetscoll = db['tweets']
     while not exit_event.is_set() or not pile_links.empty():
         todo = []
-        while not pile_links.empty() and len(todo) < 50:
+        while not pile_links.empty() and len(todo) < 500:
             todo.append(pile_links.get())
         if not todo:
             if not exit_event.is_set():
                 time.sleep(1)
             continue
         done = 0
+        urlstoclear = list(set([l for t in todo for l in t['links']]))
+        alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
         for tweet in todo:
             if exit_event.is_set():
                 continue
             gdlinks = []
             for link in tweet["links"]:
-                good = linkscoll.find_one({'_id': link})
-                if good:
-                    gdlinks.append(good['real'])
+                if link in alreadydone:
+                    gdlinks.append(alreadydone[link])
                     continue
                 good = resolve_url(link, user_agent=ua)
                 gdlinks.append(good)
@@ -157,7 +161,7 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
                     done += 1
             tweetscoll.update({'_id': tweet['_id']}, {'$set': {'proper_links': gdlinks}}, upsert=False)
         if debug and done:
-            log("DEBUG", "[links] +%s links resolved (%s waiting)" % (done, pile_links.qsize()))
+            log("DEBUG", "[links] +%s redirection links resolved (%s waiting)" % (done, pile_links.qsize()))
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
