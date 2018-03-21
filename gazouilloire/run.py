@@ -538,4 +538,3 @@ if __name__=='__main__':
         depile.join()
     except KeyboardInterrupt:
         exit_event.set()
-        depile.join()
