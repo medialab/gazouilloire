@@ -24,7 +24,10 @@ from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 
 def log(typelog, text):
-    sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
+    try:
+        sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
+    except UnicodeEncodeError:
+        sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text.encode('ascii', 'ignore')))
 
 def depiler(pile, pile_deleted, pile_catchup, pile_links, pile_medias, mongoconf, locale, exit_event, debug=False):
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
