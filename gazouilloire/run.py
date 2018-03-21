@@ -154,7 +154,7 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
                     done += 1
             tweetscoll.update({'_id': tweet['_id']}, {'$set': {'proper_links': gdlinks}}, upsert=False)
         if debug and done:
-            log("DEBUG", "[links] +%s links resolved (out of %s/%s)" % (done, len(todo), pile_links.qsize()))
+            log("DEBUG", "[links] +%s links resolved (%s waiting)" % (done, pile_links.qsize()))
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
