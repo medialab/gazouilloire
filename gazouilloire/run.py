@@ -297,6 +297,14 @@ def get_twitter_rates(conn):
     rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
     return rate_limits['reset'], rate_limits['limit'], rate_limits['remaining']
 
+def read_search_state():
+    with open(".search_state.json") as f:
+        return json.load(f)
+
+def write_search_state(state):
+    with open(".search_state.json", "w") as f:
+        json.dump(state, f)
+
 def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_event, debug=False):
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco)
@@ -313,7 +321,13 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_eve
             fmtkeywords.append(format_keyword(k))
     queries += [" OR ".join(a) for a in chunkize(fmtkeywords, 3)]
     timed_queries = {}
-    queries_since_id = [0 for _ in queries + timed_keywords.items()]
+    state = {q: 0 for q in queries + [format_keyword(k) for k in timed_keywords.keys()]}
+    try:
+        queries_since_id = read_search_state()
+        assert queries_since_id and state.keys() == queries_since_id.keys()
+        log("INFO", "Search queries restarting from previous state: %s" % queries_since_id)
+    except:
+        queries_since_id = state
 
     timegap = 1 + len(queries)
     while not exit_event.is_set():
@@ -344,16 +358,16 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_eve
         if debug:
             log("DEBUG", "Starting search queries with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
 
-        for i, query in enumerate(queries + timed_queries.items()):
+        for query in sorted(queries_since_id.keys()):
 
-            planning = None
-            if type(query) is tuple:
-                planning = query[1]
+            try:
+                planning = timed_queries[query]
                 if not planning:
                     continue
-                query = query[0]
+            except KeyError:
+                planning = None
 
-            since = queries_since_id[i]
+            since = queries_since_id[query]
             max_id = 0
             while left and not exit_event.is_set():
                 args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent', 'tweet_mode': 'extended'}
@@ -361,8 +375,8 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_eve
                     args['geocode'] = geocode
                 if max_id:
                     args['max_id'] = str(max_id)
-                if queries_since_id[i]:
-                    args['since_id'] = str(queries_since_id[i])
+                if queries_since_id[query]:
+                    args['since_id'] = str(queries_since_id[query])
                 try:
                     res = searchco.search.tweets(**args)
                 except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
@@ -398,7 +412,8 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_eve
                     break
                 if debug:
                     log("DEBUG", "[search] +%d tweets (%s)" % (news, query))
-            queries_since_id[i] = since
+            queries_since_id[query] = since
+            write_search_state(queries_since_id)
         if not exit_event.is_set():
             time.sleep(max(timegap, next_reset - time.time() - 2*left))
       except KeyboardInterrupt:

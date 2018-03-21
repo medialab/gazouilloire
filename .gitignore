@@ -2,6 +2,7 @@ config.py
 config.json
 *.pyc
 backups
+.search_state.json
 runlog.txt*
 *.csv
 *.zip
