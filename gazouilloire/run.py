@@ -125,6 +125,7 @@ def resolve_url(url, retries=5, user_agent=None):
         log("ERROR", "Could not resolve redirection for url %s (%s: %s)" % (url, type(e), e))
         return url
 
+# TODO store resolver state to fill missing links after restart
 def resolver(pile_links, mongoconf, exit_event, debug=False):
     ua = UserAgent()
     ua.update()
