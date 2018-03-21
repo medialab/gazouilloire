@@ -296,9 +296,10 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
 
 chunkize = lambda a, n: [a[i:i+n] for i in xrange(0, len(a), n)]
 
-def get_twitter_rates(conn):
+def get_twitter_rates(conn, conn2):
     rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
-    return rate_limits['reset'], rate_limits['limit'], rate_limits['remaining']
+    rate_limits2 = conn2.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
+    return min(rate_limits['reset'], rate_limits2['reset']), (rate_limits['limit'] + rate_limits2['limit']), (rate_limits['remaining'] + rate_limits2['remaining'])
 
 def read_search_state():
     with open(".search_state.json") as f:
@@ -308,12 +309,13 @@ def write_search_state(state):
     with open(".search_state.json", "w") as f:
         json.dump(state, f)
 
-def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_event, debug=False):
+def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocode, exit_event, debug=False):
     try:
-        next_reset, max_per_reset, left = get_twitter_rates(searchco)
+        next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2)
     except:
-        log("ERROR", "Connecting to Twitter API via OAuth2 sign, could not get rate limits")
+        log("ERROR", "Connecting to Twitter API: could not get rate limits")
         sys.exit(1)
+    curco = searchco
 
     queries = []
     fmtkeywords = []
@@ -337,7 +339,7 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_eve
       try:
         if time.time() > next_reset:
             try:
-                next_reset, _, left = get_twitter_rates(searchco)
+                next_reset, _, left = get_twitter_rates(searchco, searchco2)
             except:
                 next_reset += 15*60
                 left = max_per_reset
@@ -381,12 +383,17 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_eve
                 if queries_since_id[query]:
                     args['since_id'] = str(queries_since_id[query])
                 try:
-                    res = searchco.search.tweets(**args)
-                except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
-                    log("WARNING", "Search connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
-                    if not exit_event.is_set():
-                        time.sleep(2)
-                    continue
+                    res = curco.search.tweets(**args)
+                except:
+                    curco = searchco if curco == searchco2 else searchco2
+                    log("INFO", "Switching search connexion to OAuth%s" % (2 if curco == searchco2 else ""))
+                    try:
+                        res = curco.search.tweets(**args)
+                    except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
+                        log("WARNING", "Search connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
+                        if not exit_event.is_set():
+                            time.sleep(2)
+                        continue
                 tweets = res.get('statuses', [])
                 left -= 1
                 if not len(tweets):
@@ -444,7 +451,8 @@ if __name__=='__main__':
     try:
         oauth = OAuth(conf['twitter']['oauth_token'], conf['twitter']['oauth_secret'], conf['twitter']['key'], conf['twitter']['secret'])
         oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
-        SearchConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth2, secure=True)
+        SearchConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
+        SearchConn2 = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth2, secure=True)
         ResConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
         StreamConn = TwitterStream(domain="stream.twitter.com", api_version="1.1", auth=oauth, secure=True, block=False, timeout=10)
     except Exception as e:
@@ -521,7 +529,7 @@ if __name__=='__main__':
     stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['time_limited_keywords'], streamgeocode, exit_event, conf['debug']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['time_limited_keywords'], locale, searchgeocode, exit_event, conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['time_limited_keywords'], locale, searchgeocode, exit_event, conf['debug']))
     search.start()
     def stopper(*args):
         exit_event.set()
