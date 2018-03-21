@@ -117,7 +117,7 @@ def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
 re_clean_mobile_twitter = re.compile(r'^(https?://)mobile\.(twitter\.)')
 def resolve_url(url, retries=5, user_agent=None):
     try:
-        good = resolve_redirects(url, user_agent=user_agent.random, verify=False)
+        good = resolve_redirects(url, user_agent=user_agent.random, verify=False, timeout=5)
         return re_clean_mobile_twitter.sub(r'\1\2', good)
     except Exception as e:
         if retries:
@@ -133,7 +133,7 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
     tweetscoll = db['tweets']
     while not exit_event.is_set() or not pile_links.empty():
         todo = []
-        while not pile_links.empty() and len(todo) < 10:
+        while not pile_links.empty() and len(todo) < 50:
             todo.append(pile_links.get())
         if not todo:
             if not exit_event.is_set():
