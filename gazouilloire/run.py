@@ -301,7 +301,7 @@ def get_twitter_rates(conn):
 
 def read_search_state():
     with open(".search_state.json") as f:
-        return json.load(f)
+        return {k.encode("utf-8"): v for k, v in json.load(f).items()}
 
 def write_search_state(state):
     with open(".search_state.json", "w") as f:
@@ -326,8 +326,8 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_eve
     state = {q: 0 for q in queries + [format_keyword(k) for k in timed_keywords.keys()]}
     try:
         queries_since_id = read_search_state()
-        assert queries_since_id and state.keys() == queries_since_id.keys()
-        log("INFO", "Search queries restarting from previous state: %s" % queries_since_id)
+        assert queries_since_id and sorted(state.keys()) == sorted(queries_since_id.keys())
+        log("INFO", "Search queries restarting from previous state.")
     except:
         queries_since_id = state
 
