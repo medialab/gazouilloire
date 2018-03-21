@@ -385,6 +385,10 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                 try:
                     res = curco.search.tweets(**args)
                 except:
+                    try:
+                        next_reset, _, left = get_twitter_rates(searchco, searchco2)
+                    except:
+                        pass
                     curco = searchco if curco == searchco2 else searchco2
                     log("INFO", "Switching search connexion to OAuth%s" % (2 if curco == searchco2 else ""))
                     try:
