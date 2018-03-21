@@ -141,6 +141,8 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
             continue
         done = 0
         for tweet in todo:
+            if exit_event.is_set():
+                continue
             gdlinks = []
             for link in tweet["links"]:
                 good = linkscoll.find_one({'_id': link})
