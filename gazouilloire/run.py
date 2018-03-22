@@ -156,7 +156,10 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
                     continue
                 good = resolve_url(link, user_agent=ua)
                 gdlinks.append(good)
-                linkscoll.save({'_id': link, 'real': good})
+                try:
+                    linkscoll.save({'_id': link, 'real': good})
+                except:
+                    pass
                 if link != good:
                     done += 1
             tweetscoll.update({'_id': tweet['_id']}, {'$set': {'proper_links': gdlinks}}, upsert=False)
