@@ -379,6 +379,15 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
             except KeyError:
                 planning = None
 
+            # TODO: refacto reset/left blocks
+            try:
+                next_reset, _, left = get_twitter_rates(searchco, searchco2)
+            except:
+                pass
+            if not left:
+                log("WARNING", "Stalling search queries with rate exceeded for the next %s seconds" % max(0, int(next_reset - time.time())))
+                if not exit_event.is_set():
+                    time.sleep(timegap + max(0, next_reset - time.time()))
             try:
                 next_reset, _, left = get_twitter_rates(searchco, searchco2)
             except:
@@ -397,6 +406,14 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                 try:
                     res = curco.search.tweets(**args)
                 except:
+                    try:
+                        next_reset, _, left = get_twitter_rates(searchco, searchco2)
+                    except:
+                        pass
+                    if not left:
+                        log("WARNING", "Stalling search queries with rate exceeded for the next %s seconds" % max(0, int(next_reset - time.time())))
+                        if not exit_event.is_set():
+                            time.sleep(timegap + max(0, next_reset - time.time()))
                     try:
                         next_reset, _, left = get_twitter_rates(searchco, searchco2)
                     except:
