@@ -351,12 +351,12 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                 next_reset += 15*60
                 left = max_per_reset
         if not left:
-            log("WARNING", "Stalling search queries with rate exceeded for the next %s seconds" % max(0, int(next_reset - time.time())))
+            log("INFO", "Stalling search queries with rate exceeded for the next %s seconds" % max(0, int(next_reset - time.time())))
             if not exit_event.is_set():
                 time.sleep(timegap + max(0, next_reset - time.time()))
             continue
 
-        log("DEBUG", "Starting search queries cycle with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
+        log("INFO", "Starting search queries cycle with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
 
         now = time.time()
         last_week = now - 60*60*24*7
@@ -378,24 +378,20 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
             except KeyError:
                 planning = None
 
-            # TODO: refacto reset/left blocks
-            try:
-                next_reset, _, left = get_twitter_rates(searchco, searchco2)
-            except:
-                pass
-            if not left:
-                log("WARNING", "Stalling search queries with rate exceeded for the next %s seconds" % max(0, int(next_reset - time.time())))
-                if not exit_event.is_set():
-                    time.sleep(timegap + max(0, next_reset - time.time()))
-            try:
-                next_reset, _, left = get_twitter_rates(searchco, searchco2)
-            except:
-                pass
-            log("DEBUG", "resume search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
-
             since = queries_since_id[query]
             max_id = 0
-            while left and not exit_event.is_set():
+            while not exit_event.is_set():
+                while not left:
+                    log("INFO", "Stalling search queries with rate exceeded for the next %s seconds" % max(0, int(next_reset - time.time())))
+                    if not exit_event.is_set():
+                        time.sleep(timegap + max(0, next_reset - time.time()))
+                    try:
+                        next_reset, _, left = get_twitter_rates(searchco, searchco2)
+                        if debug:
+                            log("DEBUG", "Resuming search '%s' with %d remaining calls for the next %s seconds" % (query, left, int(next_reset - time.time())))
+                    except:
+                        pass
+
                 args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent', 'tweet_mode': 'extended'}
                 if geocode:
                     args['geocode'] = geocode
@@ -406,19 +402,6 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                 try:
                     res = curco.search.tweets(**args)
                 except:
-                    try:
-                        next_reset, _, left = get_twitter_rates(searchco, searchco2)
-                    except:
-                        pass
-                    if not left:
-                        log("WARNING", "Stalling search queries with rate exceeded for the next %s seconds" % max(0, int(next_reset - time.time())))
-                        if not exit_event.is_set():
-                            time.sleep(timegap + max(0, next_reset - time.time()))
-                    try:
-                        next_reset, _, left = get_twitter_rates(searchco, searchco2)
-                    except:
-                        pass
-                    log("DEBUG", "resume search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
                     curco = searchco if curco == searchco2 else searchco2
                     log("INFO", "Switching search connexion to OAuth%s" % (2 if curco == searchco2 else ""))
                     try:
