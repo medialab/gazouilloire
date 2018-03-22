@@ -379,6 +379,11 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
             except KeyError:
                 planning = None
 
+            try:
+                next_reset, _, left = get_twitter_rates(searchco, searchco2)
+            except:
+                pass
+
             since = queries_since_id[query]
             max_id = 0
             while left and not exit_event.is_set():
