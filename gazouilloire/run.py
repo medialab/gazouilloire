@@ -356,6 +356,8 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                 time.sleep(timegap + max(0, next_reset - time.time()))
             continue
 
+        log("DEBUG", "Starting search queries cycle with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
+
         now = time.time()
         last_week = now - 60*60*24*7
         for keyw, planning in timed_keywords.items():
@@ -366,9 +368,6 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                 t1 = date_to_time(times[1])
                 if last_week < t0 < now or last_week < t1 < now:
                     timed_queries[keyw].append([t0, t1])
-
-        if debug:
-            log("DEBUG", "Starting search queries with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
 
         for query in sorted(queries_since_id.keys()):
 
@@ -392,6 +391,7 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                 next_reset, _, left = get_twitter_rates(searchco, searchco2)
             except:
                 pass
+            log("DEBUG", "resume search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
 
             since = queries_since_id[query]
             max_id = 0
@@ -418,6 +418,7 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                         next_reset, _, left = get_twitter_rates(searchco, searchco2)
                     except:
                         pass
+                    log("DEBUG", "resume search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
                     curco = searchco if curco == searchco2 else searchco2
                     log("INFO", "Switching search connexion to OAuth%s" % (2 if curco == searchco2 else ""))
                     try:
