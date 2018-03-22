@@ -308,6 +308,11 @@ def get_twitter_rates(conn, conn2):
     rate_limits2 = conn2.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
     return min(rate_limits['reset'], rate_limits2['reset']), (rate_limits['limit'] + rate_limits2['limit']), (rate_limits['remaining'] + rate_limits2['remaining'])
 
+def stall_queries(next_reset):
+    log("INFO", "Stalling search queries with rate exceeded for the next %s seconds" % max(2, int(next_reset - time.time())))
+    if not exit_event.is_set():
+        time.sleep(max(2, next_reset - time.time()))
+
 def read_search_state():
     with open(".search_state.json") as f:
         return {k.encode("utf-8"): v for k, v in json.load(f).items()}
@@ -351,9 +356,7 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                 next_reset += 15*60
                 left = max_per_reset
         if not left:
-            log("INFO", "Stalling search queries with rate exceeded for the next %s seconds" % max(0, int(next_reset - time.time())))
-            if not exit_event.is_set():
-                time.sleep(timegap + max(0, next_reset - time.time()))
+            stall_queries(next_reset)
             continue
 
         log("INFO", "Starting search queries cycle with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
@@ -382,9 +385,7 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
             max_id = 0
             while not exit_event.is_set():
                 while not left:
-                    log("INFO", "Stalling search queries with rate exceeded for the next %s seconds" % max(0, int(next_reset - time.time())))
-                    if not exit_event.is_set():
-                        time.sleep(timegap + max(0, next_reset - time.time()))
+                    stall_queries(next_reset)
                     try:
                         next_reset, _, left = get_twitter_rates(searchco, searchco2)
                         if debug:
