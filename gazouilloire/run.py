@@ -240,6 +240,8 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                     args['track'] = ",".join(query_keywords)
                 if query_users:
                     args['follow'] = ",".join(query_users)
+            if debug:
+                log("DEBUG", "Calling stream with args %s" % args)
             streamiter = streamco.statuses.filter(**args)
         except KeyboardInterrupt:
             log("INFO", "closing streamer...")
