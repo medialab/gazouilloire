@@ -187,6 +187,7 @@ def format_url_query(urlquery):
     return " ".join([k for k in re_split_url_pieces.split(urlquery) if k.strip()])
 
 def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, geocode, exit_event, debug=False):
+    # Stream operators reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters
     while not exit_event.is_set():
         ts = time.time()
         extra_keywords = []
@@ -334,6 +335,7 @@ def write_search_state(state):
 # TODO
 # - improve logs : add INFO on result of all queries on a keyword if new
 def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, geocode, exit_event, debug=False):
+    # Search operators reference: https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2)
     except:

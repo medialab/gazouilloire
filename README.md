@@ -27,14 +27,20 @@ HowTo
 
 ```
 
-- Write down the list of desired **keywords** and **@users** as json array.
+- Write down the list of desired **keywords** and **@users** and/or the list of desired **url_pieces** as json arrays:
   
   ```json
     "keywords": [
         "amour",
         "@medialab_scpo"
     ],
+    "url_pieces": [
+        "medialab.sciencespo.fr/fr"
+    ],
   ```
+
+  Avoid using accented characters (Twitter will automatically return both tweets with and without accents, for instance searching "heros" will find both tweets with "heros" and "héros").
+
   Note that there are two possibilities to filter further:
   
   - geolocalisation mode: just add ``"geolocalisation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box as shown in the config example file
@@ -64,6 +70,8 @@ HowTo
 - Data is stored in your mongo, you can also export it easily with simple scripts such as those in the `bin` directory:
 
 ```bash
+# To export a csv with most fields (formatted similarily to [DMI's TCAT](https://github.com/digitalmethodsinitiative/dmi-tcat)):
+bin/export_csv_as_tcat.py
 # To export a csv with the most useful fields:
 bin/export_csv.py
 # To export the whole text content of the tweets:
