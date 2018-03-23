@@ -19,7 +19,7 @@ try:
 except:
     from pymongo import Connection as MongoClient
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
-from tweets import prepare_tweets, get_timestamp
+from tweets import prepare_tweet, prepare_tweets, get_timestamp
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 
@@ -179,7 +179,14 @@ def format_keyword(k):
         k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
     return urllib.quote(k.encode('utf-8'), '')
 
-def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geocode, exit_event, debug=False):
+def format_url_queries(urlpieces):
+    return [format_url_query(q) for q in urlpieces]
+
+re_split_url_pieces = re.compile(r'[^a-z0-9]+', re.I)
+def format_url_query(urlquery):
+    return " ".join([k for k in re_split_url_pieces.split(urlquery) if k.strip()])
+
+def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, geocode, exit_event, debug=False):
     while not exit_event.is_set():
         ts = time.time()
         extra_keywords = []
@@ -200,7 +207,8 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
 
         try:
             # keywords tracked on stream
-            filter_keywords = [k.strip().lower().encode('utf-8') for k in keywords + extra_keywords if " OR " not in k and not k.startswith('@')]
+            query_keywords = [k.strip().lower().encode('utf-8') for k in keywords + format_url_queries(urlpieces) + extra_keywords if " OR " not in k and not k.startswith('@')]
+            filter_keywords = [k.strip().lower().encode('utf-8') for k in keywords + urlpieces + extra_keywords if " OR " not in k and not k.startswith('@')]
             for k in keywords + extra_keywords:
                 if " OR " in k:
                     if re_andor.match(k):
@@ -208,6 +216,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
                         combis = ands[0]
                         for ors in ands[1:]:
                             combis = ["%s %s" % (a, b) for a in combis for b in ors]
+                        query_keywords += combis
                         filter_keywords += combis
                     else:
                         log("WARNING", 'Ignoring keyword %s to streaming API, please use syntax with simple keywords separated by spaces or such as "(KEYW1 OR KEYW2) (KEYW3 OR KEYW4 OR KEYW5) (KEYW6)"' % k)
@@ -215,10 +224,10 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
             # users followed on stream
             users = [k.lstrip('@').strip().lower().encode('utf-8') for k in keywords + extra_keywords if k.startswith('@')]
             keep_users = list(users)
-            filter_users = []
+            query_users = []
             while users:
                 for u in resco.users.lookup(screen_name=','.join(users[0:100]), include_entities=False):
-                    filter_users.append(u['id_str'])
+                    query_users.append(u['id_str'])
                 users = users[100:]
 
             # prepare stream query arguments
@@ -226,10 +235,10 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
             if geocode:
                 args['locations'] = geocode
             else:
-                if filter_keywords:
-                    args['track'] = ",".join(filter_keywords)
-                if filter_users:
-                    args['follow'] = ",".join(filter_users)
+                if query_keywords:
+                    args['track'] = ",".join(query_keywords)
+                if query_users:
+                    args['follow'] = ",".join(query_users)
             streamiter = streamco.statuses.filter(**args)
         except KeyboardInterrupt:
             log("INFO", "closing streamer...")
@@ -255,8 +264,8 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
                 if msg.get("timeout"):
                     continue
                 if msg.get('text'):
-                    if geocode:
-                        tmptext = msg.get('text').lower().encode('utf-8')
+                    if geocode or (urlpieces and not keywords):
+                        tmptext = prepare_tweet(msg, return_text=True).lower().encode('utf-8')
                         keep = False
                         for k in filter_keywords:
                             if " " in k:
@@ -271,7 +280,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
                             elif k in tmptext:
                                 keep = True
                                 break
-                        if not keep:
+                        if not keep and keep_users:
                             tmpauthor = msg.get('screen_name').lower()
                             for u in keep_users:
                                 if "@%s" % u in tmptext or u == tmpauthor:
@@ -291,8 +300,8 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
                         log("INFO", "Got special data: %s" % str(msg))
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
             log("WARNING", "Stream connection lost, reconnecting in a sec... (%s: %s)" % (type(e), e))
-        except:
-            log("INFO", "closing streamer...")
+        except Exception as e:
+            log("INFO", "closing streamer (%s: %s)..." % (type(e), e))
             exit_event.set()
 
         if debug:
@@ -324,7 +333,7 @@ def write_search_state(state):
 
 # TODO
 # - improve logs : add INFO on result of all queries on a keyword if new
-def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocode, exit_event, debug=False):
+def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, geocode, exit_event, debug=False):
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2)
     except:
@@ -339,6 +348,8 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
             queries.append(format_keyword(k))
         else:
             fmtkeywords.append(format_keyword(k))
+    for q in urlpieces:
+        fmtkeywords.append('url:"%s"' % format_url_query(q))
     queries += [" OR ".join(a) for a in chunkize(fmtkeywords, 3)]
     timed_queries = {}
     state = {q: 0 for q in queries + [format_keyword(k) for k in timed_keywords.keys()]}
@@ -475,6 +486,9 @@ if __name__=='__main__':
     try:
         with open('config.json') as confile:
             conf = json.loads(confile.read())
+            for k in ['keywords', 'url_pieces', 'time_limited_keywords']:
+                if k not in conf:
+                    conf[k] = []
     except Exception as e:
         log('ERROR', 'Could not open config.json: %s %s' % (type(e), e))
         sys.exit(1)
@@ -556,10 +570,10 @@ if __name__=='__main__':
         download.daemon = True
         download.start()
     signal.signal(signal.SIGINT, default_handler)
-    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['time_limited_keywords'], streamgeocode, exit_event, conf['debug']))
+    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], streamgeocode, exit_event, conf['debug']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['time_limited_keywords'], locale, searchgeocode, exit_event, conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, searchgeocode, exit_event, conf['debug']))
     search.start()
     def stopper(*args):
         exit_event.set()
