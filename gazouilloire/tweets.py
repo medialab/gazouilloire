@@ -57,11 +57,11 @@ def grab_extra_meta(source, result):
 
 def prepare_tweets(tweets, locale):
     for tweet in tweets:
-        if "_id" in tweet:
-            yield tweet
         if not isinstance(tweet, dict):
             continue
-        yield prepare_tweet(tweet, locale=locale)
+        if "_id" not in tweet:
+            tweet = prepare_tweet(tweet, locale=locale)
+        yield tweet
 
 def prepare_tweet(tweet, locale=None):
     if "extended_tweet" in tweet:

@@ -268,7 +268,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                     break
                 if msg.get("timeout"):
                     continue
-                if msg.get('text'):
+                if msg.get('id_str'):
                     tweet = prepare_tweet(msg, locale=locale)
                     if geocode or (urlpieces and not keywords):
                         tmptext = tweet["text"].lower().encode('utf-8')
