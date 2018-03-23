@@ -40,8 +40,8 @@ def depiler(pile, pile_deleted, pile_catchup, pile_links, pile_medias, mongoconf
         todo = []
         while not pile.empty():
             todo.append(pile.get())
-        save = prepare_tweets(todo, locale)
-        for t in save:
+        stored = 0
+        for t in prepare_tweets(todo, locale):
             if pile_medias and t["medias"]:
                 pile_medias.put(t)
             if pile_catchup and t["in_reply_to_status_id_str"]:
@@ -50,8 +50,9 @@ def depiler(pile, pile_deleted, pile_catchup, pile_links, pile_medias, mongoconf
             tid = coll.save(t)
             if pile_links and t["links"]:
                 pile_links.put(t)
-        if debug and save:
-            log("DEBUG", "Saved %s tweets in MongoDB" % len(save))
+            stored += 1
+        if debug and stored:
+            log("DEBUG", "Saved %s tweets in MongoDB" % stored)
         if not exit_event.is_set():
             time.sleep(2)
     log("INFO", "FINISHED depiler")
@@ -186,7 +187,7 @@ re_split_url_pieces = re.compile(r'[^a-z0-9]+', re.I)
 def format_url_query(urlquery):
     return " ".join([k for k in re_split_url_pieces.split(urlquery) if k.strip()])
 
-def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, geocode, exit_event, debug=False):
+def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, locale, geocode, exit_event, debug=False):
     # Stream operators reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters
     # Stream special messages reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/streaming-message-types
     while not exit_event.is_set():
@@ -268,8 +269,9 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                 if msg.get("timeout"):
                     continue
                 if msg.get('text'):
+                    tweet = prepare_tweet(msg, locale=locale)
                     if geocode or (urlpieces and not keywords):
-                        tmptext = prepare_tweet(msg, return_text=True).lower().encode('utf-8')
+                        tmptext = tweet["text"].lower().encode('utf-8')
                         keep = False
                         for k in filter_keywords:
                             if " " in k:
@@ -285,14 +287,14 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                                 keep = True
                                 break
                         if not keep and keep_users:
-                            tmpauthor = msg.get('screen_name').lower()
+                            tmpauthor = tweet['user_screen_name'].lower()
                             for u in keep_users:
                                 if "@%s" % u in tmptext or u == tmpauthor:
                                     keep = True
                                     break
                         if not keep:
                             continue
-                    pile.put(dict(msg))
+                    pile.put(tweet)
                     if debug:
                         log("DEBUG", "[stream] +1 tweet")
                 else:
@@ -575,7 +577,7 @@ if __name__=='__main__':
         download.daemon = True
         download.start()
     signal.signal(signal.SIGINT, default_handler)
-    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], streamgeocode, exit_event, conf['debug']))
+    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, streamgeocode, exit_event, conf['debug']))
     stream.daemon = True
     stream.start()
     search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, searchgeocode, exit_event, conf['debug']))

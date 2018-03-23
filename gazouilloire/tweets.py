@@ -56,15 +56,14 @@ def grab_extra_meta(source, result):
     return result
 
 def prepare_tweets(tweets, locale):
-    tosave = []
     for tweet in tweets:
+        if "_id" in tweet:
+            yield tweet
         if not isinstance(tweet, dict):
             continue
-        tw = prepare_tweet(tweet, locale=locale)
-        tosave.append(tw)
-    return tosave
+        yield prepare_tweet(tweet, locale=locale)
 
-def prepare_tweet(tweet, locale=None, return_text=False):
+def prepare_tweet(tweet, locale=None):
     if "extended_tweet" in tweet:
         for field in tweet["extended_tweet"]:
             tweet[field] = tweet["extended_tweet"][field]
@@ -87,8 +86,6 @@ def prepare_tweet(tweet, locale=None, return_text=False):
                     text = text.replace(entity['url'], entity['expanded_url'])
                 except:
                     pass
-            if not return_text:
-                continue
             if "media_url" in entity:
                 if "video_info" in entity:
                     med_url = sorted(entity["video_info"]["variants"], key=lambda x: x.get("bitrate", 0))[-1]["url"]
@@ -98,14 +95,11 @@ def prepare_tweet(tweet, locale=None, return_text=False):
                 medias.append(["%s_%s" % (source_id, med_name), med_url])
             else:
                 links.append(entity["expanded_url"])
-    text = unescape_html(text)
-    if return_text:
-        return text
     tw = {
         '_id': tweet['id_str'],
         'created_at': tweet['created_at'],
         'timestamp': get_timestamp(tweet, locale),
-        'text': text,
+        'text': unescape_html(text),
         'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str']),
         'retweet_id': rti,
         'retweet_user': rtu,
