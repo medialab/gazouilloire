@@ -353,7 +353,8 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
         if time.time() > next_reset:
             try:
                 next_reset, _, left = get_twitter_rates(searchco, searchco2)
-            except:
+            except Exception as e:
+                log("ERROR", "Issue while collecting twitter rates, applying default 15 min values. %s: %s" % (type(e), e))
                 next_reset += 15*60
                 left = max_per_reset
         if not left:
@@ -389,10 +390,10 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                     stall_queries(next_reset)
                     try:
                         next_reset, _, left = get_twitter_rates(searchco, searchco2)
-                        if debug:
+                        if debug and left:
                             log("DEBUG", "Resuming search '%s' with %d remaining calls for the next %s seconds" % (query, left, int(next_reset - time.time())))
-                    except:
-                        pass
+                    except Exception as e:
+                        log("ERROR", "Issue while collecting twitter rates. %s: %s" % (type(e), e))
 
                 args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent', 'tweet_mode': 'extended'}
                 if geocode:
