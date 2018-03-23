@@ -414,8 +414,14 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                         if not exit_event.is_set():
                             time.sleep(2)
                         continue
-                tweets = res.get('statuses', [])
                 left -= 1
+                try:
+                    tweets = res['statuses']
+                except KeyError:
+                    log("WARNING", "Bad response from Twitter to query %s with args %s: %s" % (query, args, res))
+                    if not exit_event.is_set():
+                        time.sleep(2)
+                    continue
                 if not len(tweets):
                     break
                 news = 0
