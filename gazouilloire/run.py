@@ -322,6 +322,8 @@ def write_search_state(state):
     with open(".search_state.json", "w") as f:
         json.dump(state, f)
 
+# TODO
+# - improve logs : add INFO on result of all queries on a keyword if new
 def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocode, exit_event, debug=False):
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2)
@@ -375,7 +377,6 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
                     timed_queries[keyw].append([t0, t1])
 
         for query in sorted(queries_since_id.keys()):
-
             try:
                 planning = timed_queries[query]
                 if not planning:
@@ -385,15 +386,18 @@ def searcher(pile, searchco, searchco2, keywords, timed_keywords, locale, geocod
 
             since = queries_since_id[query]
             max_id = 0
+            if debug:
+                log("DEBUG", "Starting search query on %s since %s" % (query, since))
             while not exit_event.is_set():
                 while not left:
-                    stall_queries(next_reset)
                     try:
                         next_reset, _, left = get_twitter_rates(searchco, searchco2)
                         if debug and left:
-                            log("DEBUG", "Resuming search '%s' with %d remaining calls for the next %s seconds" % (query, left, int(next_reset - time.time())))
+                            log("DEBUG", "Resuming search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
                     except Exception as e:
                         log("ERROR", "Issue while collecting twitter rates. %s: %s" % (type(e), e))
+                    if not left:
+                        stall_queries(next_reset)
 
                 args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent', 'tweet_mode': 'extended'}
                 if geocode:
