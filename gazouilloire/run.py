@@ -188,6 +188,7 @@ def format_url_query(urlquery):
 
 def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, geocode, exit_event, debug=False):
     # Stream operators reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters
+    # Stream special messages reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/streaming-message-types
     while not exit_event.is_set():
         ts = time.time()
         extra_keywords = []
