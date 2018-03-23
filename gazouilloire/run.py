@@ -309,9 +309,10 @@ def get_twitter_rates(conn, conn2):
     return min(rate_limits['reset'], rate_limits2['reset']), (rate_limits['limit'] + rate_limits2['limit']), (rate_limits['remaining'] + rate_limits2['remaining'])
 
 def stall_queries(next_reset):
-    log("INFO", "Stalling search queries with rate exceeded for the next %s seconds" % max(2, int(next_reset - time.time())))
+    delay = max(1, next_reset - time.time()) + 1
+    log("INFO", "Stalling search queries with rate exceeded for the next %s seconds" % delay)
     if not exit_event.is_set():
-        time.sleep(max(2, next_reset - time.time()))
+        time.sleep(delay)
 
 def read_search_state():
     with open(".search_state.json") as f:
