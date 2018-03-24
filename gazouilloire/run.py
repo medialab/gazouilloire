@@ -394,7 +394,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                 if last_week < t0 < now or last_week < t1 < now:
                     timed_queries[keyw].append([t0, t1])
 
-        for query in sorted(queries_since_id.keys()):
+        for query in [q[0] for q in sorted(queries_since_id.items(), key=lambda ts: ts[1])]:
             try:
                 planning = timed_queries[query]
                 if not planning:
