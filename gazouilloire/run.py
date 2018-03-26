@@ -143,7 +143,7 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
         if not todo:
             if not exit_event.is_set():
                 missing = 0
-                for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": False}}, fields=["links"], limit=20000, sort=[("_id", 1)]):
+                for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": False}}, projection={"links": 1}, limit=20000, sort=[("_id", 1)]):
                     pile_links.put(t)
                     missing += 1
                 if missing:
