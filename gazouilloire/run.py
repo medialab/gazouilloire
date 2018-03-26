@@ -149,6 +149,12 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
             else:
                 time.sleep(1)
                 continue
+        drop = 0
+        while pile_links.qsize() > 200000:
+            drop += 1
+            pile_links.get()
+        if drop:
+            log("INFO", "Dropped %s elements from resolver's queue to save ram, will run htem later if time allow it" % drop)
         done = 0
         urlstoclear = list(set([l for t in todo for l in t['links']]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
