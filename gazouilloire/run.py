@@ -140,16 +140,15 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
         todo = []
         while not pile_links.empty() and len(todo) < 500:
             todo.append(pile_links.get())
-        if not todo:
-            if not exit_event.is_set():
-                missing = 0
-                for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": False}}, projection={"links": 1}, limit=20000, sort=[("_id", 1)]):
-                    pile_links.put(t)
-                    missing += 1
-                if missing:
-                    log("INFO", "Empty queue for resolver, added %s tweets with missing proper links from DB to queue" % missing)
+        if not todo and not exit_event.is_set():
+            for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": False}}, projection={"links": 1}, limit=500, sort=[("_id", 1)]):
+                todo.append(t)
+            if todo:
+                left = tweetscoll.count({"links": {"$ne": []}, "proper_links": {"$exists": False}})
+                log("INFO", "Empty queue for resolver, added %s tweets with missing proper links from DB to queue (%s left missing from DB)" % (len(todo), left))
+            else:
                 time.sleep(1)
-            continue
+                continue
         done = 0
         urlstoclear = list(set([l for t in todo for l in t['links']]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
