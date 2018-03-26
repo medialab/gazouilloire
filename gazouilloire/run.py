@@ -322,10 +322,10 @@ chunkize = lambda a, n: [a[i:i+n] for i in xrange(0, len(a), n)]
 def get_twitter_rates(conn, conn2):
     rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
     rate_limits2 = conn2.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
-    return min(rate_limits['reset'], rate_limits2['reset']), (rate_limits['limit'] + rate_limits2['limit']), (rate_limits['remaining'] + rate_limits2['remaining'])
+    return min(int(rate_limits['reset']), int(rate_limits2['reset'])), (rate_limits['limit'] + rate_limits2['limit']), (rate_limits['remaining'] + rate_limits2['remaining'])
 
 def stall_queries(next_reset):
-    delay = max(1, next_reset - time.time()) + 1
+    delay = max(1, int(next_reset - time.time())) + 1
     log("INFO", "Stalling search queries with rate exceeded for the next %s seconds" % delay)
     if not exit_event.is_set():
         time.sleep(delay)
