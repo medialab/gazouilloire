@@ -35,7 +35,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_links, pile_medias, mongoconf
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         while not pile_deleted.empty():
             todelete = pile_deleted.get()
-            coll.update(spec={'_id': todelete}, document={'$set': {'deleted': True}})
+            coll.update({'_id': todelete}, {'$set': {'deleted': True}}, upsert=True)
 
         todo = []
         while not pile.empty():
@@ -47,7 +47,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_links, pile_medias, mongoconf
             if pile_catchup and t["in_reply_to_status_id_str"]:
                 if not coll.find_one({"_id": t["in_reply_to_status_id_str"]}):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
-            tid = coll.save(t)
+            tid = coll.update({'_id': t['_id']}, {'$set': t}, upsert=True)
             if pile_links and t["links"]:
                 pile_links.put(t)
             stored += 1
@@ -110,6 +110,7 @@ def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
             if debug and tweets:
                 log("DEBUG", "[conversations] +%d tweets" % len(tweets))
             for t in tweets:
+                t["source"] = "thread"
                 pile.put(dict(t))
         if not exit_event.is_set():
             time.sleep(5)
@@ -270,6 +271,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                 if msg.get("timeout"):
                     continue
                 if msg.get('id_str'):
+                    msg["source"] = "stream"
                     tweet = prepare_tweet(msg, locale=locale)
                     if geocode or (urlpieces and not keywords):
                         tmptext = tweet["text"].lower().encode('utf-8')
@@ -465,6 +467,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                                 break
                         if skip:
                             continue
+                    tw["source"] = "search"
                     pile.put(dict(tw))
                     news += 1
                 if news == 0:
