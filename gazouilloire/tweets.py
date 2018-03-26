@@ -84,8 +84,9 @@ def prepare_tweet(tweet, locale=None):
                 tweet[ent][field] = tweet[ent].get(field, [])
                 if field in tweet['retweeted_status'][ent]:
                     tweet[ent][field] += tweet['retweeted_status'][ent][field]
+    medids = set([])
     medias = []
-    links = []
+    links = set([])
     if 'entities' in tweet or 'extended_entities' in tweet:
         source_id = rti or tweet['id_str']
         for entity in tweet.get('extended_entities', tweet['entities']).get('media', []) + tweet['entities'].get('urls', []):
@@ -100,9 +101,11 @@ def prepare_tweet(tweet, locale=None):
                 else:
                     med_url = entity["media_url_https"]
                 med_name = med_url.split('/')[-1]
-                medias.append(["%s_%s" % (source_id, med_name), med_url])
+                if med_name not in medids:
+                    medids.add(med_name)
+                    medias.append(["%s_%s" % (source_id, med_name), med_url])
             else:
-                links.append(entity["expanded_url"])
+                links.add(entity["expanded_url"])
     tw = {
         '_id': tweet['id_str'],
         'created_at': tweet['created_at'],
@@ -112,7 +115,7 @@ def prepare_tweet(tweet, locale=None):
         'retweet_id': rti,
         'retweet_user': rtu,
         'medias': medias,
-        'links': links,
+        'links': list(links),
         'collected_at_timestamp': time.time()
     }
     if "source" in tweet:
