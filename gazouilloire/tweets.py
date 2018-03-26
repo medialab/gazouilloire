@@ -76,6 +76,14 @@ def prepare_tweet(tweet, locale=None):
         text = "RT @%s: %s" % (tweet['retweeted_status']['user']['screen_name'], tweet['retweeted_status'].get('full_text', tweet['retweeted_status'].get('text', '')))
         rti = tweet['retweeted_status']['id_str']
         rtu = tweet['retweeted_status']['user']['screen_name']
+        for ent in ['entities', 'extended_entities']:
+            if ent not in tweet['retweeted_status']:
+                continue
+            tweet[ent] = tweet.get(ent, {})
+            for field in ['media', 'urls']:
+                tweet[ent][field] = tweet[ent].get(field, [])
+                if field in tweet['retweeted_status'][ent]:
+                    tweet[ent][field] += tweet['retweeted_status'][ent][field]
     medias = []
     links = []
     if 'entities' in tweet or 'extended_entities' in tweet:
