@@ -127,7 +127,6 @@ def resolve_url(url, retries=5, user_agent=None):
         return url
 
 # TODO :
-# - store resolver state to fill missing links after restart
 # - use goodlinks in exports
 # - add finalize task to run resolver on all tweets in DB with links but no proper_links
 def resolver(pile_links, mongoconf, exit_event, debug=False):
@@ -142,6 +141,8 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
             todo.append(pile_links.get())
         if not todo:
             if not exit_event.is_set():
+                for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": false}}, fields=["links"], limit=20000, sort=[("_id", 1)]):
+                    pile_links.put(t)
                 time.sleep(1)
             continue
         done = 0
