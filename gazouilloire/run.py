@@ -136,14 +136,18 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     linkscoll = db['links']
     tweetscoll = db['tweets']
-    while not exit_event.is_set() or not pile_links.empty():
+    while not exit_event.is_set():
         todo = []
         while not pile_links.empty() and len(todo) < 500:
             todo.append(pile_links.get())
         if not todo:
             if not exit_event.is_set():
+                missing = 0
                 for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": false}}, fields=["links"], limit=20000, sort=[("_id", 1)]):
                     pile_links.put(t)
+                    missing += 1
+                if missing:
+                    log("INFO", "Empty queue for resolver, added %s tweets with missing proper links from DB to queue" % missing)
                 time.sleep(1)
             continue
         done = 0
@@ -190,7 +194,8 @@ def format_url_query(urlquery):
     return " ".join([k for k in re_split_url_pieces.split(urlquery) if k.strip()])
 
 def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, locale, geocode, exit_event, debug=False):
-    # Stream operators reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters
+    # Stream parameters reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters
+    # Stream operators reference: https://developer.twitter.com/en/docs/tweets/rules-and-filtering/overview/standard-operators.html
     # Stream special messages reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/streaming-message-types
     while not exit_event.is_set():
         ts = time.time()
