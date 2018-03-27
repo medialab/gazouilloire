@@ -142,7 +142,7 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
             todo.append(pile_links.get())
         if pile_links.qsize() < 5000 and not exit_event.is_set():
             extra = 0
-            for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": False}}, projection={"links": 1}, limit=200, sort=[("_id", 1)]):
+            for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": False}}, projection={"links": 1, "retweet_id": 1}, limit=200, sort=[("_id", 1)]):
                 extra += 1
                 todo.append(t)
             if extra:
@@ -158,6 +158,7 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
         urlstoclear = list(set([l for t in todo for l in t['links']]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
         for tweet in todo:
+            tweetid = tweet.get('retweet_id') or tweet['_id']
             if exit_event.is_set():
                 continue
             gdlinks = []
@@ -173,7 +174,7 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
                     pass
                 if link != good:
                     done += 1
-            tweetscoll.update({'_id': tweet['_id']}, {'$set': {'proper_links': gdlinks}}, upsert=False)
+            tweetscoll.update({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks}}, upsert=False, multi=True)
         if debug and done:
             log("DEBUG", "[links] +%s new redirection links resolved out of %s (%s waiting)" % (done, len(todo), pile_links.qsize()))
     log("INFO", "FINISHED resolver")
@@ -532,6 +533,7 @@ if __name__=='__main__':
         db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]
         coll = db['tweets']
         coll.ensure_index([('_id', ASCENDING)], background=True)
+        coll.ensure_index([('retweet_id', ASCENDING)], background=True)
         coll.ensure_index([('timestamp', ASCENDING)], background=True)
     except Exception as e:
         log('ERROR', 'Could not initiate connection to MongoDB: %s %s' % (type(e), e))
