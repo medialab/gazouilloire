@@ -138,16 +138,16 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
     tweetscoll = db['tweets']
     while not exit_event.is_set():
         todo = []
-        while not pile_links.empty() and len(todo) < 250:
+        while not pile_links.empty() and len(todo) < 400:
             todo.append(pile_links.get())
         if pile_links.qsize() < 5000 and not exit_event.is_set():
             extra = 0
-            for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": False}}, projection={"links": 1}, limit=250, sort=[("_id", 1)]):
+            for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": False}}, projection={"links": 1}, limit=200, sort=[("_id", 1)]):
                 extra += 1
                 todo.append(t)
             if extra:
                 left = tweetscoll.count({"links": {"$ne": []}, "proper_links": {"$exists": False}})
-                log("INFO", "Empty queue for resolver, added %s tweets with missing proper links from DB to queue (%s left missing from DB)" % (extra, left))
+                log("INFO", "Added %s tweets with missing proper links from DB to links resolver queue (%s left in DB)" % (extra, left))
         drop = 0
         while pile_links.qsize() > 200000:
             drop += 1
@@ -175,7 +175,7 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
                     done += 1
             tweetscoll.update({'_id': tweet['_id']}, {'$set': {'proper_links': gdlinks}}, upsert=False)
         if debug and done:
-            log("DEBUG", "[links] +%s redirection links resolved (%s waiting)" % (done, pile_links.qsize()))
+            log("DEBUG", "[links] +%s new redirection links resolved out of %s (%s waiting)" % (done, len(todo), pile_links.qsize()))
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
