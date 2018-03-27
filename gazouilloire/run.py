@@ -138,17 +138,16 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
     tweetscoll = db['tweets']
     while not exit_event.is_set():
         todo = []
-        while not pile_links.empty() and len(todo) < 500:
+        while not pile_links.empty() and len(todo) < 250:
             todo.append(pile_links.get())
-        if not todo and not exit_event.is_set():
-            for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": False}}, projection={"links": 1}, limit=500, sort=[("_id", 1)]):
+        if pile_links.qsize() < 5000 and not exit_event.is_set():
+            extra = 0
+            for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": False}}, projection={"links": 1}, limit=250, sort=[("_id", 1)]):
+                extra += 1
                 todo.append(t)
-            if todo:
+            if extra:
                 left = tweetscoll.count({"links": {"$ne": []}, "proper_links": {"$exists": False}})
-                log("INFO", "Empty queue for resolver, added %s tweets with missing proper links from DB to queue (%s left missing from DB)" % (len(todo), left))
-            else:
-                time.sleep(1)
-                continue
+                log("INFO", "Empty queue for resolver, added %s tweets with missing proper links from DB to queue (%s left missing from DB)" % (extra, left))
         drop = 0
         while pile_links.qsize() > 200000:
             drop += 1
