@@ -8,9 +8,18 @@ from datetime import datetime
 re_entities = re.compile(r'&([^;]+);')
 def decode_entities(x):
     if x.group(1).startswith('#'):
-        return unichr(int(x.group(1)[1:]))
+        char = x.group(1)[1:]
+        if char.startswith('x'):
+            try:
+                return unichr(int(x.group(1)[2:], 16))
+            except:
+                pass
+        try:
+            return unichr(int(x.group(1)[1:]))
+        except:
+            pass
     try:
-        return unichr(htmlentitydefs.name2codepoint[x.group(1)])
+        return unichr(name2codepoint[x.group(1)])
     except:
         return x.group(1)
 def unescape_html(text):
