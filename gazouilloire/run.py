@@ -173,7 +173,7 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
                 try:
                     linkscoll.save({'_id': link, 'real': good})
                 except Exception as e:
-                    log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e)
+                    log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
                 if link != good:
                     done += 1
             tweetscoll.update({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks}}, upsert=False, multi=True)
