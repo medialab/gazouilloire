@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import re
+import re, sys
 from datetime import datetime
 
 fields = [
@@ -48,7 +48,10 @@ fields = [
   "retweeted_id",
   "links",
   "medias_urls",
-  "medias_files"
+  "medias_files",
+  "mentioned_user_ids",
+  "mentioned_user_names",
+  "hashtags"
 ]
 
 corresp_fields = {
@@ -96,7 +99,10 @@ corresp_fields = {
     "retweeted_id": "retweet_id",
     "links": lambda x: x.get("proper_links", x.get("links", [])),
     "medias_urls": lambda x: [_url for _id,_url in x.get("medias", [])],
-    "medias_files": lambda x: [_id for _id,_url in x.get("medias", [])]
+    "medias_files": lambda x: [_id for _id,_url in x.get("medias", [])],
+    "mentioned_user_ids": "mentions_ids",
+    "mentioned_user_names": lambda x: x.get("mentions_names", process_extract(x["text"], "@")),
+    "hashtags": lambda x: x.get("hashtags", process_extract(x["text"], "#"))
 }
 
 def search_field(field, tweet):
@@ -131,7 +137,9 @@ def format_field(val):
 def get_field(field, tweet):
     return format_field(search_field(field, tweet)).replace('\n', ' ').replace('\r', ' ')
 
-format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val).encode('utf-8')
+re_clean_rt = re.compile(r"^RT @\w+: ")
+def process_extract(text, car):
+    return sorted([r.lstrip(car).lower() for r in re.split(r'[^\w%s]+' % car, re_clean_rt.sub('', text)) if r.startswith(car)])
 
 def get_coords(tw):
     if 'coordinates' not in tw or not tw['coordinates']:
@@ -141,6 +149,8 @@ def get_coords(tw):
     return tw['coordinates']['coordinates']
 
 isodate = lambda x: datetime.strptime(x, '%a %b %d %H:%M:%S +0000 %Y').isoformat()
+
+format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val).encode('utf-8')
 
 def yield_csv(queryiterator, extra_fields=[]):
     out_fields = fields + extra_fields

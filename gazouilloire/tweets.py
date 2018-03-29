@@ -89,13 +89,15 @@ def prepare_tweet(tweet, locale=None):
             if ent not in tweet['retweeted_status']:
                 continue
             tweet[ent] = tweet.get(ent, {})
-            for field in ['media', 'urls']:
+            for field in tweet['retweeted_status'][ent]:
                 tweet[ent][field] = tweet[ent].get(field, [])
                 if field in tweet['retweeted_status'][ent]:
                     tweet[ent][field] += tweet['retweeted_status'][ent][field]
     medids = set([])
     medias = []
     links = set([])
+    hashtags = set([])
+    mentions = {}
     if 'entities' in tweet or 'extended_entities' in tweet:
         source_id = rti or tweet['id_str']
         for entity in tweet.get('extended_entities', tweet['entities']).get('media', []) + tweet['entities'].get('urls', []):
@@ -115,6 +117,10 @@ def prepare_tweet(tweet, locale=None):
                     medias.append(["%s_%s" % (source_id, med_name), med_url])
             else:
                 links.add(entity["expanded_url"])
+        for hashtag in tweet['entities'].get('hashtags', []):
+            hashtags.add(hashtag['text'].lower())
+        for mention in tweet['entities'].get('user_mentions', []):
+            mentions[mention['screen_name'].lower()] = mention['id_str']
     tw = {
         '_id': tweet['id_str'],
         'created_at': tweet['created_at'],
@@ -124,7 +130,10 @@ def prepare_tweet(tweet, locale=None):
         'retweet_id': rti,
         'retweet_user': rtu,
         'medias': medias,
-        'links': list(links),
+        'links': sorted(links),
+        'hashtags': sorted(hashtags),
+        'mentions_ids': [mentions[m] for m in sorted(mentions.keys())],
+        'mentions_names': sorted(mentions.keys()),
         'collected_at_timestamp': time.time()
     }
     if "gazouilloire_source" in tweet:
