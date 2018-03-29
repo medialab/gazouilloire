@@ -4,7 +4,7 @@
 import json, sys, re
 from pymongo import MongoClient
 import progressbar
-from gazouilloire.web.export import fields, get_field, format_csv
+from gazouilloire.web.export import yield_csv
 
 with open('config.json') as confile:
     conf = json.loads(confile.read())
@@ -26,9 +26,9 @@ elif len(sys.argv) > 2:
     for arg in sys.argv[1:]:
         query["$or"].append({"text": re.compile(arg.replace(' ', '\s+'), re.I)})
 
+extra_fields = conf.get('export', {}).get('extra_fields', [])
 count = db.count(query)
 bar = progressbar.ProgressBar(max_value=count)
-print ",".join(fields)
-for t in bar(db.find(query, sort=[("_id", 1)], limit=count)):
-    print ",".join(format_csv(get_field(k, t)) for k in fields)
-
+mongoiterator = db.find(query, sort=[("_id", 1)], limit=count)
+for t in bar(yield_csv(mongoiterator, extra_fields)):
+    print t

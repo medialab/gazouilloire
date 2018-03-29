@@ -126,7 +126,6 @@ def resolve_url(url, retries=5, user_agent=None):
         return url
 
 # TODO :
-# - use goodlinks in exports
 # - add finalize task to run resolver on all tweets in DB with links but no proper_links
 def resolver(mongoconf, exit_event, debug=False):
     ua = UserAgent()
