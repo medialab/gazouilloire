@@ -81,10 +81,12 @@ def prepare_tweet(tweet, locale=None):
         print "WARNING, no text for tweet %s" % "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str'])
     rti = None
     rtu = None
+    rtuid = None
     if "retweeted_status" in tweet and tweet['retweeted_status']['id_str'] != tweet['id_str']:
         text = "RT @%s: %s" % (tweet['retweeted_status']['user']['screen_name'], tweet['retweeted_status'].get('full_text', tweet['retweeted_status'].get('text', '')))
         rti = tweet['retweeted_status']['id_str']
         rtu = tweet['retweeted_status']['user']['screen_name']
+        rtuid = tweet['retweeted_status']['user']['id_str']
         for ent in ['entities', 'extended_entities']:
             if ent not in tweet['retweeted_status']:
                 continue
@@ -129,6 +131,7 @@ def prepare_tweet(tweet, locale=None):
         'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str']),
         'retweet_id': rti,
         'retweet_user': rtu,
+        'retweet_user_id': rtuid,
         'medias': medias,
         'links': sorted(links),
         'hashtags': sorted(hashtags),

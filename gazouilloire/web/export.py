@@ -21,6 +21,7 @@ fields = [
   "reply_count",
   "lang",
   "to_user_name",
+  "to_user_id",
   "in_reply_to_status_id",
   "source",
   "source_name",
@@ -46,14 +47,17 @@ fields = [
   "from_user_withheld_countries",
   "from_user_created_at",
   "retweeted_id",
+  "retweeted_user_name",
+  "retweeted_user_id",
   "links",
   "medias_urls",
   "medias_files",
-  "mentioned_user_ids",
   "mentioned_user_names",
+  "mentioned_user_ids",
   "hashtags"
 ]
 
+# Based and enriched from TCAT fields
 corresp_fields = {
     "id": "_id",
     "time": "timestamp",
@@ -65,16 +69,17 @@ corresp_fields = {
     "withheld_copyright": str,
     "withheld_scope": str,
     "withheld_countries": lambda x: x.get("withheld_countries", []),      # Added since this is the most interesting info from withheld fields
-    "truncated": bool,       # unnecessary since we rebuild text from RTs
+    "truncated": bool,      # unnecessary since we rebuild text from RTs
     "retweet_count": int,
     "favorite_count": int,
-    "reply_count": int,
+    "reply_count": int,     # Recently appeared in Twitter data
     "lang": str,
     "to_user_name": "in_reply_to_screen_name",
+    "to_user_id": "in_reply_to_user_id_str",    # Added for better user interaction analysis
     "in_reply_to_status_id": "in_reply_to_status_id_str",
     "source": str,
-    "source_name": lambda x: re.split(r"[<>]", x.get("source", "<>"))[2],
-    "source_url": lambda x: x.get("source", '"').split('"')[1],
+    "source_name": lambda x: re.split(r"[<>]", x.get("source", "<>"))[2],   # Added for simplier postprocess
+    "source_url": lambda x: x.get("source", '"').split('"')[1],             # Added for simplier postprocess
     "location": "user_location",
     "lat": lambda x: get_coords(x)[1],
     "lng": lambda x: get_coords(x)[0],
@@ -95,13 +100,15 @@ corresp_fields = {
     "from_user_withheld_scope": "user_withheld_scope",
     "from_user_withheld_countries": lambda x: x.get("user_withheld_countries", []),      # Added since this is the most interesting info from withheld fields
     "from_user_created_at": lambda x: isodate(x.get("user_created_at", "")),
-    # Our extra fields:
+    # More added fields:
     "retweeted_id": "retweet_id",
+    "retweeted_user_name": "retweet_user",
+    "retweeted_user_id": "retweet_user_id",
     "links": lambda x: x.get("proper_links", x.get("links", [])),
     "medias_urls": lambda x: [_url for _id,_url in x.get("medias", [])],
     "medias_files": lambda x: [_id for _id,_url in x.get("medias", [])],
-    "mentioned_user_ids": "mentions_ids",
     "mentioned_user_names": lambda x: x.get("mentions_names", process_extract(x["text"], "@")),
+    "mentioned_user_ids": "mentions_ids",
     "hashtags": lambda x: x.get("hashtags", process_extract(x["text"], "#"))
 }
 
