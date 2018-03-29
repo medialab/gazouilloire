@@ -108,7 +108,7 @@ def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
             if debug and tweets:
                 log("DEBUG", "[conversations] +%d tweets" % len(tweets))
             for t in tweets:
-                t["source"] = "thread"
+                t["gazouilloire_source"] = "thread"
                 pile.put(dict(t))
         if not exit_event.is_set():
             time.sleep(5)
@@ -264,7 +264,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                 if msg.get("timeout"):
                     continue
                 if msg.get('id_str'):
-                    msg["source"] = "stream"
+                    msg["gazouilloire_source"] = "stream"
                     tweet = prepare_tweet(msg, locale=locale)
                     if geocode or (urlpieces and not keywords):
                         tmptext = tweet["text"].lower().encode('utf-8')
@@ -460,7 +460,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                                 break
                         if skip:
                             continue
-                    tw["source"] = "search"
+                    tw["gazouilloire_source"] = "search"
                     pile.put(dict(tw))
                     news += 1
                 if news == 0:
