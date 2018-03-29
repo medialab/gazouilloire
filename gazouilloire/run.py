@@ -29,7 +29,7 @@ def log(typelog, text):
     except UnicodeEncodeError:
         sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text.encode('ascii', 'ignore')))
 
-def depiler(pile, pile_deleted, pile_catchup, pile_links, pile_medias, mongoconf, locale, exit_event, debug=False):
+def depiler(pile, pile_deleted, pile_catchup, pile_medias, mongoconf, locale, exit_event, debug=False):
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     coll = db['tweets']
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
@@ -48,8 +48,6 @@ def depiler(pile, pile_deleted, pile_catchup, pile_links, pile_medias, mongoconf
                 if not coll.find_one({"_id": t["in_reply_to_status_id_str"]}):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
             tid = coll.update({'_id': t['_id']}, {'$set': t}, upsert=True)
-            if pile_links and t["links"]:
-                pile_links.put(t)
             stored += 1
         if debug and stored:
             log("DEBUG", "Saved %s tweets in MongoDB" % stored)
@@ -130,33 +128,16 @@ def resolve_url(url, retries=5, user_agent=None):
 # TODO :
 # - use goodlinks in exports
 # - add finalize task to run resolver on all tweets in DB with links but no proper_links
-def resolver(pile_links, mongoconf, exit_event, debug=False):
+def resolver(mongoconf, exit_event, debug=False):
     ua = UserAgent()
     ua.update()
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     linkscoll = db['links']
     tweetscoll = db['tweets']
+    links_to_resolve_query = {"links": {"$ne": []}, "proper_links": {"$exists": False}}
     while not exit_event.is_set():
-        todo = []
-        while not pile_links.empty() and len(todo) < 400:
-            todo.append(pile_links.get())
-        pile_size = pile_links.qsize()
-        if pile_size < 5000 and not exit_event.is_set():
-            left = tweetscoll.count({"links": {"$ne": []}, "proper_links": {"$exists": False}})
-            if left > pile_size:
-                extra = 0
-                for t in tweetscoll.find({"links": {"$ne": []}, "proper_links": {"$exists": False}}, projection={"links": 1, "retweet_id": 1}, limit=200, sort=[("_id", 1)]):
-                    extra += 1
-                    todo.append(t)
-                if extra:
-                    log("INFO", "Added %s tweets with missing proper links from DB to links resolver queue (%s left in DB)" % (extra, left))
-        drop = 0
-        while pile_links.qsize() > 200000:
-            drop += 1
-            pile_links.get()
-        if drop:
-            log("INFO", "Dropped %s elements from resolver's queue to save ram, will run htem later if time allow it" % drop)
         done = 0
+        todo = list(tweetscoll.find(links_to_resolve_query, projection={"links": 1, "retweet_id": 1}, limit=500, sort=[("_id", 1)]))
         urlstoclear = list(set([l for t in todo for l in t['links']]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
         for tweet in todo:
@@ -178,7 +159,8 @@ def resolver(pile_links, mongoconf, exit_event, debug=False):
                     done += 1
             tweetscoll.update({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks}}, upsert=False, multi=True)
         if debug and done:
-            log("DEBUG", "[links] +%s new redirection links resolved out of %s (%s waiting)" % (done, len(todo), pile_links.qsize()))
+            left = tweetscoll.count(links_to_resolve_query)
+            log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
@@ -572,13 +554,12 @@ if __name__=='__main__':
     pile = Queue()
     pile_deleted = Queue()
     pile_catchup = Queue() if grab_conversations else None
-    pile_links = Queue() if resolve_links else None
     pile_medias = Queue() if dl_medias else None
     default_handler = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     exit_event = Event()
-    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_links, pile_medias, conf['mongo'], locale, exit_event, conf['debug']))
+    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf['mongo'], locale, exit_event, conf['debug']))
     depile.daemon = True
     depile.start()
     if grab_conversations:
@@ -586,7 +567,7 @@ if __name__=='__main__':
         catchup.daemon = True
         catchup.start()
     if resolve_links:
-        resolve = Process(target=resolver, args=(pile_links, conf['mongo'], exit_event, conf['debug']))
+        resolve = Process(target=resolver, args=(conf['mongo'], exit_event, conf['debug']))
         resolve.daemon = True
         resolve.start()
     if dl_medias:
