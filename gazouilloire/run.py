@@ -491,6 +491,9 @@ if __name__=='__main__':
     except Exception as e:
         log('ERROR', 'Could not open config.json: %s %s' % (type(e), e))
         sys.exit(1)
+    if len(conf['keywords']) + len(conf['url_pieces']) > 400:
+        log('ERROR', 'Please limit yourself to a maximum of 400 keywords total (including url_pieces): you set up %s keywords and %s url_pieces.' % (len(conf['keywords']), len(conf['url_pieces'])))
+        sys.exit(1)
     try:
         oauth = OAuth(conf['twitter']['oauth_token'], conf['twitter']['oauth_secret'], conf['twitter']['key'], conf['twitter']['secret'])
         oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
