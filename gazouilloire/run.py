@@ -515,6 +515,7 @@ if __name__=='__main__':
         coll = db['tweets']
         coll.ensure_index([('_id', ASCENDING)], background=True)
         coll.ensure_index([('retweet_id', ASCENDING)], background=True)
+        coll.ensure_index([('in_reply_to_status_id_str', ASCENDING)], background=True)
         coll.ensure_index([('timestamp', ASCENDING)], background=True)
     except Exception as e:
         log('ERROR', 'Could not initiate connection to MongoDB: %s %s' % (type(e), e))

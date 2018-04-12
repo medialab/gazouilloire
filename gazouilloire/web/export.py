@@ -159,6 +159,20 @@ isodate = lambda x: datetime.strptime(x, '%a %b %d %H:%M:%S +0000 %Y').isoformat
 
 format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val).encode('utf-8')
 
+def get_thread_ids_from_ids(ids, mongocoll):
+    all_ids = set(ids)
+    for t in mongocoll.find({"$or": [
+        {"_id": {"$in": ids}},
+        {"in_reply_to_status_id_str": {"$in": ids}}
+      ]}, projection={"in_reply_to_status_id_str": 1}):
+        all_ids.add(t["_id"])
+        if t.get("in_reply_to_status_id_str"):
+            all_ids.add(t["in_reply_to_status_id_str"])
+    all_ids = list(all_ids)
+    if len(all_ids) != len(ids):
+        return get_thread_ids_from_ids(all_ids, mongocoll)
+    return all_ids
+
 def yield_csv(queryiterator, extra_fields=[]):
     out_fields = fields + extra_fields
     yield ",".join(out_fields)
