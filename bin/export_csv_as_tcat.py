@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json, sys, re
+import os, sys, re
+import csv, json
 from pymongo import MongoClient
 import progressbar
 from gazouilloire.web.export import yield_csv
@@ -19,6 +20,10 @@ if len(sys.argv) == 2:
         except Exception as e:
             sys.stderr.write("WARNING: query wrongly formatted: %s\n" % sys.argv[1])
             sys.exit("%s: %s\n" % (type(e), e))
+    elif os.path.exists(sys.argv[1]):
+          with open(sys.argv[1]) as f:
+              ids = sorted([t.get("id", t.get("_id")) for t in csv.DictReader(f)])
+          query = {"_id": {"$in": ids}}
     else:
         query = {"text": re.compile(sys.argv[1].replace(' ', '\s+'), re.I)}
 elif len(sys.argv) > 2:
