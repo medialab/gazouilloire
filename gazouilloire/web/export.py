@@ -159,19 +159,25 @@ isodate = lambda x: datetime.strptime(x, '%a %b %d %H:%M:%S +0000 %Y').isoformat
 
 format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val).encode('utf-8')
 
-def get_thread_ids_from_ids(ids, mongocoll):
-    all_ids = set(ids)
+def get_thread_idset_from_idset(ids, mongocoll, known_ids=set()):
+    all_ids = ids | known_ids
+    new_ids = set()
+    ids_list = list(ids)
     for t in mongocoll.find({"$or": [
-        {"_id": {"$in": ids}},
-        {"in_reply_to_status_id_str": {"$in": ids}}
+        {"_id": {"$in": ids_list}},
+        {"in_reply_to_status_id_str": {"$in": ids_list}}
       ]}, projection={"in_reply_to_status_id_str": 1}):
-        all_ids.add(t["_id"])
-        if t.get("in_reply_to_status_id_str"):
-            all_ids.add(t["in_reply_to_status_id_str"])
-    all_ids = list(all_ids)
-    if len(all_ids) != len(ids):
-        return get_thread_ids_from_ids(all_ids, mongocoll)
+        if t["_id"] not in all_ids:
+            new_ids.add(t["_id"])
+        origin = t.get("in_reply_to_status_id_str")
+        if origin and origin not in all_ids:
+            new_ids.add(origin)
+    if len(new_ids):
+        return all_ids | get_thread_idset_from_idset(new_ids, mongocoll, all_ids)
     return all_ids
+
+def get_thread_ids_from_ids(ids_list, mongocoll):
+    return list(get_thread_idset_from_idset(set(ids_list), mongocoll))
 
 def yield_csv(queryiterator, extra_fields=[]):
     out_fields = fields + extra_fields
