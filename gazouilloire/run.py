@@ -93,6 +93,8 @@ def downloader(pile_medias, medias_dir, exit_event, debug=False):
             log("DEBUG", "[medias] +%s files" % done)
     log("INFO", "FINISHED downloader")
 
+# TODO
+# - mark as deleted tweet_ids missing from request result
 def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
     while not exit_event.is_set() or not pile_catchup.empty():
         todo = []
