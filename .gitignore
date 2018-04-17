@@ -3,7 +3,6 @@ config.json
 *.pyc
 backups
 .search_state.json
-runlog.txt*
 *.csv
 *.zip
 *.tmp
@@ -11,3 +10,4 @@ gazouilloire/web/apache.conf
 gazouilloire/web/web.wsgi
 exclude_filters.txt
 medias
+logs
