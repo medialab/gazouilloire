@@ -179,6 +179,10 @@ def get_thread_idset_from_idset(ids, mongocoll, known_ids=set()):
 def get_thread_ids_from_ids(ids_list, mongocoll):
     return list(get_thread_idset_from_idset(set(ids_list), mongocoll))
 
+def get_thread_ids_from_query(query, mongocoll):
+    ids = [t["_id"] for t in mongocoll.find(query, projection={})]
+    return get_thread_ids_from_ids(ids, mongocoll))
+
 def yield_csv(queryiterator, extra_fields=[]):
     out_fields = fields + extra_fields
     yield ",".join(out_fields)
