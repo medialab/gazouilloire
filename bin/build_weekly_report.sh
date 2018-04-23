@@ -52,7 +52,7 @@ medias at $reporturl/media/
 " >> $report
 fi
 
-bin/export_csv_as_tcat.py '{"$and": ['"$time_args""$filters"']}' > $outdir/all.csv
+bin/export_csv_as_tcat.py --quiet '{"$and": ['"$time_args""$filters"']}' > $outdir/all.csv
 total=$((`cat $outdir/all.csv | wc -l` - 1))
 echo "TOTAL tweets collected this week:
   $total
@@ -60,7 +60,7 @@ echo "TOTAL tweets collected this week:
 
 cat $list_queries | grep . | while read query; do
   query_name=$(echo $query | sed 's/[\\^].//g' | sed 's/|/-/g' | sed 's/[^a-z\-]//gi')
-  bin/export_csv_as_tcat.py '{"$and": ['"$time_args""$filters"', {"text": re.compile(r"'"$query"'", re.I)}]}' > $outdir/$query_name.csv
+  bin/export_csv_as_tcat.py --quiet '{"$and": ['"$time_args""$filters"', {"text": re.compile(r"'"$query"'", re.I)}]}' > $outdir/$query_name.csv
   total=$((`cat $outdir/$query_name.csv | wc -l` - 1))
   if [ $total -eq 0 ]; then
     echo "________________________
