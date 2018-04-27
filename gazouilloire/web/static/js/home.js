@@ -73,6 +73,9 @@
     ns.addTagSelect('filters', $('#filters_val').val());
     $('#submit').on('click', ns.submit);
     $('#download').on('click', ns.download);
+    $('#threads').on('change', function(d){
+      $("#threads_val").val(d.currentTarget.checked ? "checked" : "");
+    });
     $('#selected').on('change', function(d){
       $("#selected_val").val(d.currentTarget.checked ? "checked" : "");
     });

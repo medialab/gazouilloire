@@ -4,13 +4,17 @@
 import os, sys, re
 import csv, json
 from pymongo import MongoClient
-import progressbar
 from gazouilloire.web.export import yield_csv, get_thread_ids_from_ids
 
 with open('config.json') as confile:
     conf = json.loads(confile.read())
 
 db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
+
+verbose = True
+if len(sys.argv) > 1 and "--quiet" in sys.argv:
+    sys.argv.remove("--quiet")
+    verbose = False
 
 query = {}
 if len(sys.argv) == 2:
@@ -34,7 +38,10 @@ elif len(sys.argv) > 2:
 
 extra_fields = conf.get('export', {}).get('extra_fields', [])
 count = db.count(query)
-bar = progressbar.ProgressBar(max_value=count)
-mongoiterator = db.find(query, sort=[("_id", 1)], limit=count)
-for t in bar(yield_csv(mongoiterator, extra_fields)):
+iterator = yield_csv(db.find(query, sort=[("_id", 1)], limit=count), extra_fields)
+if verbose:
+    import progressbar
+    bar = progressbar.ProgressBar(max_value=count)
+    iterator = bar(iterator)
+for t in iterator:
     print t
