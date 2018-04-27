@@ -89,8 +89,8 @@ corresp_fields = {
     "from_user_description": "user_description",
     "from_user_url": "user_url",
     "from_user_profile_image_url": "user_profile_image_url_https",
-    "from_user_utcoffset": "user_utc_offset",
-    "from_user_timezone": "user_time_zone",
+    "from_user_utcoffset": "user_utc_offset",   # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
+    "from_user_timezone": "user_time_zone",     # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
     "from_user_lang": "user_lang",
     "from_user_tweetcount": "user_statuses",
     "from_user_followercount": "user_followers",
