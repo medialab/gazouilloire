@@ -140,14 +140,14 @@ def resolver(mongoconf, exit_event, debug=False):
     while not exit_event.is_set():
         done = 0
         todo = list(tweetscoll.find(links_to_resolve_query, projection={"links": 1, "retweet_id": 1}, limit=500, sort=[("_id", 1)]))
-        urlstoclear = list(set([l for t in todo for l in t['links']]))
+        urlstoclear = list(set([l for t in todo for l in t.get('links', [])]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
         for tweet in todo:
             tweetid = tweet.get('retweet_id') or tweet['_id']
             if exit_event.is_set():
                 continue
             gdlinks = []
-            for link in tweet["links"]:
+            for link in tweet.get("links", []):
                 if link in alreadydone:
                     gdlinks.append(alreadydone[link])
                     continue
