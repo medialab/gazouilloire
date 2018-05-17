@@ -528,6 +528,8 @@ if __name__=='__main__':
         coll.ensure_index([('_id', ASCENDING)], background=True)
         coll.ensure_index([('retweet_id', ASCENDING)], background=True)
         coll.ensure_index([('in_reply_to_status_id_str', ASCENDING)], background=True)
+        coll.ensure_index([('lang', ASCENDING)], background=True)
+        coll.ensure_index([('user_lang', ASCENDING)], background=True)
         coll.ensure_index([('timestamp', ASCENDING)], background=True)
         coll.ensure_index([('links_to_resolve', ASCENDING)], background=True)
         coll.ensure_index([('links_to_resolve', ASCENDING), ('_id', ASCENDING)], background=True)
