@@ -64,6 +64,8 @@ HowTo
 - Run with:
 
 ```bash
+    ./restart.sh
+    # or
     ./gazouilloire/run.py
 ``` 
 
@@ -72,9 +74,25 @@ HowTo
 ```bash
 # To export a csv with most fields (formatted similarily to [DMI's TCAT](https://github.com/digitalmethodsinitiative/dmi-tcat)):
 bin/export_csv_as_tcat.py
+# To export a csv of all tweets having a specific word in their text:
+bin/export_csv_as_tcat.py medialab
+# To export a csv of all tweets having one of many specific words in their text:
+bin/export_csv_as_tcat.py medialab digitalhumanities datajournalism '#python'
+# To export a csv of all tweets matching a specific MongoDB query, for instance by user_name:
+bin/export_csv_as_tcat.py "{'user_screen_name': 'medialab_ScPo'}"
 # To export a csv with the most useful fields:
 bin/export_csv.py
 # To export the whole text content of the tweets:
 bin/export_all_text.py
 ```
+
+## Credits & License
+
+[Benjamin Ooghe-Tabanou](https://github.com/boogheta) @ [Sciences Po médialab](https://github.com/medialab)
+
+Discover more of our projects at [médialab tools](http://tools.medialab.sciences-po.fr/).
+
+This work is supported by [DIME-Web](http://dimeweb.dime-shs.sciences-po.fr/), part of [DIME-SHS](http://www.sciencespo.fr/dime-shs/) research equipment financed by the EQUIPEX program (ANR-10-EQPX-19-01).
+
+Gazouilloire is a free open source software released under [GPL 3.0 license](LICENSE).
 

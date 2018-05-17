@@ -1,41 +1,17 @@
 #/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import csv, json
-from time import time, sleep
+import csv
 from pymongo import MongoClient
-from twitter import Twitter, OAuth, OAuth2, TwitterHTTPError
 from config import CSV_SOURCE, CSV_ENCODING, CSV_TWITTER_FIELD, MONGO_DATABASE, TWITTER
 from gazouilloire.tweets import prepare_tweet
+from gazouilloire.api_wrapper import TwitterWrapper
 
 with open(CSV_SOURCE) as f:
     data = list(csv.DictReader(f))
 
-oauth = OAuth(TWITTER['OAUTH_TOKEN'], TWITTER['OAUTH_SECRET'], TWITTER['KEY'], TWITTER['SECRET'])
-oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(TWITTER['KEY'], TWITTER['SECRET'])).oauth2.token(grant_type="client_credentials"))['access_token'])
-api = {
-    'user': Twitter(auth=oauth),
-    'app': Twitter(auth=oauth2)
-}
-
+api = TwitterWrapper(TWITTER)
 db = MongoClient("localhost", 27017)[MONGO_DATABASE]
-
-def wrapper(route, args={}, tryouts=50, apipath='user'):
-    try:
-        return api[apipath].__getattr__("/".join(route.split('.')))(**args)
-    except TwitterHTTPError as e:
-        if e.e.code == 429:
-            if apipath == 'user':
-                return wrapper(route, args, apipath='app')
-            reset = int(e.e.headers["x-rate-limit-reset"])
-            sleeptime = int(reset - time() + 2)
-            print "REACHED API LIMITS on %s %s %s, will wait for the next %ss" % (route, apipath, args, sleeptime)
-            sleep(sleeptime)
-            return wrapper(route, args, tryouts-1)
-        elif tryouts:
-            return wrapper(route, args, tryouts-1, apipath)
-        else:
-            print "ERROR after 50 tryouts for %s %s %s" % (route, apipath, args)
 
 def cleaner(data):
     if 'entities' in data:
@@ -60,7 +36,7 @@ for i, row in enumerate(data):
         print "  ALREADY DONE!"
         continue
     api_args = {'screen_name': user['twitter']}
-    metas = wrapper('users.show', api_args)
+    metas = api.call('users.show', api_args)
     cleaner(metas)
     #if user['protected']:
     #    print "SKIPPING tweets for %s whose account is unfortunately protected" % user['twitter']
@@ -70,7 +46,7 @@ for i, row in enumerate(data):
     api_args['cursor'] = -1
     metas['friends'] = []
     while api_args['cursor']:
-        res = wrapper('friends.ids', api_args)
+        res = api.call('friends.ids', api_args)
         metas['friends'] += res['ids']
         print "  -> query: %s, next: %s" % (len(metas['friends']), res['next_cursor'])
         api_args['cursor'] = res['next_cursor']

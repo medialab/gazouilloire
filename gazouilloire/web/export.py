@@ -89,8 +89,8 @@ corresp_fields = {
     "from_user_description": "user_description",
     "from_user_url": "user_url",
     "from_user_profile_image_url": "user_profile_image_url_https",
-    "from_user_utcoffset": "user_utc_offset",
-    "from_user_timezone": "user_time_zone",
+    "from_user_utcoffset": "user_utc_offset",   # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
+    "from_user_timezone": "user_time_zone",     # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
     "from_user_lang": "user_lang",
     "from_user_tweetcount": "user_statuses",
     "from_user_followercount": "user_followers",
@@ -181,7 +181,7 @@ def get_thread_ids_from_ids(ids_list, mongocoll):
 
 def get_thread_ids_from_query(query, mongocoll):
     ids = [t["_id"] for t in mongocoll.find(query, projection={})]
-    return get_thread_ids_from_ids(ids, mongocoll))
+    return get_thread_ids_from_ids(ids, mongocoll)
 
 def yield_csv(queryiterator, extra_fields=[]):
     out_fields = fields + extra_fields

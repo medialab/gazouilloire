@@ -20,5 +20,5 @@ for t in db.find(sort=[("_id", 1)]):
     t["twitterid"] = t["screen_name"].lower()
     t["follows"] = "|".join(t["follows"])
     t["created_at"] = datetime.strptime(t['created_at'], '%a %b %d %H:%M:%S +0000 %Y').isoformat().decode("utf8")
-    print ",".join([format_field(t[a]) for a in headers])
+    print ",".join([format_field(t.get(a, "")) for a in headers])
 
