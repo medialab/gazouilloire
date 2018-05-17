@@ -134,6 +134,7 @@ def prepare_tweet(tweet, locale=None):
         'retweet_user_id': rtuid,
         'medias': medias,
         'links': sorted(links),
+        'links_to_resolve': len(links) > 0,
         'hashtags': sorted(hashtags),
         'mentions_ids': [mentions[m] for m in sorted(mentions.keys())],
         'mentions_names': sorted(mentions.keys()),

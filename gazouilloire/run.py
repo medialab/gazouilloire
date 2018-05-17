@@ -136,14 +136,21 @@ def resolver(mongoconf, exit_event, debug=False):
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     linkscoll = db['links']
     tweetscoll = db['tweets']
-    links_to_resolve_query = {"links": {"$ne": []}, "proper_links": {"$exists": False}}
+    links_to_resolve_query = {"links_to_resolve": True}
     while not exit_event.is_set():
         done = 0
-        todo = list(tweetscoll.find(links_to_resolve_query, projection={"links": 1, "retweet_id": 1}, limit=500, sort=[("_id", 1)]))
-        urlstoclear = list(set([l for t in todo for l in t.get('links', [])]))
+        todo = list(tweetscoll.find(links_to_resolve_query, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=200, sort=[("_id", 1)]))
+        urlstoclear = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
+        tweetsdone = []
+        batchidsdone = set()
         for tweet in todo:
+            if t.get("proper_links", []):
+                tweetsdone.append(t["_id"])
+                continue
             tweetid = tweet.get('retweet_id') or tweet['_id']
+            if tweetid in batchidsdone:
+                continue
             if exit_event.is_set():
                 continue
             gdlinks = []
@@ -159,10 +166,13 @@ def resolver(mongoconf, exit_event, debug=False):
                     log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
                 if link != good:
                     done += 1
-            tweetscoll.update({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks}}, upsert=False, multi=True)
+            tweetscoll.update({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks, 'links_to_resolve': False}}, upsert=False, multi=True)
+            batchidsdone.add(tweetid)
         if debug and done:
             left = tweetscoll.count(links_to_resolve_query)
             log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
+        # clear tweets potentially rediscovered
+        tweetscoll.update({"_id": {"$in": tweetsdone}}, {"$set": {"links_to_resolve": False}}, upsert=False, multi=True)
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
@@ -519,6 +529,8 @@ if __name__=='__main__':
         coll.ensure_index([('retweet_id', ASCENDING)], background=True)
         coll.ensure_index([('in_reply_to_status_id_str', ASCENDING)], background=True)
         coll.ensure_index([('timestamp', ASCENDING)], background=True)
+        coll.ensure_index([('links_to_resolve', ASCENDING)], background=True)
+        coll.ensure_index([('links_to_resolve', ASCENDING), ('_id', ASCENDING)], background=True)
     except Exception as e:
         log('ERROR', 'Could not initiate connection to MongoDB: %s %s' % (type(e), e))
         sys.exit(1)
