@@ -172,7 +172,8 @@ def resolver(mongoconf, exit_event, debug=False):
             left = tweetscoll.count(links_to_resolve_query)
             log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
         # clear tweets potentially rediscovered
-        tweetscoll.update({"_id": {"$in": tweetsdone}}, {"$set": {"links_to_resolve": False}}, upsert=False, multi=True)
+        if tweetsdone:
+            tweetscoll.update({"_id": {"$in": tweetsdone}}, {"$set": {"links_to_resolve": False}}, upsert=False, multi=True)
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
