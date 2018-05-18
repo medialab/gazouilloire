@@ -526,12 +526,9 @@ if __name__=='__main__':
     try:
         db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]
         coll = db['tweets']
-        coll.ensure_index([('_id', ASCENDING)], background=True)
-        coll.ensure_index([('retweet_id', ASCENDING)], background=True)
-        coll.ensure_index([('in_reply_to_status_id_str', ASCENDING)], background=True)
-        coll.ensure_index([('timestamp', ASCENDING)], background=True)
-        # TODO Add langs array field with both lang and user_data and index it for faster filtering
-        coll.ensure_index([('links_to_resolve', ASCENDING)], background=True)
+        for f in ['_id', 'retweet_id', 'in_reply_to_status_id_str', 'timestamp',
+                  'links_to_resolve', 'lang', 'user_lang', 'langs']:
+            coll.ensure_index([(f, ASCENDING)], background=True)
         coll.ensure_index([('links_to_resolve', ASCENDING), ('_id', ASCENDING)], background=True)
     except Exception as e:
         log('ERROR', 'Could not initiate connection to MongoDB: %s %s' % (type(e), e))

@@ -12,13 +12,13 @@ with open('config.json') as confile:
 db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
 
 urls = {}
-query = {"$or": [{"lang": "fr"}, {"user_lang": "fr"}]}
+query = {"langs": "fr"}
 print "Counting matching results..."
-count = db.find(query, projection=[]).hint([('$natural', True)]).count()
+count = db.count(query)
 
 print "Querying and hashing results..."
 bar = progressbar.ProgressBar(max_value=count)
-for t in bar(db.find(query, limit=count, projection={"links": 1, "proper_links": 1}).hint([('$natural', True)])):
+for t in bar(db.find(query, limit=count, projection={"links": 1, "proper_links": 1})):
     for l in t.get("proper_links", t["links"]):
         if l not in urls:
             urls[l] = 0

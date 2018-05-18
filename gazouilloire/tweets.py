@@ -62,6 +62,12 @@ def grab_extra_meta(source, result):
         result['user_created_at_timestamp'] = get_timestamp(result, locale, 'user_created_at')
     except:
         pass
+    # grouped langs field for faster querying across both
+    result['langs'] = []
+    for lang_field in ['lang', 'user_lang']:
+        lang = result.get(lang_field, '').lower()
+        if lang and lang not in result['langs']:
+            result['langs'].append(lang)
     return result
 
 def prepare_tweets(tweets, locale):
