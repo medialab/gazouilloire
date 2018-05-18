@@ -96,4 +96,3 @@ if __name__ == "__main__":
     db = MongoClient("localhost", 27017)[MONGO_DATABASE]
     for account in ACCOUNTS:
         process_account(account, api, db)
-        break
