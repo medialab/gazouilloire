@@ -1,0 +1,10 @@
+MONGO_DATABASE = 'retweeters'
+TWITTER = {
+  'KEY': 'xxxxxxxxxxxxxxxxxxxxx',
+  'SECRET': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  'OAUTH_TOKEN': 'xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  'OAUTH_SECRET': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+}
+ACCOUNTS = [
+  'medialab_ScPo'
+]
