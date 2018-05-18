@@ -33,7 +33,7 @@ class TwitterWrapper(object):
                 sleeptime = max(int(self.waits[route] - time() - 10), 0) + 10
                 print "REACHED API LIMITS on %s %s %s, will wait for the next %ss" % (route, auth, args, sleeptime)
                 sleep(sleeptime)
-                return self.call(route, args, tryouts)
+                return self.call(route, args, tryouts, auth=('app' if auth == 'user' else 'user'))
             elif tryouts:
                 return self.call(route, args, tryouts-1, auth)
             else:
