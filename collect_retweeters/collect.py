@@ -67,9 +67,11 @@ def process_account(user_name, api, db):
             while rt_args.get('cursor', True):
                 retweets = api.call('statuses.retweeters.ids', rt_args)
                 rt_args['cursor'] = retweets.get('next_cursor', long(retweets.get('next_cursor_str', '')))
-                tw['retweeters'] += retweets.get('ids', [])
-                user_args['user_id'] = ",".join([str(i) for i in retweets.get('ids', [])])
-                retweeters += api.call('users.lookup', user_args)
+                rt_ids = retweets.get('ids', [])
+                if rt_ids:
+                    tw['retweeters'] += rt_ids
+                    user_args['user_id'] = ",".join([str(i) for i in rt_ids])
+                    retweeters += api.call('users.lookup', user_args)
 
             n_retweets = len(retweeters)
             n_retweets_batch += n_retweets
