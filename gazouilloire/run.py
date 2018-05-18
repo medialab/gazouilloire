@@ -136,10 +136,9 @@ def resolver(mongoconf, exit_event, debug=False):
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     linkscoll = db['links']
     tweetscoll = db['tweets']
-    links_to_resolve_query = {"links_to_resolve": True}
     while not exit_event.is_set():
         done = 0
-        todo = list(tweetscoll.find(links_to_resolve_query, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=200, sort=[("_id", 1)]))
+        todo = list(tweetscoll.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=600, sort=[("_id", 1)]))
         urlstoclear = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
         tweetsdone = []
@@ -169,7 +168,7 @@ def resolver(mongoconf, exit_event, debug=False):
             tweetscoll.update({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks, 'links_to_resolve': False}}, upsert=False, multi=True)
             batchidsdone.add(tweetid)
         if debug and done:
-            left = tweetscoll.count(links_to_resolve_query)
+            left = tweetscoll.count({"links_to_resolve": True})
             log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
         # clear tweets potentially rediscovered
         if tweetsdone:
@@ -333,7 +332,8 @@ def get_twitter_rates(conn, conn2):
 
 def stall_queries(next_reset, exit_event):
     delay = max(1, int(next_reset - time.time())) + 1
-    log("INFO", "Stalling search queries with rate exceeded for the next %s seconds" % delay)
+    if delay > 5:
+        log("INFO", "Stalling search queries with rate exceeded for the next %s seconds" % delay)
     breakable_sleep(delay, exit_event)
 
 def read_search_state():
@@ -529,9 +529,8 @@ if __name__=='__main__':
         coll.ensure_index([('_id', ASCENDING)], background=True)
         coll.ensure_index([('retweet_id', ASCENDING)], background=True)
         coll.ensure_index([('in_reply_to_status_id_str', ASCENDING)], background=True)
-        coll.ensure_index([('lang', ASCENDING)], background=True)
-        coll.ensure_index([('user_lang', ASCENDING)], background=True)
         coll.ensure_index([('timestamp', ASCENDING)], background=True)
+        # TODO Add langs array field with both lang and user_data and index it for faster filtering
         coll.ensure_index([('links_to_resolve', ASCENDING)], background=True)
         coll.ensure_index([('links_to_resolve', ASCENDING), ('_id', ASCENDING)], background=True)
     except Exception as e:

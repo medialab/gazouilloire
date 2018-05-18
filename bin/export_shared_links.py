@@ -14,19 +14,15 @@ db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db
 urls = {}
 query = {"$or": [{"lang": "fr"}, {"user_lang": "fr"}]}
 print "Counting matching results..."
-count = db.count(query)
+count = db.find(query, projection=[]).hint([('$natural', True)]).count()
 
 print "Querying and hashing results..."
 bar = progressbar.ProgressBar(max_value=count)
-for t in bar(db.find(query, limit=count, projection={"links": 1, "proper_links": 1})):
+for t in bar(db.find(query, limit=count, projection={"links": 1, "proper_links": 1}).hint([('$natural', True)])):
     for l in t.get("proper_links", t["links"]):
         if l not in urls:
             urls[l] = 0
         urls[l] += 1
-
-print "Storing json data..."
-with open("shared_urls.json", "w") as f:
-    json.dump(urls, f)
 
 print "Sorting and storing csv data..."
 with open("shared_urls.csv", "w") as f:
