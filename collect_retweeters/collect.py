@@ -39,6 +39,9 @@ def process_account(user_name, api, db):
       'include_rts': False,
       'tweet_mode': 'extended'
     }
+    max_id = db.tweets.find_one({"user_id_str": user['id_str']}, projection=[], sort=[('timestamp', ASCENDING)])
+    if max_id:
+        api_args['max_id'] = long(max_id["_id"]) - 1
     tweets = api.call('statuses.user_timeline', api_args)
     while tweets:
         n_retweets_batch = 0
@@ -71,13 +74,13 @@ def process_account(user_name, api, db):
             n_retweets = len(retweeters)
             n_retweets_batch += n_retweets
             print "    found %s retweets out of %s" % (n_retweets, tw["retweet_count"])
-            db.tweets.update({'_id': tweet['id_str']}, {"$set": tw}, upsert=True)
             if tw["retweeters"]:
                 existing = [u["_id"] for u in db.users.find({"_id": {"$in": tw["retweeters"]}}, projection=[])]
                 news = [clean_user_entities(u) for u in retweeters if u["id"] not in existing]
                 if news:
                     db.users.insert(news)
                 db.users.update({"_id": {"$in": tw["retweeters"]}}, {"$inc": {account_rt_field: 1}}, multi=True)
+            db.tweets.update({'_id': tweet['id_str']}, {"$set": tw}, upsert=True)
 
         print " -> collected %s tweets and %s retweets" % (len(tweets), n_retweets_batch)
         tweets = api.call('statuses.user_timeline', api_args)
