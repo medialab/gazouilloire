@@ -9,16 +9,16 @@ class TwitterWrapper(object):
 
     MAX_TRYOUTS = 5
 
-    def __init__(api_keys):
+    def __init__(self, api_keys):
         self.oauth = OAuth(api_keys['OAUTH_TOKEN'], api_keys['OAUTH_SECRET'], api_keys['KEY'], api_keys['SECRET'])
         self.oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(api_keys['KEY'], api_keys['SECRET'])).oauth2.token(grant_type="client_credentials"))['access_token'])
         self.api = {
-            'user': Twitter(auth=oauth),
-            'app': Twitter(auth=oauth2)
+            'user': Twitter(auth=self.oauth),
+            'app': Twitter(auth=self.oauth2)
         }
         self.waits = {}
 
-    def call(route, args={}, tryouts=self.MAX_TRYOUTS, auth='user'):
+    def call(self, route, args={}, tryouts=MAX_TRYOUTS, auth='user'):
         try:
             return self.api[auth].__getattr__("/".join(route.split('.')))(**args)
         except TwitterHTTPError as e:
@@ -38,4 +38,5 @@ class TwitterWrapper(object):
                 return self.call(route, args, tryouts-1, auth)
             else:
                 print "ERROR after %s tryouts for %s %s %s" % (self.MAX_TRYOUTS, route, auth, args)
+                print "%s: %s" % (type(e), e)
 

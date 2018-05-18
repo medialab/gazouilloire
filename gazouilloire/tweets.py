@@ -153,3 +153,18 @@ def prepare_tweet(tweet, locale=None):
     tw = grab_extra_meta(tweet, tw)
     return tw
 
+def clean_user_entities(user_data):
+    if 'entities' in user_data:
+        for k in user_data['entities']:
+            if 'urls' in user_data['entities'][k]:
+                for url in user_data['entities'][k]['urls']:
+                    try:
+                        user_data[k] = user_data[k].replace(url['url'], url['expanded_url'])
+                    except:
+                        print "WARNING, couldn't process entity", url, k, user_data[k]
+        user_data.pop('entities')
+    if 'status' in user_data:
+        user_data.pop('status')
+    user_data["_id"] = user_data["id"]
+    return user_data
+
