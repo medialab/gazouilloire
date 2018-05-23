@@ -38,7 +38,7 @@ elif len(sys.argv) > 2:
 
 extra_fields = conf.get('export', {}).get('extra_fields', [])
 count = db.count(query)
-iterator = yield_csv(db.find(query, sort=[("_id", 1)], limit=count), extra_fields)
+iterator = yield_csv(db.find(query, sort=[("_id", 1)], limit=count), extra_fields=extra_fields)
 if verbose:
     import progressbar
     bar = progressbar.ProgressBar(max_value=count)

@@ -183,11 +183,11 @@ def get_thread_ids_from_query(query, mongocoll):
     ids = [t["_id"] for t in mongocoll.find(query, projection={})]
     return get_thread_ids_from_ids(ids, mongocoll)
 
-def yield_csv(queryiterator, extra_fields=[]):
-    out_fields = fields + extra_fields
+def yield_csv(queryiterator, list_fields=fields, extra_fields=[]):
+    out_fields = list_fields + extra_fields
     yield ",".join(out_fields)
     for t in queryiterator:
         yield ",".join(format_csv(get_field(k, t)) for k in out_fields)
 
-def export_csv(queryiterator, extra_fields=[]):
-    return "\n".join([t.decode('utf-8') for t in yield_csv(queryiterator, extra_fields)])
+def export_csv(queryiterator, list_fields=fields, extra_fields=[]):
+    return "\n".join([t.decode('utf-8') for t in yield_csv(queryiterator, list_fields, extra_fields)])
