@@ -4,7 +4,7 @@
 import re, sys
 from datetime import datetime
 
-fields = [
+TWEET_FIELDS = [
   "id",
   "time",
   "created_at",
@@ -57,8 +57,46 @@ fields = [
   "hashtags"
 ]
 
+USER_FIELDS = [
+  'id',
+  'screen_name',
+  'name',
+  'description',
+  'url',
+  'lang',
+  'created_at',
+  'utc_offset',
+  'time_zone',
+  'location',
+  'geo_enabled',
+  'verified',
+  'protected',
+  'statuses_count',
+  'followers_count',
+  'friends_count',
+  'favourites_count',
+  'listed_count',
+  'is_translator',
+  'translator_type',
+  'is_translation_enabled',
+  'default_profile',
+  'default_profile_image',
+  'has_extended_profile',
+  'profile_use_background_image',
+  'profile_background_image_url_https',
+  'profile_background_tile',
+  'profile_background_color',
+  'profile_banner_url',
+  'profile_link_color',
+  'profile_image_url',
+  'profile_text_color',
+  'profile_image_url_https',
+  'profile_sidebar_fill_color',
+  'profile_sidebar_border_color'
+]
+
 # Based and enriched from TCAT fields
-corresp_fields = {
+CORRESP_FIELDS = {
     "id": "_id",
     "time": "timestamp",
     "created_at": lambda x: isodate(x.get("created_at", "")),
@@ -113,21 +151,21 @@ corresp_fields = {
 }
 
 def search_field(field, tweet):
-    if field not in corresp_fields:
+    if field not in CORRESP_FIELDS:
         return tweet.get(field, '')
-    if not corresp_fields[field]:
+    if not CORRESP_FIELDS[field]:
         return ''
-    if corresp_fields[field] == bool:
+    if CORRESP_FIELDS[field] == bool:
         return tweet.get(field, False)
-    if corresp_fields[field] == int:
+    if CORRESP_FIELDS[field] == int:
         return tweet.get(field, 0)
-    if corresp_fields[field] == str:
+    if CORRESP_FIELDS[field] == str:
         return tweet.get(field, '')
-    if type(corresp_fields[field]) == str:
-        return tweet.get(corresp_fields[field], 0 if field.endswith('count') else '')
+    if type(CORRESP_FIELDS[field]) == str:
+        return tweet.get(CORRESP_FIELDS[field], 0 if field.endswith('count') else '')
     else:
         try:
-            return corresp_fields[field](tweet)
+            return CORRESP_FIELDS[field](tweet)
         except Exception as e:
             print >> sys.stderr, "WARNING: Can't apply export fonction for field %s to tweet %s\n%s: %s" % (field, tweet, type(e), e)
             return ""
@@ -183,11 +221,12 @@ def get_thread_ids_from_query(query, mongocoll):
     ids = [t["_id"] for t in mongocoll.find(query, projection={})]
     return get_thread_ids_from_ids(ids, mongocoll)
 
-def yield_csv(queryiterator, list_fields=fields, extra_fields=[]):
+def yield_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
     out_fields = list_fields + extra_fields
     yield ",".join(out_fields)
     for t in queryiterator:
         yield ",".join(format_csv(get_field(k, t)) for k in out_fields)
 
-def export_csv(queryiterator, list_fields=fields, extra_fields=[]):
+def export_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
     return "\n".join([t.decode('utf-8') for t in yield_csv(queryiterator, list_fields, extra_fields)])
+
