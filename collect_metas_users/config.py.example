@@ -1,4 +1,4 @@
-MONGO_DATABASE = 'retweeters'
+MONGO_DATABASE = 'metas-users'
 TWITTER = {
   'KEY': 'xxxxxxxxxxxxxxxxxxxxx',
   'SECRET': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
