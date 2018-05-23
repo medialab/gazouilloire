@@ -158,6 +158,8 @@ def clean_user_entities(user_data):
         for k in user_data['entities']:
             if 'urls' in user_data['entities'][k]:
                 for url in user_data['entities'][k]['urls']:
+                    if not url['expanded_url']:
+                        continue
                     try:
                         user_data[k] = user_data[k].replace(url['url'], url['expanded_url'])
                     except:
