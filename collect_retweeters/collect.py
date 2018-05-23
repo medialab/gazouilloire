@@ -101,4 +101,4 @@ if __name__ == "__main__":
         process_account(account, api, db)
         extra_fields.append("retweets_of_%s" % account.lstrip('@').strip().lower())
     iterator = db.users.find()
-    print export_csv(iterator, fields=USER_FIELDS, extra_fields=extra_fields).encode("utf-8")
+    print export_csv(iterator, USER_FIELDS, extra_fields).encode("utf-8")
