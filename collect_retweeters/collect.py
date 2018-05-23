@@ -4,6 +4,8 @@
 from pymongo import MongoClient, ASCENDING
 from gazouilloire.tweets import prepare_tweet, clean_user_entities
 from gazouilloire.api_wrapper import TwitterWrapper
+from gazouilloire.web.export import export_csv, USER_FIELDS
+
 
 def process_account(user_name, api, db):
     print "- WORKING ON %s" % user_name
@@ -94,5 +96,9 @@ if __name__ == "__main__":
     from config import ACCOUNTS, MONGO_DATABASE, TWITTER
     api = TwitterWrapper(TWITTER)
     db = MongoClient("localhost", 27017)[MONGO_DATABASE]
+    extra_fields = []
     for account in ACCOUNTS:
         process_account(account, api, db)
+        extra_fields.append("retweets_of_%s" % account.lstrip('@').strip().lower())
+    iterator = db.users.find()
+    print export_csv(iterator, fields=USER_FIELDS, extra_fields=extra_fields).encode("utf-8")

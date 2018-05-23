@@ -31,4 +31,4 @@ if __name__ == "__main__":
     db.users.drop()
     process_accounts(ACCOUNTS, api, db)
     iterator = db.users.find(sort=[('screen_name', 1)])
-    print export_csv(iterator, fields=USER_FIELDS)
+    print export_csv(iterator, fields=USER_FIELDS).encode("utf-8")
