@@ -44,7 +44,8 @@ def collect_user_and_friends(user_name, api, db):
 def build_ego_network(account, db):
     G = nx.DiGraph()
     corpus_ids = db.users.find_one({"screen_name": account})["friends"]
-    users = list(db.users.find({"_id": {"$in": corpus_ids}, "protected": False, "lang": {"$ne": "fr"}}))
+    users = list(db.users.find({"_id": {"$in": corpus_ids}, "protected": False}))
+    corpus_ids = [u["_id"] for u in users]
     for u in users:
         G.add_node(u["id_str"], label=u["screen_name"], friends=u["friends_count"], followers=u["followers_count"], tweets=u["statuses_count"], lang=u["lang"])
     for u in users:
