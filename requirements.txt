@@ -11,3 +11,4 @@ csvkit
 flask
 Flask-Caching
 flask-compress
+networkx
