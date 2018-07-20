@@ -88,11 +88,14 @@ def prepare_tweet(tweet, locale=None):
     rti = None
     rtu = None
     rtuid = None
+    rtime = None
     if "retweeted_status" in tweet and tweet['retweeted_status']['id_str'] != tweet['id_str']:
-        text = "RT @%s: %s" % (tweet['retweeted_status']['user']['screen_name'], tweet['retweeted_status'].get('full_text', tweet['retweeted_status'].get('text', '')))
         rti = tweet['retweeted_status']['id_str']
         rtu = tweet['retweeted_status']['user']['screen_name']
         rtuid = tweet['retweeted_status']['user']['id_str']
+        rtweet = prepare_tweet(tweet['retweeted_status'], locale=locale)
+        rtime = rtweet['timestamp']
+        text = "RT @%s: %s" % (rtu, rtweet['text'])
         for ent in ['entities', 'extended_entities']:
             if ent not in tweet['retweeted_status']:
                 continue
