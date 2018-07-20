@@ -104,13 +104,33 @@ def prepare_tweet(tweet, locale=None):
                 tweet[ent][field] = tweet[ent].get(field, [])
                 if field in tweet['retweeted_status'][ent]:
                     tweet[ent][field] += tweet['retweeted_status'][ent][field]
+    qti = None
+    qtu = None
+    qtuid = None
+    qtime = None
+    if "quoted_status" in tweet and tweet['quoted_status']['id_str'] != tweet['id_str']:
+        qti = tweet['quoted_status']['id_str']
+        qtu = tweet['quoted_status']['user']['screen_name']
+        qtuid = tweet['quoted_status']['user']['id_str']
+        qturl = tweet['quoted_status_permalink']['url']
+        qtweet = prepare_tweet(tweet['quoted_status'], locale=locale)
+        qtime = qtweet['timestamp']
+        text = text.replace(qturl, u"« %s: %s — %s »" % (qtu, qtweet['text'], qturl))
+        for ent in ['entities', 'extended_entities']:
+            if ent not in tweet['quoted_status']:
+                continue
+            tweet[ent] = tweet.get(ent, {})
+            for field in tweet['quoted_status'][ent]:
+                tweet[ent][field] = tweet[ent].get(field, [])
+                if field in tweet['quoted_status'][ent]:
+                    tweet[ent][field] += tweet['quoted_status'][ent][field]
     medids = set([])
     medias = []
     links = set([])
     hashtags = set([])
     mentions = {}
     if 'entities' in tweet or 'extended_entities' in tweet:
-        source_id = rti or tweet['id_str']
+        source_id = rti or qti or tweet['id_str']
         for entity in tweet.get('extended_entities', tweet['entities']).get('media', []) + tweet['entities'].get('urls', []):
             if 'expanded_url' in entity and 'url' in entity and entity['expanded_url']:
                 try:
@@ -138,9 +158,14 @@ def prepare_tweet(tweet, locale=None):
         'timestamp': get_timestamp(tweet, locale),
         'text': unescape_html(text),
         'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str']),
+        'quoted_id': qti,
+        'quoted_user': qtu,
+        'quoted_user_id': qtuid,
+        'quoted_timestamp': qtime,
         'retweet_id': rti,
         'retweet_user': rtu,
         'retweet_user_id': rtuid,
+        'retweet_timestamp': rtime,
         'medias': medias,
         'links': sorted(links),
         'links_to_resolve': len(links) > 0,
