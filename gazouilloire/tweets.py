@@ -112,8 +112,11 @@ def prepare_tweet(tweet, locale=None):
         qti = tweet['quoted_status']['id_str']
         qtu = tweet['quoted_status']['user']['screen_name']
         qtuid = tweet['quoted_status']['user']['id_str']
-        qturl = tweet['quoted_status_permalink']['url']
         qtweet = prepare_tweet(tweet['quoted_status'], locale=locale)
+        if 'quoted_status_permalink' in tweet:
+            qturl = tweet['quoted_status_permalink']['url']
+        else:
+            qturl = qtweet['url']
         qtime = qtweet['timestamp']
         text = text.replace(qturl, u"« %s: %s — %s »" % (qtu, qtweet['text'], qturl))
         for ent in ['entities', 'extended_entities']:
