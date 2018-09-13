@@ -14,6 +14,9 @@
         "amour",
         "@medialab_scpo"
     ],
+    "url_pieces": [
+        "medialab.sciencespo.fr/fr"
+    ],
     "time_limited_keywords": {
         "#m6": [
             ["2014-05-01 16:00", "2014-05-08 16:05"],

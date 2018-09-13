@@ -19,38 +19,44 @@ try:
 except:
     from pymongo import Connection as MongoClient
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
-from tweets import prepare_tweets, get_timestamp
+from tweets import prepare_tweet, prepare_tweets, get_timestamp
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 
 def log(typelog, text):
-    sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
+    try:
+        sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
+    except UnicodeEncodeError:
+        sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text.encode('ascii', 'ignore')))
 
-def depiler(pile, pile_deleted, pile_catchup, pile_links, pile_medias, mongoconf, locale, exit_event, debug=False):
+def breakable_sleep(delay, exit_event):
+    t = time.time() + delay
+    while time.time() < t and not exit_event.is_set():
+        time.sleep(1)
+
+def depiler(pile, pile_deleted, pile_catchup, pile_medias, mongoconf, locale, exit_event, debug=False):
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     coll = db['tweets']
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         while not pile_deleted.empty():
             todelete = pile_deleted.get()
-            coll.update(spec={'_id': todelete}, document={'$set': {'deleted': True}})
+            coll.update({'_id': todelete}, {'$set': {'deleted': True}}, upsert=True)
 
         todo = []
         while not pile.empty():
             todo.append(pile.get())
-        save = prepare_tweets(todo, locale)
-        for t in save:
+        stored = 0
+        for t in prepare_tweets(todo, locale):
             if pile_medias and t["medias"]:
                 pile_medias.put(t)
             if pile_catchup and t["in_reply_to_status_id_str"]:
                 if not coll.find_one({"_id": t["in_reply_to_status_id_str"]}):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
-            tid = coll.save(t)
-            if pile_links and t["links"]:
-                pile_links.put(t)
-        if debug and save:
-            log("DEBUG", "Saved %s tweets in MongoDB" % len(save))
-        if not exit_event.is_set():
-            time.sleep(2)
+            tid = coll.update({'_id': t['_id']}, {'$set': t}, upsert=True)
+            stored += 1
+        if debug and stored:
+            log("DEBUG", "Saved %s tweets in MongoDB" % stored)
+        breakable_sleep(2, exit_event)
     log("INFO", "FINISHED depiler")
 
 def download_media(tweet, media_id, media_url, medias_dir="medias"):
@@ -77,8 +83,7 @@ def downloader(pile_medias, medias_dir, exit_event, debug=False):
         while not pile_medias.empty():
             todo.append(pile_medias.get())
         if not todo:
-            if not exit_event.is_set():
-                time.sleep(2)
+            breakable_sleep(2, exit_event)
             continue
         done = 0
         for tweet in todo:
@@ -88,6 +93,8 @@ def downloader(pile_medias, medias_dir, exit_event, debug=False):
             log("DEBUG", "[medias] +%s files" % done)
     log("INFO", "FINISHED downloader")
 
+# TODO
+# - mark as deleted tweet_ids missing from request result
 def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
     while not exit_event.is_set() or not pile_catchup.empty():
         todo = []
@@ -97,24 +104,23 @@ def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
             try:
                 tweets = twitterco.statuses.lookup(_id=",".join(todo), tweet_mode="extended", _method="POST")
             except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
-                log("WARNING", "API connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
+                log("WARNING", "API connection could not be established, retrying in 10 secs (%s: %s)" % (type(e), e))
                 for t in todo:
                     pile_catchup.put(t)
-                if not exit_event.is_set():
-                    time.sleep(10)
+                breakable_sleep(10, exit_event)
                 continue
             if debug and tweets:
                 log("DEBUG", "[conversations] +%d tweets" % len(tweets))
             for t in tweets:
+                t["gazouilloire_source"] = "thread"
                 pile.put(dict(t))
-        if not exit_event.is_set():
-            time.sleep(5)
+        breakable_sleep(5, exit_event)
     log("INFO", "FINISHED catchupper")
 
 re_clean_mobile_twitter = re.compile(r'^(https?://)mobile\.(twitter\.)')
 def resolve_url(url, retries=5, user_agent=None):
     try:
-        good = resolve_redirects(url, user_agent=user_agent.random, verify=False)
+        good = resolve_redirects(url, user_agent=user_agent.random, verify=False, timeout=5)
         return re_clean_mobile_twitter.sub(r'\1\2', good)
     except Exception as e:
         if retries:
@@ -122,36 +128,51 @@ def resolve_url(url, retries=5, user_agent=None):
         log("ERROR", "Could not resolve redirection for url %s (%s: %s)" % (url, type(e), e))
         return url
 
-def resolver(pile_links, mongoconf, exit_event, debug=False):
+# TODO :
+# - add finalize task to run resolver on all tweets in DB with links but no proper_links
+def resolver(mongoconf, exit_event, debug=False):
     ua = UserAgent()
     ua.update()
     db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
     linkscoll = db['links']
     tweetscoll = db['tweets']
-    while not exit_event.is_set() or not pile_links.empty():
-        todo = []
-        while not pile_links.empty() and len(todo) < 10:
-            todo.append(pile_links.get())
-        if not todo:
-            if not exit_event.is_set():
-                time.sleep(1)
-            continue
+    while not exit_event.is_set():
         done = 0
+        todo = list(tweetscoll.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=600, sort=[("_id", 1)]))
+        urlstoclear = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
+        alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
+        tweetsdone = []
+        batchidsdone = set()
         for tweet in todo:
+            if t.get("proper_links", []):
+                tweetsdone.append(t["_id"])
+                continue
+            tweetid = tweet.get('retweet_id') or tweet['_id']
+            if tweetid in batchidsdone:
+                continue
+            if exit_event.is_set():
+                continue
             gdlinks = []
-            for link in tweet["links"]:
-                good = linkscoll.find_one({'_id': link})
-                if good:
-                    gdlinks.append(good['real'])
+            for link in tweet.get("links", []):
+                if link in alreadydone:
+                    gdlinks.append(alreadydone[link])
                     continue
                 good = resolve_url(link, user_agent=ua)
                 gdlinks.append(good)
-                linkscoll.save({'_id': link, 'real': good})
+                try:
+                    linkscoll.save({'_id': link, 'real': good})
+                except Exception as e:
+                    log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
                 if link != good:
                     done += 1
-            tweetscoll.update({'_id': tweet['_id']}, {'$set': {'proper_links': gdlinks}}, upsert=False)
+            tweetscoll.update({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks, 'links_to_resolve': False}}, upsert=False, multi=True)
+            batchidsdone.add(tweetid)
         if debug and done:
-            log("DEBUG", "[links] +%s links resolved (out of %s/%s)" % (done, len(todo), pile_links.qsize()))
+            left = tweetscoll.count({"links_to_resolve": True})
+            log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
+        # clear tweets potentially rediscovered
+        if tweetsdone:
+            tweetscoll.update({"_id": {"$in": tweetsdone}}, {"$set": {"links_to_resolve": False}}, upsert=False, multi=True)
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
@@ -166,7 +187,17 @@ def format_keyword(k):
         k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
     return urllib.quote(k.encode('utf-8'), '')
 
-def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geocode, exit_event, debug=False):
+def format_url_queries(urlpieces):
+    return [format_url_query(q) for q in urlpieces]
+
+re_split_url_pieces = re.compile(r'[^a-z0-9]+', re.I)
+def format_url_query(urlquery):
+    return " ".join([k for k in re_split_url_pieces.split(urlquery) if k.strip()])
+
+def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, locale, geocode, exit_event, debug=False):
+    # Stream parameters reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters
+    # Stream operators reference: https://developer.twitter.com/en/docs/tweets/rules-and-filtering/overview/standard-operators.html
+    # Stream special messages reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/streaming-message-types
     while not exit_event.is_set():
         ts = time.time()
         extra_keywords = []
@@ -187,7 +218,8 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
 
         try:
             # keywords tracked on stream
-            filter_keywords = [k.strip().lower().encode('utf-8') for k in keywords + extra_keywords if " OR " not in k and not k.startswith('@')]
+            query_keywords = [k.strip().lower().encode('utf-8') for k in keywords + format_url_queries(urlpieces) + extra_keywords if " OR " not in k and not k.startswith('@')]
+            filter_keywords = [k.strip().lower().encode('utf-8') for k in keywords + urlpieces + extra_keywords if " OR " not in k and not k.startswith('@')]
             for k in keywords + extra_keywords:
                 if " OR " in k:
                     if re_andor.match(k):
@@ -195,6 +227,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
                         combis = ands[0]
                         for ors in ands[1:]:
                             combis = ["%s %s" % (a, b) for a in combis for b in ors]
+                        query_keywords += combis
                         filter_keywords += combis
                     else:
                         log("WARNING", 'Ignoring keyword %s to streaming API, please use syntax with simple keywords separated by spaces or such as "(KEYW1 OR KEYW2) (KEYW3 OR KEYW4 OR KEYW5) (KEYW6)"' % k)
@@ -202,10 +235,10 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
             # users followed on stream
             users = [k.lstrip('@').strip().lower().encode('utf-8') for k in keywords + extra_keywords if k.startswith('@')]
             keep_users = list(users)
-            filter_users = []
+            query_users = []
             while users:
                 for u in resco.users.lookup(screen_name=','.join(users[0:100]), include_entities=False):
-                    filter_users.append(u['id_str'])
+                    query_users.append(u['id_str'])
                 users = users[100:]
 
             # prepare stream query arguments
@@ -213,18 +246,19 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
             if geocode:
                 args['locations'] = geocode
             else:
-                if filter_keywords:
-                    args['track'] = ",".join(filter_keywords)
-                if filter_users:
-                    args['follow'] = ",".join(filter_users)
+                if query_keywords:
+                    args['track'] = ",".join(query_keywords)
+                if query_users:
+                    args['follow'] = ",".join(query_users)
+            if debug:
+                log("DEBUG", "Calling stream with args %s" % args)
             streamiter = streamco.statuses.filter(**args)
         except KeyboardInterrupt:
             log("INFO", "closing streamer...")
             exit_event.set()
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
             log("WARNING", "Stream connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
-            if not exit_event.is_set():
-                time.sleep(2)
+            breakable_sleep(2, exit_event)
             continue
 
         try:
@@ -241,9 +275,11 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
                     break
                 if msg.get("timeout"):
                     continue
-                if msg.get('text'):
-                    if geocode:
-                        tmptext = msg.get('text').lower().encode('utf-8')
+                if msg.get('id_str'):
+                    msg["gazouilloire_source"] = "stream"
+                    tweet = prepare_tweet(msg, locale=locale)
+                    if geocode or (urlpieces and not keywords):
+                        tmptext = tweet["text"].lower().encode('utf-8')
                         keep = False
                         for k in filter_keywords:
                             if " " in k:
@@ -258,15 +294,15 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
                             elif k in tmptext:
                                 keep = True
                                 break
-                        if not keep:
-                            tmpauthor = msg.get('screen_name').lower()
+                        if not keep and keep_users:
+                            tmpauthor = tweet['user_screen_name'].lower()
                             for u in keep_users:
                                 if "@%s" % u in tmptext or u == tmpauthor:
                                     keep = True
                                     break
                         if not keep:
                             continue
-                    pile.put(dict(msg))
+                    pile.put(tweet)
                     if debug:
                         log("DEBUG", "[stream] +1 tweet")
                 else:
@@ -278,28 +314,46 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, timed_keywords, geoc
                         log("INFO", "Got special data: %s" % str(msg))
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
             log("WARNING", "Stream connection lost, reconnecting in a sec... (%s: %s)" % (type(e), e))
-        except:
-            log("INFO", "closing streamer...")
+        except Exception as e:
+            log("INFO", "closing streamer (%s: %s)..." % (type(e), e))
             exit_event.set()
 
         if debug:
             log("DEBUG", "Stream stayed alive for %sh" % str((time.time()-ts)/3600))
-        if not exit_event.is_set():
-            time.sleep(2)
+        breakable_sleep(2, exit_event)
     log("INFO", "FINISHED streamer")
 
 chunkize = lambda a, n: [a[i:i+n] for i in xrange(0, len(a), n)]
 
-def get_twitter_rates(conn):
+def get_twitter_rates(conn, conn2):
     rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
-    return rate_limits['reset'], rate_limits['limit'], rate_limits['remaining']
+    rate_limits2 = conn2.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
+    return min(int(rate_limits['reset']), int(rate_limits2['reset'])), (rate_limits['limit'] + rate_limits2['limit']), (rate_limits['remaining'] + rate_limits2['remaining'])
 
-def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_event, debug=False):
+def stall_queries(next_reset, exit_event):
+    delay = max(1, int(next_reset - time.time())) + 1
+    if delay > 5:
+        log("INFO", "Stalling search queries with rate exceeded for the next %s seconds" % delay)
+    breakable_sleep(delay, exit_event)
+
+def read_search_state():
+    with open(".search_state.json") as f:
+        return {k.encode("utf-8"): v for k, v in json.load(f).items()}
+
+def write_search_state(state):
+    with open(".search_state.json", "w") as f:
+        json.dump(state, f)
+
+# TODO
+# - improve logs : add INFO on result of all queries on a keyword if new
+def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, geocode, exit_event, debug=False):
+    # Search operators reference: https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators
     try:
-        next_reset, max_per_reset, left = get_twitter_rates(searchco)
-    except:
-        log("ERROR", "Connecting to Twitter API via OAuth2 sign, could not get rate limits")
+        next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2)
+    except Exception as e:
+        log("ERROR", "Connecting to Twitter API: could not get rate limits %s: %s" % (type(e), e))
         sys.exit(1)
+    curco = searchco
 
     queries = []
     fmtkeywords = []
@@ -308,24 +362,33 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_eve
             queries.append(format_keyword(k))
         else:
             fmtkeywords.append(format_keyword(k))
+    for q in urlpieces:
+        fmtkeywords.append('url:"%s"' % format_url_query(q))
     queries += [" OR ".join(a) for a in chunkize(fmtkeywords, 3)]
     timed_queries = {}
-    queries_since_id = [0 for _ in queries + timed_keywords.items()]
+    state = {q: 0 for q in queries + [format_keyword(k) for k in timed_keywords.keys()]}
+    try:
+        queries_since_id = read_search_state()
+        assert queries_since_id and sorted(state.keys()) == sorted(queries_since_id.keys())
+        log("INFO", "Search queries restarting from previous state.")
+    except:
+        queries_since_id = state
 
     timegap = 1 + len(queries)
     while not exit_event.is_set():
       try:
         if time.time() > next_reset:
             try:
-                next_reset, _, left = get_twitter_rates(searchco)
-            except:
+                next_reset, _, left = get_twitter_rates(searchco, searchco2)
+            except Exception as e:
+                log("ERROR", "Issue while collecting twitter rates, applying default 15 min values. %s: %s" % (type(e), e))
                 next_reset += 15*60
                 left = max_per_reset
         if not left:
-            log("WARNING", "Stalling search queries with rate exceeded for the next %s seconds" % max(0, int(next_reset - time.time())))
-            if not exit_event.is_set():
-                time.sleep(timegap + max(0, next_reset - time.time()))
+            stall_queries(next_reset, exit_event)
             continue
+
+        log("INFO", "Starting search queries cycle with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
 
         now = time.time()
         last_week = now - 60*60*24*7
@@ -338,37 +401,54 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_eve
                 if last_week < t0 < now or last_week < t1 < now:
                     timed_queries[keyw].append([t0, t1])
 
-        if debug:
-            log("DEBUG", "Starting search queries with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
-
-        for i, query in enumerate(queries + timed_queries.items()):
-
-            planning = None
-            if type(query) is tuple:
-                planning = query[1]
+        for query in [q[0] for q in sorted(queries_since_id.items(), key=lambda ts: ts[1])]:
+            try:
+                planning = timed_queries[query]
                 if not planning:
                     continue
-                query = query[0]
+            except KeyError:
+                planning = None
 
-            since = queries_since_id[i]
+            since = queries_since_id[query]
             max_id = 0
-            while left and not exit_event.is_set():
+            if debug:
+                log("DEBUG", "Starting search query on %s since %s" % (query, since))
+            while not exit_event.is_set():
+                while not left and not exit_event.is_set():
+                    try:
+                        next_reset, _, left = get_twitter_rates(searchco, searchco2)
+                        if debug and left:
+                            log("DEBUG", "Resuming search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
+                    except Exception as e:
+                        log("ERROR", "Issue while collecting twitter rates. %s: %s" % (type(e), e))
+                    if not left:
+                        stall_queries(next_reset, exit_event)
+
                 args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent', 'tweet_mode': 'extended'}
                 if geocode:
                     args['geocode'] = geocode
                 if max_id:
                     args['max_id'] = str(max_id)
-                if queries_since_id[i]:
-                    args['since_id'] = str(queries_since_id[i])
+                if queries_since_id[query]:
+                    args['since_id'] = str(queries_since_id[query])
                 try:
-                    res = searchco.search.tweets(**args)
-                except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
-                    log("WARNING", "Search connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
-                    if not exit_event.is_set():
-                        time.sleep(2)
-                    continue
-                tweets = res.get('statuses', [])
+                    res = curco.search.tweets(**args)
+                except:
+                    curco = searchco if curco == searchco2 else searchco2
+                    log("INFO", "Switching search connexion to OAuth%s" % (2 if curco == searchco2 else ""))
+                    try:
+                        res = curco.search.tweets(**args)
+                    except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
+                        log("WARNING", "Search connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
+                        breakable_sleep(2, exit_event)
+                        continue
                 left -= 1
+                try:
+                    tweets = res['statuses']
+                except KeyError:
+                    log("WARNING", "Bad response from Twitter to query %s with args %s: %s" % (query, args, res))
+                    breakable_sleep(2, exit_event)
+                    continue
                 if not len(tweets):
                     break
                 news = 0
@@ -389,15 +469,16 @@ def searcher(pile, searchco, keywords, timed_keywords, locale, geocode, exit_eve
                                 break
                         if skip:
                             continue
+                    tw["gazouilloire_source"] = "search"
                     pile.put(dict(tw))
                     news += 1
                 if news == 0:
                     break
                 if debug:
                     log("DEBUG", "[search] +%d tweets (%s)" % (news, query))
-            queries_since_id[i] = since
-        if not exit_event.is_set():
-            time.sleep(max(timegap, next_reset - time.time() - 2*left))
+            queries_since_id[query] = since
+            write_search_state(queries_since_id)
+        breakable_sleep(max(timegap, next_reset - time.time() - 2*left), exit_event)
       except KeyboardInterrupt:
         log("INFO", "closing searcher...")
         exit_event.set()
@@ -417,13 +498,20 @@ if __name__=='__main__':
     try:
         with open('config.json') as confile:
             conf = json.loads(confile.read())
+            for k in ['keywords', 'url_pieces', 'time_limited_keywords']:
+                if k not in conf:
+                    conf[k] = []
     except Exception as e:
         log('ERROR', 'Could not open config.json: %s %s' % (type(e), e))
+        sys.exit(1)
+    if len(conf['keywords']) + len(conf['url_pieces']) > 400:
+        log('ERROR', 'Please limit yourself to a maximum of 400 keywords total (including url_pieces): you set up %s keywords and %s url_pieces.' % (len(conf['keywords']), len(conf['url_pieces'])))
         sys.exit(1)
     try:
         oauth = OAuth(conf['twitter']['oauth_token'], conf['twitter']['oauth_secret'], conf['twitter']['key'], conf['twitter']['secret'])
         oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
-        SearchConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth2, secure=True)
+        SearchConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
+        SearchConn2 = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth2, secure=True)
         ResConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
         StreamConn = TwitterStream(domain="stream.twitter.com", api_version="1.1", auth=oauth, secure=True, block=False, timeout=10)
     except Exception as e:
@@ -438,8 +526,10 @@ if __name__=='__main__':
     try:
         db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]
         coll = db['tweets']
-        coll.ensure_index([('_id', ASCENDING)], background=True)
-        coll.ensure_index([('timestamp', ASCENDING)], background=True)
+        for f in ['retweet_id', 'in_reply_to_status_id_str', 'timestamp',
+                  'links_to_resolve', 'lang', 'user_lang', 'langs']:
+            coll.ensure_index([(f, ASCENDING)], background=True)
+        coll.ensure_index([('links_to_resolve', ASCENDING), ('_id', ASCENDING)], background=True)
     except Exception as e:
         log('ERROR', 'Could not initiate connection to MongoDB: %s %s' % (type(e), e))
         sys.exit(1)
@@ -475,13 +565,12 @@ if __name__=='__main__':
     pile = Queue()
     pile_deleted = Queue()
     pile_catchup = Queue() if grab_conversations else None
-    pile_links = Queue() if resolve_links else None
     pile_medias = Queue() if dl_medias else None
     default_handler = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     exit_event = Event()
-    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_links, pile_medias, conf['mongo'], locale, exit_event, conf['debug']))
+    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf['mongo'], locale, exit_event, conf['debug']))
     depile.daemon = True
     depile.start()
     if grab_conversations:
@@ -489,7 +578,7 @@ if __name__=='__main__':
         catchup.daemon = True
         catchup.start()
     if resolve_links:
-        resolve = Process(target=resolver, args=(pile_links, conf['mongo'], exit_event, conf['debug']))
+        resolve = Process(target=resolver, args=(conf['mongo'], exit_event, conf['debug']))
         resolve.daemon = True
         resolve.start()
     if dl_medias:
@@ -497,10 +586,10 @@ if __name__=='__main__':
         download.daemon = True
         download.start()
     signal.signal(signal.SIGINT, default_handler)
-    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['time_limited_keywords'], streamgeocode, exit_event, conf['debug']))
+    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, streamgeocode, exit_event, conf['debug']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, conf['keywords'], conf['time_limited_keywords'], locale, searchgeocode, exit_event, conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, searchgeocode, exit_event, conf['debug']))
     search.start()
     def stopper(*args):
         exit_event.set()
@@ -509,4 +598,3 @@ if __name__=='__main__':
         depile.join()
     except KeyboardInterrupt:
         exit_event.set()
-        depile.join()

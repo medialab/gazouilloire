@@ -5,7 +5,7 @@ import os, json, sys, re, time
 from datetime import date, timedelta, datetime
 from pymongo import MongoClient
 from bson.code import Code
-from export import export_csv
+from export import export_csv, get_thread_ids_from_query
 from flask import Flask, render_template, request, make_response
 from flask_caching import Cache
 from flask_compress import Compress
@@ -16,8 +16,9 @@ try:
 except Exception as e:
     sys.stderr.write("ERROR: Impossible to read config.json: %s %s" % (type(e), e))
     exit(1)
-selected_field =  conf.get('export', {}).get('selected_field', None)
-extra_fields =  conf.get('export', {}).get('extra_fields', [])
+THREADS = conf.get('grab_conversations', False)
+SELECTED_FIELD = conf.get('export', {}).get('selected_field', None)
+EXTRA_FIELDS = conf.get('export', {}).get('extra_fields', [])
 
 try:
     mongodb = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
@@ -35,8 +36,10 @@ def init_args():
       'enddate': date.today().isoformat(),
       'query': '',
       'filters': '',
-      'selected_option': selected_field is not None,
-      'selected': "checked" if selected_field else None
+      'threads_option': THREADS,
+      'include_threads': "checked" if THREADS else None,
+      'selected_option': SELECTED_FIELD is not None,
+      'selected': "checked" if SELECTED_FIELD else None
     }
 
 @app.route("/")
@@ -95,7 +98,9 @@ def download():
                 args[arg.replace("date", "time")] = time.mktime(d.timetuple())
             except Exception as e:
                 errors.append(u'Field "%s": « %s » is not a valid date (%s: %s)' % (arg, args[arg], type(e), e))
-    if selected_field:
+    if THREADS:
+        args['include_threads'] = request.args.get('threads')
+    if SELECTED_FIELD:
         args['selected'] = request.args.get('selected')
     if args.get("starttime", 0) >= args.get("endtime", 0):
         errors.append('Field "startdate" should be older than field "enddate"')
@@ -121,10 +126,13 @@ def queryData(args):
             query["$and"].append({
               "text": {"$not": re.compile(r"%s" % q, re.I)}
             })
-    if selected_field and args['selected'] == 'checked':
-        query["$and"].append({selected_field: True})
+    if SELECTED_FIELD and args['selected'] == 'checked':
+        query["$and"].append({"selected_field": True})
+    if args["include_threads"]:
+        ids = get_thread_ids_from_query(query, mongodb)
+        query = {"_id": {"$in": ids}}
     mongoiterator = mongodb.find(query, sort=[("_id", 1)])
-    csv = export_csv(mongoiterator, extra_fields)
+    csv = export_csv(mongoiterator, extra_fields=EXTRA_FIELDS)
     res = make_response(csv)
     res.headers["Content-Type"] = "text/csv; charset=UTF-8"
     res.headers["Content-Disposition"] = "attachment; filename=tweets-%s-%s-%s.csv" % (args['startdate'], args['enddate'], args['query'])

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import re
+import re, sys
 from datetime import datetime
 
-fields = [
+TWEET_FIELDS = [
   "id",
   "time",
   "created_at",
@@ -21,6 +21,7 @@ fields = [
   "reply_count",
   "lang",
   "to_user_name",
+  "to_user_id",
   "in_reply_to_status_id",
   "source",
   "source_name",
@@ -46,12 +47,56 @@ fields = [
   "from_user_withheld_countries",
   "from_user_created_at",
   "retweeted_id",
+  "retweeted_user_name",
+  "retweeted_user_id",
   "links",
   "medias_urls",
-  "medias_files"
+  "medias_files",
+  "mentioned_user_names",
+  "mentioned_user_ids",
+  "hashtags"
 ]
 
-corresp_fields = {
+USER_FIELDS = [
+  'id',
+  'screen_name',
+  'name',
+  'description',
+  'url',
+  'lang',
+  'created_at',
+  'utc_offset',
+  'time_zone',
+  'location',
+  'geo_enabled',
+  'verified',
+  'protected',
+  'statuses_count',
+  'followers_count',
+  'friends_count',
+  'favourites_count',
+  'listed_count',
+  'is_translator',
+  'translator_type',
+  'is_translation_enabled',
+  'default_profile',
+  'default_profile_image',
+  'has_extended_profile',
+  'profile_use_background_image',
+  'profile_background_image_url_https',
+  'profile_background_tile',
+  'profile_background_color',
+  'profile_banner_url',
+  'profile_link_color',
+  'profile_image_url',
+  'profile_text_color',
+  'profile_image_url_https',
+  'profile_sidebar_fill_color',
+  'profile_sidebar_border_color'
+]
+
+# Based and enriched from TCAT fields
+CORRESP_FIELDS = {
     "id": "_id",
     "time": "timestamp",
     "created_at": lambda x: isodate(x.get("created_at", "")),
@@ -62,16 +107,17 @@ corresp_fields = {
     "withheld_copyright": str,
     "withheld_scope": str,
     "withheld_countries": lambda x: x.get("withheld_countries", []),      # Added since this is the most interesting info from withheld fields
-    "truncated": bool,       # unnecessary since we rebuild text from RTs
+    "truncated": bool,      # unnecessary since we rebuild text from RTs
     "retweet_count": int,
     "favorite_count": int,
-    "reply_count": int,
+    "reply_count": int,     # Recently appeared in Twitter data
     "lang": str,
     "to_user_name": "in_reply_to_screen_name",
+    "to_user_id": "in_reply_to_user_id_str",    # Added for better user interaction analysis
     "in_reply_to_status_id": "in_reply_to_status_id_str",
     "source": str,
-    "source_name": lambda x: re.split(r"[<>]", x.get("source", "<>"))[2],
-    "source_url": lambda x: x.get("source", '"').split('"')[1],
+    "source_name": lambda x: re.split(r"[<>]", x.get("source", "<>"))[2],   # Added for simplier postprocess
+    "source_url": lambda x: x.get("source", '"').split('"')[1],             # Added for simplier postprocess
     "location": "user_location",
     "lat": lambda x: get_coords(x)[1],
     "lng": lambda x: get_coords(x)[0],
@@ -81,8 +127,8 @@ corresp_fields = {
     "from_user_description": "user_description",
     "from_user_url": "user_url",
     "from_user_profile_image_url": "user_profile_image_url_https",
-    "from_user_utcoffset": "user_utc_offset",
-    "from_user_timezone": "user_time_zone",
+    "from_user_utcoffset": "user_utc_offset",   # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
+    "from_user_timezone": "user_time_zone",     # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
     "from_user_lang": "user_lang",
     "from_user_tweetcount": "user_statuses",
     "from_user_followercount": "user_followers",
@@ -92,29 +138,34 @@ corresp_fields = {
     "from_user_withheld_scope": "user_withheld_scope",
     "from_user_withheld_countries": lambda x: x.get("user_withheld_countries", []),      # Added since this is the most interesting info from withheld fields
     "from_user_created_at": lambda x: isodate(x.get("user_created_at", "")),
-    # Our extra fields:
+    # More added fields:
     "retweeted_id": "retweet_id",
+    "retweeted_user_name": "retweet_user",
+    "retweeted_user_id": "retweet_user_id",
     "links": lambda x: x.get("proper_links", x.get("links", [])),
     "medias_urls": lambda x: [_url for _id,_url in x.get("medias", [])],
-    "medias_files": lambda x: [_id for _id,_url in x.get("medias", [])]
+    "medias_files": lambda x: [_id for _id,_url in x.get("medias", [])],
+    "mentioned_user_names": lambda x: x.get("mentions_names", process_extract(x["text"], "@")),
+    "mentioned_user_ids": "mentions_ids",
+    "hashtags": lambda x: x.get("hashtags", process_extract(x["text"], "#"))
 }
 
 def search_field(field, tweet):
-    if field not in corresp_fields:
+    if field not in CORRESP_FIELDS:
         return tweet.get(field, '')
-    if not corresp_fields[field]:
+    if not CORRESP_FIELDS[field]:
         return ''
-    if corresp_fields[field] == bool:
+    if CORRESP_FIELDS[field] == bool:
         return tweet.get(field, False)
-    if corresp_fields[field] == int:
+    if CORRESP_FIELDS[field] == int:
         return tweet.get(field, 0)
-    if corresp_fields[field] == str:
+    if CORRESP_FIELDS[field] == str:
         return tweet.get(field, '')
-    if type(corresp_fields[field]) == str:
-        return tweet.get(corresp_fields[field], 0 if field.endswith('count') else '')
+    if type(CORRESP_FIELDS[field]) == str:
+        return tweet.get(CORRESP_FIELDS[field], 0 if field.endswith('count') else '')
     else:
         try:
-            return corresp_fields[field](tweet)
+            return CORRESP_FIELDS[field](tweet)
         except Exception as e:
             print >> sys.stderr, "WARNING: Can't apply export fonction for field %s to tweet %s\n%s: %s" % (field, tweet, type(e), e)
             return ""
@@ -131,7 +182,9 @@ def format_field(val):
 def get_field(field, tweet):
     return format_field(search_field(field, tweet)).replace('\n', ' ').replace('\r', ' ')
 
-format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val).encode('utf-8')
+re_clean_rt = re.compile(r"^RT @\w+: ")
+def process_extract(text, car):
+    return sorted([r.lstrip(car).lower() for r in re.split(r'[^\w%s]+' % car, re_clean_rt.sub('', text)) if r.startswith(car)])
 
 def get_coords(tw):
     if 'coordinates' not in tw or not tw['coordinates']:
@@ -142,10 +195,38 @@ def get_coords(tw):
 
 isodate = lambda x: datetime.strptime(x, '%a %b %d %H:%M:%S +0000 %Y').isoformat()
 
-def export_csv(queryiterator, extra_fields=[]):
-    output = []
-    out_fields = fields + extra_fields
-    output.append(",".join(out_fields))
+format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val).encode('utf-8')
+
+def get_thread_idset_from_idset(ids, mongocoll, known_ids=set()):
+    all_ids = ids | known_ids
+    new_ids = set()
+    ids_list = list(ids)
+    for t in mongocoll.find({"$or": [
+        {"_id": {"$in": ids_list}},
+        {"in_reply_to_status_id_str": {"$in": ids_list}}
+      ]}, projection={"in_reply_to_status_id_str": 1}):
+        if t["_id"] not in all_ids:
+            new_ids.add(t["_id"])
+        origin = t.get("in_reply_to_status_id_str")
+        if origin and origin not in all_ids:
+            new_ids.add(origin)
+    if len(new_ids):
+        return all_ids | get_thread_idset_from_idset(new_ids, mongocoll, all_ids)
+    return all_ids
+
+def get_thread_ids_from_ids(ids_list, mongocoll):
+    return list(get_thread_idset_from_idset(set(ids_list), mongocoll))
+
+def get_thread_ids_from_query(query, mongocoll):
+    ids = [t["_id"] for t in mongocoll.find(query, projection={})]
+    return get_thread_ids_from_ids(ids, mongocoll)
+
+def yield_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
+    out_fields = list_fields + extra_fields
+    yield ",".join(out_fields)
     for t in queryiterator:
-        output.append(",".join(format_csv(get_field(k, t)) for k in out_fields).decode('utf-8'))
-    return "\n".join(output)
+        yield ",".join(format_csv(get_field(k, t)) for k in out_fields)
+
+def export_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
+    return "\n".join([t.decode('utf-8') for t in yield_csv(queryiterator, list_fields, extra_fields)])
+

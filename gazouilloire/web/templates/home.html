@@ -23,6 +23,7 @@
         </div>
       </div>
 
+      <input type="hidden" id="threads_val" name="threads" value="{{include_threads}}"></select>
       <input type="hidden" id="selected_val" name="selected" value="{{selected}}"></select>
       <input type="hidden" id="query_val" name="query" value="{{query}}"></select>
       <input type="hidden" id="filters_val" name="filters" value="{{filters}}"></select>
@@ -37,6 +38,13 @@
       <label class="col-md-4 col-xs-4 control-label">Filters:</label>
       <select multiple id="filters"></select>
     </div>
+
+    {% if threads_option %}
+    <div class="row">
+      <label class="col-md-4 col-xs-4 control-label">Include threads</label>
+      <input id="threads" name="threads" type="checkbox" {{include_threads}}>
+    </div>
+    {% endif %}
 
     {% if selected_option %}
     <div class="row">
