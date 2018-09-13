@@ -4,7 +4,7 @@
 import os, json, sys, re, time
 from datetime import date, timedelta, datetime
 from pymongo import MongoClient
-from export import export_csv
+from export import export_csv, get_thread_ids_from_query
 from flask import Flask, render_template, request, make_response
 from flask_caching import Cache
 from flask_compress import Compress

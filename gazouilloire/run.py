@@ -526,7 +526,7 @@ if __name__=='__main__':
     try:
         db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]
         coll = db['tweets']
-        for f in ['_id', 'retweet_id', 'in_reply_to_status_id_str', 'timestamp',
+        for f in ['retweet_id', 'in_reply_to_status_id_str', 'timestamp',
                   'links_to_resolve', 'lang', 'user_lang', 'langs']:
             coll.ensure_index([(f, ASCENDING)], background=True)
         coll.ensure_index([('links_to_resolve', ASCENDING), ('_id', ASCENDING)], background=True)
