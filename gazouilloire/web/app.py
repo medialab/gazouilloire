@@ -1,107 +1,123 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+import os
+import sys
+import requests
 
-import os, json, sys, re, time
-from datetime import date, timedelta, datetime
-from pymongo import MongoClient
-from export import export_csv, get_thread_ids_from_query
-from flask import Flask, render_template, request, make_response
-from flask_caching import Cache
-from flask_compress import Compress
+from flask import Flask, jsonify, request, make_response, send_from_directory
+from flask_pymongo import PyMongo
+from flask_cors import CORS, cross_origin
+from elasticsearch import Elasticsearch
 
-try:
-    with open(os.path.join(os.path.dirname(__file__), '..', '..', 'config.json')) as confile:
-         conf = json.loads(confile.read())
-except Exception as e:
-    sys.stderr.write("ERROR: Impossible to read config.json: %s %s" % (type(e), e))
-    exit(1)
-THREADS = conf.get('grab_conversations', False)
-SELECTED_FIELD = conf.get('export', {}).get('selected_field', None)
-EXTRA_FIELDS = conf.get('export', {}).get('extra_fields', [])
+from datetime import datetime
 
-try:
-    mongodb = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
-except Exception as e:
-    sys.stderr.write("ERROR: Could not initiate connection to MongoDB: %s %s" % (type(e), e))
-    exit(1)
+ROOT_PATH = os.path.dirname(os.path.realpath(__file__))
 
+PUBLIC_PATH = os.path.join(ROOT_PATH, 'public')
+
+# Creating the Flask object
 app = Flask(__name__)
-Compress(app)
-cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+CORS(app)
+app.config['MONGO_URI'] = 'mongodb://127.0.0.1:27017/db2'
+app.config['JSON_AS_ASCII'] = False
+mongo = PyMongo(app)
+es = Elasticsearch('http://localhost:9200')
 
-def init_args():
-    return {
-      'startdate': (date.today() - timedelta(days=7)).isoformat(),
-      'enddate': date.today().isoformat(),
-      'query': '',
-      'filters': '',
-      'threads_option': THREADS,
-      'include_threads': "checked" if THREADS else None,
-      'selected_option': SELECTED_FIELD is not None,
-      'selected': "checked" if SELECTED_FIELD else None
-    }
+def normalize_data(data, input_format="es"):
+    if (input_format == "es"):
+        tweets = []
+        for row in data["hits"]["hits"]:
+            tweet = row["_source"]
+            tweets.append(tweet)
+        return(tweets)
+
+
+
+
+@app.errorhandler(404)
+def not_found(error):
+    """ error handler """
+    return make_response(jsonify({'error': 'Not found'}), 404)
 
 @app.route("/")
-@cache.cached(timeout=3600)
-def home():
-    return render_template("home.html", **init_args())
+def hello():
+    return send_from_directory(PUBLIC_PATH, 'index.html')
 
-@app.route("/download")
-def download():
-    args = init_args()
-    errors = []
-    for arg in ['startdate', 'enddate', 'query', 'filters']:
-        args[arg] = request.args.get(arg)
-        if args[arg] is None:
-            errors.append('Field "%s" missing' % arg)
-            args[arg] = ''
-        if arg.endswith('date'):
-            try:
-                d = datetime.strptime(args[arg], "%Y-%m-%d")
-                if arg == "enddate":
-                    d += timedelta(days=1)
-                args[arg.replace("date", "time")] = time.mktime(d.timetuple())
-            except Exception as e:
-                errors.append(u'Field "%s": « %s » is not a valid date (%s: %s)' % (arg, args[arg], type(e), e))
-    if THREADS:
-        args['include_threads'] = request.args.get('threads')
-    if SELECTED_FIELD:
-        args['selected'] = request.args.get('selected')
-    if args.get("starttime", 0) >= args.get("endtime", 0):
-        errors.append('Field "startdate" should be older than field "enddate"')
-    if errors:
-        return make_response("\n".join(["error"] + errors))
-    return queryData(args)
+@app.route("/data")
+def getTweetsMDB():
+    tweets = [tweet for tweet in mongo.db.tweets.find({},{'user_screen_name':1,'user_name':1,'user_description':1,'user_location':1,'user_profile_image_url':1,'timestamp':1,'favorite_count':1,'retweet_count':1,'text':1,'hashtags':1,'source':1,'medias':1,'proper_links':1,'langs':1})]
+    return make_response(jsonify(tweets))
 
-@cache.memoize(1800)
-def queryData(args):
-    query = {
-      "$and": [
-        {"timestamp": {"$gte": args["starttime"]}},
-        {"timestamp": {"$lt": args["endtime"]}}
-      ]
-    }
-    if args["query"]:
-        for q in args["query"].split('|'):
-            query["$and"].append({
-              "text": re.compile(r"%s" % q, re.I)
-            })
-    if args["filters"]:
-        for q in args["filters"].split('|'):
-            query["$and"].append({
-              "text": {"$not": re.compile(r"%s" % q, re.I)}
-            })
-    if SELECTED_FIELD and args['selected'] == 'checked':
-        query["$and"].append({"selected_field": True})
-    if args["include_threads"]:
-        ids = get_thread_ids_from_query(query, mongodb)
-        query = {"_id": {"$in": ids}}
-    mongoiterator = mongodb.find(query, sort=[("_id", 1)])
-    csv = export_csv(mongoiterator, extra_fields=EXTRA_FIELDS)
-    res = make_response(csv)
-    res.headers["Content-Type"] = "text/csv; charset=UTF-8"
-    res.headers["Content-Disposition"] = "attachment; filename=tweets-%s-%s-%s.csv" % (args['startdate'], args['enddate'], args['query'])
-    return res
+@app.route("/elasticdata")
+def getTweetsES():
+    data = es.search(index="tweets", body={"from" : 0, "size" : 100,"query": {"match_all": {}}})
+    normalized_data = normalize_data(data)
+    return make_response(jsonify(normalized_data))
 
-if __name__ == "__main__":
+@app.route("/timeevolution")
+def getDayCount():
+    days = [day for day in mongo.db.tweets.aggregate([{ "$group": {"_id": {"$dateToString": {"format": "%Y-%m-%d","date": {"$toDate": { "$multiply": [1000, "$timestamp"]}}}}, "date":{"$first":{"$dateToString": {"format": "%Y-%m-%d","date": {"$toDate": { "$multiply": [1000, "$timestamp"]}}}}}, "count": { "$sum": 1 }} },{ "$sort" : { '_id' : 1} }])]
+    days_timestamp = [day for day in mongo.db.tweets.aggregate([{ "$group": {"_id": {"$dateToString": {"format": "%Y-%m-%d","date": {"$toDate": { "$multiply": [1000, "$timestamp"]}}}},"count": { "$sum": 1 }} },{ "$sort" : { '_id' : 1} }])]
+    days_nodash = [day for day in mongo.db.tweets.aggregate([{ "$group": {"_id": {"$dateToString": {"format": "%Y%m%d","date": {"$toDate": { "$multiply": [1000, "$timestamp"]}}}},"count": { "$sum": 1 }} },{ "$sort" : { '_id' : 1} }])]
+    hours = [hour for hour in mongo.db.tweets.aggregate([{ "$group": {"_id": {"$dateToString": {"format": "%Y-%m-%d-%H","date": {"$toDate": { "$multiply": [1000, "$timestamp"]}}}},"count": { "$sum": 1 }} },{ "$sort" : { '_id' : 1} }])]
+    return make_response(jsonify(days))
+
+@app.route("/elastictimeevolution")
+def getDayCountES():
+    data = es.search(
+        index="tweets", 
+        body={
+                "query": 
+                    {
+                        "match_all": {}
+                    }, 
+                    
+                    "aggs": {
+                        "tweetsbyday":{"date_histogram": {"field": "timestamp", "format":"yyyy-MM-dd","interval": "day", "min_doc_count" : 5, "order" : { "_key" : "asc" }}}
+                    }
+
+            }
+        
+    )
+    days = []
+    for day in data['aggregations']['tweetsbyday']['buckets']:
+        dayToAdd = {'date':day['key_as_string'],'count':day['doc_count']}
+        days.append(dayToAdd)
+    #normalized_data = normalize_data(data)
+    #data = es.search(index="tweets", body={"query": {"match_all": {}},"aggs":{"range":{"date_range":{"field":"timestamp","ranges": [{ "from": 1537578080,  "to": 1537837210, "key": "quarter_01" }]}}}})    
+    return make_response(jsonify(days))
+
+@app.route("/userrepartition")
+def getUserCount():
+    users = [user for user in mongo.db.tweets.aggregate([{ "$group": {"_id": "$user_screen_name","count": { "$sum": 1 } }},{ "$sort" : { 'count' : -1} }],allowDiskUse=True)]
+    return make_response(jsonify(users))
+
+@app.route("/elasticuserrepartition")
+def getUserCountES():
+    data = es.search(
+        index="tweets", 
+        body={
+                "query": 
+                {
+                    "match_all": {}
+                },
+                "aggs":
+                {
+                    "users":{"terms": {"field": "user_screen_name", "order" : { "_count" : "desc" }}}
+                }
+
+            }
+        
+    )
+    users = []
+    for user in data['aggregations']['users']['buckets']:
+        userToAdd = {'_id':user['key'],'count':user['doc_count'],'size':10}
+        users.append(userToAdd)
+    return make_response(jsonify(users))
+
+@app.route("/indexstats")
+def getIndexStats():
+    data = es.indices.stats('tweets')
+    #normalized_data = normalize_data(data)
+    return make_response(jsonify(data))
+
+if __name__ == '__main__':
     app.run(debug=True)

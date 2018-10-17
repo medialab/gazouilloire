@@ -1,0 +1,36 @@
+{
+  "name": "flask",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "webpack-dev-server --mode development --colors --hot --hot-only --progress"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@material-ui/core": "^3.1.0",
+    "css-loader": "^1.0.0",
+    "date-fns": "^2.0.0-alpha.18",
+    "material-ui-chip-input": "^1.0.0-beta.7",
+    "material-ui-pickers": "^1.0.0-rc.14",
+    "react": "^16.5.1",
+    "react-datepicker": "^1.6.0",
+    "react-dom": "^16.5.1",
+    "react-particles-js": "^2.3.0",
+    "react-router-dom": "^4.3.1",
+    "recharts": "^1.2.0",
+    "style-loader": "^0.23.0",
+    "webpack-dev-server": "^3.1.8"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.1.0",
+    "@babel/plugin-proposal-class-properties": "^7.1.0",
+    "@babel/preset-env": "^7.1.0",
+    "@babel/preset-react": "^7.0.0",
+    "@babel/preset-stage-0": "^7.0.0",
+    "babel-loader": "^8.0.2",
+    "webpack": "^4.19.1",
+    "webpack-cli": "^3.1.1"
+  }
+}

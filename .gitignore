@@ -1,5 +1,6 @@
 config.py
 config.json
+config.json~
 *.pyc
 backups
 .search_state.json
