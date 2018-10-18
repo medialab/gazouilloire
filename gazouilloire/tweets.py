@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
 import re, time
 from htmlentitydefs import name2codepoint
 from pytz import timezone
@@ -84,7 +85,7 @@ def prepare_tweet(tweet, locale=None):
             tweet[field] = tweet["extended_tweet"][field]
     text = tweet.get('full_text', tweet.get('text', ''))
     if not text:
-        print "WARNING, no text for tweet %s" % "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str'])
+        print("WARNING, no text for tweet %s" % "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str']))
     rti = None
     rtu = None
     rtuid = None
@@ -180,7 +181,7 @@ def prepare_tweet(tweet, locale=None):
     if "gazouilloire_source" in tweet:
         tw["collected_via_%s" % tweet["gazouilloire_source"]] = True
     if not tw["text"]:
-        print "WARNING, no text for tweet %s" % tw["url"]
+        print("WARNING, no text for tweet %s" % tw["url"])
     tw = grab_extra_meta(tweet, tw, locale)
     return tw
 
@@ -194,7 +195,7 @@ def clean_user_entities(user_data):
                     try:
                         user_data[k] = user_data[k].replace(url['url'], url['expanded_url'])
                     except:
-                        print "WARNING, couldn't process entity", url, k, user_data[k]
+                        print("WARNING, couldn't process entity", url, k, user_data[k])
         user_data.pop('entities')
     if 'status' in user_data:
         user_data.pop('status')
