@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+from __future__ import unicode_literals
+from builtins import str
 import re, sys
 from datetime import datetime
 
@@ -161,13 +164,16 @@ def search_field(field, tweet):
         return tweet.get(field, 0)
     if CORRESP_FIELDS[field] == str:
         return tweet.get(field, '')
-    if type(CORRESP_FIELDS[field]) == str:
+    # NOT THE MOST ELEGANT BUT THE ONLY WAY WE FOUND FOR PY2/PY3 COMPATIBILITY
+    if (type(CORRESP_FIELDS[field]) == type('')):
         return tweet.get(CORRESP_FIELDS[field], 0 if field.endswith('count') else '')
+
     else:
         try:
             return CORRESP_FIELDS[field](tweet)
         except Exception as e:
-            print >> sys.stderr, "WARNING: Can't apply export fonction for field %s to tweet %s\n%s: %s" % (field, tweet, type(e), e)
+            print("WARNING: Can't apply export fonction for field %s (type %s) to tweet %s\n%s: %s" % (
+                field, type(CORRESP_FIELDS[field]), tweet, type(e), e), file=sys.stderr)
             return ""
 
 def format_field(val):
@@ -177,7 +183,7 @@ def format_field(val):
         return u"|".join([v for v in val if v])
     if val == None:
         return ''
-    return val if type(val) == unicode else unicode(val)
+    return val if type(val) == str else str(val)
 
 def get_field(field, tweet):
     return format_field(search_field(field, tweet)).replace('\n', ' ').replace('\r', ' ')
@@ -195,7 +201,7 @@ def get_coords(tw):
 
 isodate = lambda x: datetime.strptime(x, '%a %b %d %H:%M:%S +0000 %Y').isoformat()
 
-format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val).encode('utf-8')
+format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val)
 
 def get_thread_idset_from_idset(ids, mongocoll, known_ids=set()):
     all_ids = ids | known_ids
