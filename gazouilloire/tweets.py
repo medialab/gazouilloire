@@ -1,30 +1,41 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-import re, time
-from htmlentitydefs import name2codepoint
+from __future__ import unicode_literals
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import chr
+import re
+import time
+from html.entities import name2codepoint
 from pytz import timezone
 from datetime import datetime
 
 re_entities = re.compile(r'&([^;]+);')
+
+
 def decode_entities(x):
     if x.group(1).startswith('#'):
         char = x.group(1)[1:]
         if char.startswith('x'):
             try:
-                return unichr(int(x.group(1)[2:], 16))
+                return chr(int(x.group(1)[2:], 16))
             except:
                 pass
         try:
-            return unichr(int(x.group(1)[1:]))
+            return chr(int(x.group(1)[1:]))
         except:
             pass
     try:
-        return unichr(name2codepoint[x.group(1)])
+        return chr(name2codepoint[x.group(1)])
     except:
         return x.group(1)
+
+
 def unescape_html(text):
     return re_entities.sub(decode_entities, text)
+
 
 def get_timestamp(t, locale, field='created_at'):
     tim = datetime.strptime(t[field], '%a %b %d %H:%M:%S +0000 %Y')
@@ -34,7 +45,9 @@ def get_timestamp(t, locale, field='created_at'):
         return time.mktime(locale_date.timetuple())
     return tim.isoformat()
 
-nostr_field = lambda f: f.replace('_str', '')
+
+def nostr_field(f): return f.replace('_str', '')
+
 
 def grab_extra_meta(source, result, locale=None):
     for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "geo", "coordinates", "source", "truncated", "possibly_sensitive", "withheld_copyright", "withheld_scope", "withheld_countries", "retweet_count", "favorite_count", "reply_count"]:
@@ -60,7 +73,8 @@ def grab_extra_meta(source, result, locale=None):
         except:
             pass
     try:
-        result['user_created_at_timestamp'] = get_timestamp(result, locale, 'user_created_at')
+        result['user_created_at_timestamp'] = get_timestamp(
+            result, locale, 'user_created_at')
     except:
         pass
     # grouped langs field for faster querying across both
@@ -71,6 +85,7 @@ def grab_extra_meta(source, result, locale=None):
             result['langs'].append(lang)
     return result
 
+
 def prepare_tweets(tweets, locale):
     for tweet in tweets:
         if not isinstance(tweet, dict):
@@ -79,13 +94,15 @@ def prepare_tweets(tweets, locale):
             tweet = prepare_tweet(tweet, locale=locale)
         yield tweet
 
+
 def prepare_tweet(tweet, locale=None):
     if "extended_tweet" in tweet:
         for field in tweet["extended_tweet"]:
             tweet[field] = tweet["extended_tweet"][field]
     text = tweet.get('full_text', tweet.get('text', ''))
     if not text:
-        print("WARNING, no text for tweet %s" % "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str']))
+        print("WARNING, no text for tweet %s" % "https://twitter.com/%s/statuses/%s" %
+              (tweet['user']['screen_name'], tweet['id_str']))
     rti = None
     rtu = None
     rtuid = None
@@ -119,7 +136,8 @@ def prepare_tweet(tweet, locale=None):
         else:
             qturl = qtweet['url']
         qtime = qtweet['timestamp']
-        text = text.replace(qturl, u"« %s: %s — %s »" % (qtu, qtweet['text'], qturl))
+        text = text.replace(qturl, u"« %s: %s — %s »" %
+                            (qtu, qtweet['text'], qturl))
         for ent in ['entities', 'extended_entities']:
             if ent not in tweet['quoted_status']:
                 continue
@@ -143,7 +161,8 @@ def prepare_tweet(tweet, locale=None):
                     pass
             if "media_url" in entity:
                 if "video_info" in entity:
-                    med_url = sorted(entity["video_info"]["variants"], key=lambda x: x.get("bitrate", 0))[-1]["url"]
+                    med_url = sorted(entity["video_info"]["variants"], key=lambda x: x.get(
+                        "bitrate", 0))[-1]["url"]
                 else:
                     med_url = entity["media_url_https"]
                 med_name = med_url.split('/')[-1]
@@ -185,6 +204,7 @@ def prepare_tweet(tweet, locale=None):
     tw = grab_extra_meta(tweet, tw, locale)
     return tw
 
+
 def clean_user_entities(user_data):
     if 'entities' in user_data:
         for k in user_data['entities']:
@@ -193,12 +213,13 @@ def clean_user_entities(user_data):
                     if not url['expanded_url']:
                         continue
                     try:
-                        user_data[k] = user_data[k].replace(url['url'], url['expanded_url'])
+                        user_data[k] = user_data[k].replace(
+                            url['url'], url['expanded_url'])
                     except:
-                        print("WARNING, couldn't process entity", url, k, user_data[k])
+                        print("WARNING, couldn't process entity",
+                              url, k, user_data[k])
         user_data.pop('entities')
     if 'status' in user_data:
         user_data.pop('status')
     user_data["_id"] = user_data["id"]
     return user_data
-
