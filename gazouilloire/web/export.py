@@ -165,7 +165,7 @@ def search_field(field, tweet):
     if CORRESP_FIELDS[field] == str:
         return tweet.get(field, '')
     # NOT THE MOST ELEGANT BUT THE ONLY WAY WE FOUND FOR PY2/PY3 COMPATIBILITY
-    if (type(CORRESP_FIELDS[field]) == type('')):
+    if type(CORRESP_FIELDS[field]) == type(''):
         return tweet.get(CORRESP_FIELDS[field], 0 if field.endswith('count') else '')
 
     else:

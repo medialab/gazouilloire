@@ -27,4 +27,4 @@ for t in bar(db.find(query, limit=count, projection={"user_location": 1})):
 
 print("location,count")
 for loc in sorted(locations, key=locations.get, reverse=True):
-    print('"%s",%s' % (loc.replace('"', '""').encode("utf-8"), locations[loc]))
+    print('"%s",%s' % (loc.replace('"', '""'), locations[loc]))
