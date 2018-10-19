@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
 
-import sys, json, pymongo
+import sys
+import json
+try:
+    from pymongo import MongoClient
+except ImportError:
+    from pymongo.connection import Connection as MongoClient
 
 with open('config.json') as confile:
     conf = json.loads(confile.read())
 
-db = pymongo.Connection(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
+db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[
+    conf['mongo']['db']]['tweets']
 
 for tweet in db.find():
-    sys.stdout.write(tweet["text"].replace("\n", "").encode("utf-8")+"\n")
-
-
+    print(tweet["text"].replace("\n", ""))

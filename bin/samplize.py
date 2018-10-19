@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division
+from __future__ import print_function
 
-import os, sys
+import os
+import sys
 from random import random
 
 try:
@@ -18,14 +20,14 @@ if not os.path.exists(input_csv) or not os.path.isfile(input_csv):
 input_size_mo = os.path.getsize(input_csv) / 1024. / 1024
 ratio = min(1, output_size_mo / input_size_mo)
 
-sys.stderr.write("Extracting %.1f%% of file %s of %.1fMo\n" % (100*ratio, input_csv, input_size_mo))
+sys.stderr.write("Extracting %.1f%% of file %s of %.1fMo\n" %
+                 (100*ratio, input_csv, input_size_mo))
 header_done = False
 with open(input_csv) as f:
     for line in f.readlines():
         if not header_done:
-            sys.stdout.write(line)
+            print(line)
             header_done = True
             continue
         if ratio >= 1 or random() <= ratio:
-            sys.stdout.write(line)
-
+            print(line)
