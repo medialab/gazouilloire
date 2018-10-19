@@ -8,7 +8,7 @@ from gazouilloire.tweets import prepare_tweet, clean_user_entities
 from gazouilloire.api_wrapper import TwitterWrapper
 
 with open(CSV_SOURCE) as f:
-    data = list(csv.DictReader(f, delimiter=';'))
+    data = list(csv.DictReader(f, delimiter=','))
 
 api = TwitterWrapper(TWITTER)
 db = MongoClient("localhost", 27017)[MONGO_DATABASE]
@@ -25,8 +25,12 @@ for i, row in enumerate(data):
     user['done'] = False
     api_args = {'screen_name': user['twitter']}
     metas = api.call('users.show', api_args)
+    if not metas:
+        print "SKIPPING tweets for %s whose account unfortunately disappeared" % user['twitter']
+        continue
     clean_user_entities(metas)
     user.update(metas)
+    user.pop('_id')
     db.users.update({'_id': user['twitter']}, {"$set": user}, upsert=True)
     if user['protected']:
         print "SKIPPING tweets for %s whose account is unfortunately protected" % user['twitter']
