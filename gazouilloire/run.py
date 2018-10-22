@@ -144,8 +144,8 @@ def resolver(mongoconf, exit_event, debug=False):
         tweetsdone = []
         batchidsdone = set()
         for tweet in todo:
-            if t.get("proper_links", []):
-                tweetsdone.append(t["_id"])
+            if tweet.get("proper_links", []):
+                tweetsdone.append(tweet["_id"])
                 continue
             tweetid = tweet.get('retweet_id') or tweet['_id']
             if tweetid in batchidsdone:
