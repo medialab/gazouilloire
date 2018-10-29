@@ -1,3 +1,4 @@
+from __future__ import print_function
 #/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -15,12 +16,12 @@ db = MongoClient("localhost", 27017)[MONGO_DATABASE]
 
 for i, row in enumerate(data):
     user = {}
-    for k in row.keys():
+    for k in list(row.keys()):
         user[k.decode(CSV_ENCODING)] = row[k].decode(CSV_ENCODING).replace(u' ', ' ').strip()
     user['twitter'] = user[CSV_TWITTER_FIELD].lstrip('@').lower()
-    print "- WORKING ON %s" % user['twitter'], user
+    print("- WORKING ON %s" % user['twitter'], user)
     if db.users.find({'_id': user['twitter'], 'done': True}, limit=1).count():
-        print "  ALREADY DONE!"
+        print("  ALREADY DONE!")
         continue
     api_args = {'screen_name': user['twitter']}
     metas = api.call('users.show', api_args)
@@ -28,14 +29,14 @@ for i, row in enumerate(data):
     #if user['protected']:
     #    print "SKIPPING tweets for %s whose account is unfortunately protected" % user['twitter']
     #    continue
-    print "  %s friends to get" % metas['friends_count']
+    print("  %s friends to get" % metas['friends_count'])
     api_args['count'] = 5000
     api_args['cursor'] = -1
     metas['friends'] = []
     while api_args['cursor']:
         res = api.call('friends.ids', api_args)
         metas['friends'] += res['ids']
-        print "  -> query: %s, next: %s" % (len(metas['friends']), res['next_cursor'])
+        print("  -> query: %s, next: %s" % (len(metas['friends']), res['next_cursor']))
         api_args['cursor'] = res['next_cursor']
     user.update(metas)
     user['done'] = True

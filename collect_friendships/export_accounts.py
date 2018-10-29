@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+from builtins import str
 import json, sys
 from datetime import datetime
 from pymongo import MongoClient
@@ -12,13 +14,13 @@ headers = ["Nom", u"Prénom", "Compte twitter", u"Élu au", "twitterid", "follow
 
 format_txt = lambda x: '"' + x.replace('"', '""').replace("\n", " ").replace("\r", "") + '"'
 format_spe = lambda x: str(x).lower() if x else ""
-format_field = lambda x: format_txt(x).encode('utf-8') if type(x) == unicode else format_spe(x)
+format_field = lambda x: format_txt(x).encode('utf-8') if type(x) == str else format_spe(x)
 
-print (",".join(headers)).encode('utf-8')
+print((",".join(headers)).encode('utf-8'))
 for t in db.find(sort=[("_id", 1)]):
     t[u"Élu au"] = u"Conseil de Paris" if t["CR"] == "False" else u"Conseil régional d'IdF" if t["CP"] == "False" else u"Les deux"
     t["twitterid"] = t["screen_name"].lower()
     t["follows"] = "|".join(t["follows"])
     t["created_at"] = datetime.strptime(t['created_at'], '%a %b %d %H:%M:%S +0000 %Y').isoformat().decode("utf8")
-    print ",".join([format_field(t.get(a, "")) for a in headers])
+    print(",".join([format_field(t.get(a, "")) for a in headers]))
 
