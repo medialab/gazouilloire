@@ -11,5 +11,6 @@ csvkit
 flask
 Flask-Caching
 flask-compress
-networkx
+networkx==2.2
+future
 ural
