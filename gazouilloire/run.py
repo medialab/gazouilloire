@@ -1,17 +1,33 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os, sys, time, urllib, json, re
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import int
+from builtins import str
+from builtins import bytes
+from builtins import range
+from past.utils import old_div
+import os, sys, time, json, re
 from datetime import datetime
-from httplib import BadStatusLine
-from urllib2 import URLError
+try:
+    from httplib import BadStatusLine
+    from urllib2 import URLError
+    from urllib import quote
+except ImportError:
+    from http.client import BadStatusLine
+    from urllib.error import URLError
+    from urllib.parse import quote
+
 from ssl import SSLError
 import socket
 import requests
 requests.packages.urllib3.disable_warnings()
 from multiprocessing import Process, Queue, Event
 import signal
-from urlsresolver import resolve_url as resolve_redirects
+from url_resolver import resolve_url as resolve_redirects
 from fake_useragent import UserAgent
 from pymongo import ASCENDING
 try:
@@ -52,7 +68,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, mongoconf, locale, ex
             if pile_catchup and t["in_reply_to_status_id_str"]:
                 if not coll.find_one({"_id": t["in_reply_to_status_id_str"]}):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
-            tid = coll.update({'_id': t['_id']}, {'$set': t}, upsert=True)
+            coll.update({'_id': t['_id']}, {'$set': t}, upsert=True)
             stored += 1
         if debug and stored:
             log("DEBUG", "Saved %s tweets in MongoDB" % stored)
@@ -144,8 +160,8 @@ def resolver(mongoconf, exit_event, debug=False):
         tweetsdone = []
         batchidsdone = set()
         for tweet in todo:
-            if t.get("proper_links", []):
-                tweetsdone.append(t["_id"])
+            if tweet.get("proper_links", []):
+                tweetsdone.append(tweet["_id"])
                 continue
             tweetid = tweet.get('retweet_id') or tweet['_id']
             if tweetid in batchidsdone:
@@ -181,11 +197,11 @@ re_andor = re.compile(r'(\([^)]+( OR [^)]+)*\) ?)+$')
 
 def format_keyword(k):
     if k.startswith('@'):
-        kutf = k.lstrip('@').encode('utf-8')
+        kutf = k.lstrip('@')
         return "from:%s OR to:%s OR @%s" % (kutf, kutf, kutf)
     if " AND " in k or " + " in k:
         k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
-    return urllib.quote(k.encode('utf-8'), '')
+    return quote(k, '')
 
 def format_url_queries(urlpieces):
     return [format_url_query(q) for q in urlpieces]
@@ -218,8 +234,8 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
 
         try:
             # keywords tracked on stream
-            query_keywords = [k.strip().lower().encode('utf-8') for k in keywords + format_url_queries(urlpieces) + extra_keywords if " OR " not in k and not k.startswith('@')]
-            filter_keywords = [k.strip().lower().encode('utf-8') for k in keywords + urlpieces + extra_keywords if " OR " not in k and not k.startswith('@')]
+            query_keywords = [k.strip().lower() for k in keywords + format_url_queries(urlpieces) + extra_keywords if " OR " not in k and not k.startswith('@')]
+            filter_keywords = [k.strip().lower() for k in keywords + urlpieces + extra_keywords if " OR " not in k and not k.startswith('@')]
             for k in keywords + extra_keywords:
                 if " OR " in k:
                     if re_andor.match(k):
@@ -233,7 +249,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                         log("WARNING", 'Ignoring keyword %s to streaming API, please use syntax with simple keywords separated by spaces or such as "(KEYW1 OR KEYW2) (KEYW3 OR KEYW4 OR KEYW5) (KEYW6)"' % k)
 
             # users followed on stream
-            users = [k.lstrip('@').strip().lower().encode('utf-8') for k in keywords + extra_keywords if k.startswith('@')]
+            users = [k.lstrip('@').strip().lower() for k in keywords + extra_keywords if k.startswith('@')]
             keep_users = list(users)
             query_users = []
             while users:
@@ -279,7 +295,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                     msg["gazouilloire_source"] = "stream"
                     tweet = prepare_tweet(msg, locale=locale)
                     if geocode or (urlpieces and not keywords):
-                        tmptext = tweet["text"].lower().encode('utf-8')
+                        tmptext = tweet["text"].lower()
                         keep = False
                         for k in filter_keywords:
                             if " " in k:
@@ -319,11 +335,11 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
             exit_event.set()
 
         if debug:
-            log("DEBUG", "Stream stayed alive for %sh" % str((time.time()-ts)/3600))
+            log("DEBUG", "Stream stayed alive for %sh" % str(old_div((time.time()-ts),3600)))
         breakable_sleep(2, exit_event)
     log("INFO", "FINISHED streamer")
 
-chunkize = lambda a, n: [a[i:i+n] for i in xrange(0, len(a), n)]
+chunkize = lambda a, n: [a[i:i+n] for i in range(0, len(a), n)]
 
 def get_twitter_rates(conn, conn2):
     rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
@@ -338,7 +354,7 @@ def stall_queries(next_reset, exit_event):
 
 def read_search_state():
     with open(".search_state.json") as f:
-        return {k.encode("utf-8"): v for k, v in json.load(f).items()}
+        return {k: v for k, v in list(json.load(f).items())}
 
 def write_search_state(state):
     with open(".search_state.json", "w") as f:
@@ -366,7 +382,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
         fmtkeywords.append('url:"%s"' % format_url_query(q))
     queries += [" OR ".join(a) for a in chunkize(fmtkeywords, 3)]
     timed_queries = {}
-    state = {q: 0 for q in queries + [format_keyword(k) for k in timed_keywords.keys()]}
+    state = {q: 0 for q in queries + [format_keyword(k) for k in list(timed_keywords.keys())]}
     try:
         queries_since_id = read_search_state()
         assert queries_since_id and sorted(state.keys()) == sorted(queries_since_id.keys())
@@ -392,7 +408,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
 
         now = time.time()
         last_week = now - 60*60*24*7
-        for keyw, planning in timed_keywords.items():
+        for keyw, planning in list(timed_keywords.items()):
             keyw = format_keyword(keyw)
             timed_queries[keyw] = []
             for times in planning:
@@ -401,7 +417,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                 if last_week < t0 < now or last_week < t1 < now:
                     timed_queries[keyw].append([t0, t1])
 
-        for query in [q[0] for q in sorted(queries_since_id.items(), key=lambda ts: ts[1])]:
+        for query in [q[0] for q in sorted(list(queries_since_id.items()), key=lambda ts: ts[1])]:
             try:
                 planning = timed_queries[query]
                 if not planning:
@@ -453,7 +469,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                     break
                 news = 0
                 for tw in tweets:
-                    tid = long(tw.get('id_str', str(tw.get('id', ''))))
+                    tid = int(tw.get('id_str', str(tw.get('id', ''))))
                     if not tid:
                         continue
                     if since < tid:
@@ -487,8 +503,8 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
 def generate_geoloc_strings(x1, y1, x2, y2):
     streamgeocode = "%s,%s,%s,%s" % (y1, x1, y2, x2)
     log('INFO', 'Stream Bounding box: %s/%s -> %s/%s' % (x1, y1, x2, y2))
-    x = (x1 + x2) / 2
-    y = (y1 + y2) / 2
+    x = old_div((x1 + x2), 2)
+    y = old_div((y1 + y2), 2)
     d = 6371 * acos(sin(x*pi/180) * sin(x1*pi/180) + cos(x*pi/180) * cos(x1*pi/180) * cos((y1-y)*pi/180))
     searchgeocode = "%s,%s,%.2fkm" % (x, y, d)
     log('INFO', 'Search Disk: %s/%s, %.2fkm' % (x, y, d))
