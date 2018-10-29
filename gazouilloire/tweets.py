@@ -2,13 +2,14 @@
 
 from __future__ import print_function
 from __future__ import unicode_literals
-from future import standard_library
-standard_library.install_aliases()
 from builtins import str
 from builtins import chr
 import re
 import time
-from html.entities import name2codepoint
+try:
+    from html.entities import name2codepoint
+except ImportError:
+    from htmlentitydefs import name2codepoint
 from pytz import timezone
 from datetime import datetime
 
