@@ -13,3 +13,4 @@ flask-compress
 networkx==2.2
 future
 ural
+elasticsearch

@@ -28,6 +28,8 @@ from multiprocessing import Process, Queue, Event
 import signal
 from url_resolver import resolve_url as resolve_redirects
 from fake_useragent import UserAgent
+from elasticsearch import Elasticsearch
+from elasticsearch import helpers
 from pymongo import ASCENDING
 try:
     from pymongo import MongoClient
