@@ -10,6 +10,12 @@
         "port": 27017,
         "db": "tweets"
     },
+    "elasticsearch": {
+        "host": "localhost",
+        "port": 9200,
+        "index": "tweets",
+        "index_links": "links"
+    },
     "keywords": [
         "amour",
         "@medialab_scpo"
