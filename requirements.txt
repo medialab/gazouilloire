@@ -4,7 +4,6 @@ twitter>=1.14.1
 pytz
 requests
 urllib3[secure]
-urlsresolver
 fake-useragent
 progressbar2
 csvkit
