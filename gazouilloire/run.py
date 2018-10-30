@@ -2,14 +2,13 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import division
+from past.utils import old_div
 from builtins import int
 from builtins import str
 from builtins import bytes
 from builtins import range
-from past.utils import old_div
 import os, sys, time, json, re
 from datetime import datetime
 try:
@@ -197,8 +196,8 @@ re_andor = re.compile(r'(\([^)]+( OR [^)]+)*\) ?)+$')
 
 def format_keyword(k):
     if k.startswith('@'):
-        kutf = k.lstrip('@')
-        return "from:%s OR to:%s OR @%s" % (kutf, kutf, kutf)
+        k = k.lstrip('@')
+        return "from:%s OR to:%s OR @%s" % (k, k, k)
     if " AND " in k or " + " in k:
         k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
     return quote(k, '')
@@ -354,7 +353,7 @@ def stall_queries(next_reset, exit_event):
 
 def read_search_state():
     with open(".search_state.json") as f:
-        return {k: v for k, v in list(json.load(f).items())}
+        return {k: v for k, v in json.load(f).items()}
 
 def write_search_state(state):
     with open(".search_state.json", "w") as f:
@@ -382,7 +381,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
         fmtkeywords.append('url:"%s"' % format_url_query(q))
     queries += [" OR ".join(a) for a in chunkize(fmtkeywords, 3)]
     timed_queries = {}
-    state = {q: 0 for q in queries + [format_keyword(k) for k in list(timed_keywords.keys())]}
+    state = {q: 0 for q in queries + [format_keyword(k) for k in timed_keywords.keys()]}
     try:
         queries_since_id = read_search_state()
         assert queries_since_id and sorted(state.keys()) == sorted(queries_since_id.keys())
@@ -408,7 +407,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
 
         now = time.time()
         last_week = now - 60*60*24*7
-        for keyw, planning in list(timed_keywords.items()):
+        for keyw, planning in timed_keywords.items():
             keyw = format_keyword(keyw)
             timed_queries[keyw] = []
             for times in planning:
@@ -417,7 +416,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                 if last_week < t0 < now or last_week < t1 < now:
                     timed_queries[keyw].append([t0, t1])
 
-        for query in [q[0] for q in sorted(list(queries_since_id.items()), key=lambda ts: ts[1])]:
+        for query in [q[0] for q in sorted(queries_since_id.items(), key=lambda ts: ts[1])]:
             try:
                 planning = timed_queries[query]
                 if not planning:
