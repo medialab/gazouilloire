@@ -11,7 +11,7 @@ from gazouilloire.api_wrapper import TwitterWrapper
 
 def collect_user_and_friends(user_name, api, db):
     print("- WORKING ON %s" % user_name)
-    if type(user_name) in (str, str):
+    if isinstance(user_name,(str,unicode)):
         field = "screen_name"
     else:
         field = "_id"
