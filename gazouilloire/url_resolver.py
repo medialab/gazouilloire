@@ -1,3 +1,5 @@
+# Code adapted from Alexandr Shurigin's code on phpdude/python-urlsresolver under license GPLv3
+
 # coding=utf-8
 from builtins import str
 from builtins import next
@@ -19,7 +21,6 @@ from contextlib import closing
 from collections import OrderedDict
 
 __version__ = (1, 2, 0)
-__author__ = 'Alexandr Shurigin (https://github.com/phpdude/)'
 
 # HTML tags syntax http://www.w3.org/TR/html-markup/syntax.html
 TAG_ATTRIBUTES_REGEX = \
