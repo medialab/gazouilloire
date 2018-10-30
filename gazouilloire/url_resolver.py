@@ -1,4 +1,4 @@
-# Code adapted from Alexandr Shurigin's code on phpdude/python-urlsresolver under license GPLv3
+# Code adapted from Alexandr Shurigin's code on github.com/phpdude/python-urlsresolver under license GPLv3
 
 # coding=utf-8
 from builtins import str
