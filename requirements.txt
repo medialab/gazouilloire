@@ -12,4 +12,4 @@ Flask-Caching
 flask-compress
 networkx==2.2
 future
-elasticsearch
+elasticsearch>=6.0.0,<7.0.0
