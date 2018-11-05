@@ -40,6 +40,8 @@ from tweets import prepare_tweet, prepare_tweets, get_timestamp
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 
+from database.mongomanager import MongoManager
+
 def log(typelog, text):
     try:
         sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
@@ -52,13 +54,11 @@ def breakable_sleep(delay, exit_event):
         time.sleep(1)
 
 def depiler(pile, pile_deleted, pile_catchup, pile_medias, mongoconf, locale, exit_event, debug=False):
-    db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
-    coll = db['tweets']
+    db = MongoManager(mongoconf['host'], mongoconf['port'], mongoconf['db'])
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         while not pile_deleted.empty():
             todelete = pile_deleted.get()
-            coll.update({'_id': todelete}, {'$set': {'deleted': True}}, upsert=True)
-
+            db.set_deleted(todelete)
         todo = []
         while not pile.empty():
             todo.append(pile.get())
@@ -67,9 +67,9 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, mongoconf, locale, ex
             if pile_medias and t["medias"]:
                 pile_medias.put(t)
             if pile_catchup and t["in_reply_to_status_id_str"]:
-                if not coll.find_one({"_id": t["in_reply_to_status_id_str"]}):
+                if not db.find_one(t["in_reply_to_status_id_str"]):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
-            coll.update({'_id': t['_id']}, {'$set': t}, upsert=True)
+            db.update(t['_id'],t)
             stored += 1
         if debug and stored:
             log("DEBUG", "Saved %s tweets in MongoDB" % stored)
@@ -156,8 +156,10 @@ def resolver(mongoconf, exit_event, debug=False):
     while not exit_event.is_set():
         done = 0
         todo = list(tweetscoll.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=600, sort=[("_id", 1)]))
+        # METHOD todo()
         urlstoclear = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
+        # METHOD find_alreadydone()
         tweetsdone = []
         batchidsdone = set()
         for tweet in todo:
@@ -178,18 +180,22 @@ def resolver(mongoconf, exit_event, debug=False):
                 gdlinks.append(good)
                 try:
                     linkscoll.save({'_id': link, 'real': good})
+                    # METHOD save_link()
                 except Exception as e:
                     log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
                 if link != good:
                     done += 1
             tweetscoll.update({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks, 'links_to_resolve': False}}, upsert=False, multi=True)
+            # METHOD update_tweetscoll()
             batchidsdone.add(tweetid)
         if debug and done:
             left = tweetscoll.count({"links_to_resolve": True})
+            # METHOD count()
             log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
         # clear tweets potentially rediscovered
         if tweetsdone:
             tweetscoll.update({"_id": {"$in": tweetsdone}}, {"$set": {"links_to_resolve": False}}, upsert=False, multi=True)
+            # METHOD update_tweetscoll()
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
