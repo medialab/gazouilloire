@@ -547,14 +547,11 @@ if __name__=='__main__':
         log('ERROR', 'Unknown timezone set in config.json: %s. Please choose one among the above ones.' % conf['timezone'])
         sys.exit(1)
     try:
-        db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]
-        coll = db['tweets']
-        for f in ['retweet_id', 'in_reply_to_status_id_str', 'timestamp',
-                  'links_to_resolve', 'lang', 'user_lang', 'langs']:
-            coll.ensure_index([(f, ASCENDING)], background=True)
-        coll.ensure_index([('links_to_resolve', ASCENDING), ('_id', ASCENDING)], background=True)
+        db = MongoManager(conf['mongo']['host'],
+                          conf['mongo']['port'], conf['mongo']['db'])
+        db.prepare_indices()
     except Exception as e:
-        log('ERROR', 'Could not initiate connection to MongoDB: %s %s' % (type(e), e))
+        log('ERROR', 'Could not initiate connection to database: %s %s' % (type(e), e))
         sys.exit(1)
     streamgeocode = None
     searchgeocode = None
