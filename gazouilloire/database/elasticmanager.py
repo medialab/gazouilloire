@@ -23,13 +23,12 @@ class ElasticManager:
 
     def update(self, tweet_id,  new_value):
         return self.es.update(index=self.index_name, doc_type='tweet', id=tweet_id, body={"doc": new_value, "doc_as_upsert": True})
-        # {'_id': tweet_id}, {'$set': new_value}, upsert=True
 
     def set_deleted(self, tweet_id):
         return self.es.update(index=self.index_name, doc_type='tweet', id=tweet_id, body={"doc": {"deleted": True}, "doc_as_upsert": True})
 
     def find_one(self, tweet_id):
-        return self.es.search(
+        response = self.es.search(
             index="tweets",
             body={
                 "query":
@@ -39,10 +38,13 @@ class ElasticManager:
                         }
                     }
             }
-        )['hits']['hits'][0]['_source']
-        # return self.db['tweets'].find_one({"_id": search_parameter})
+        )
+        if response['hits']['total'] == 0:
+            return None
+        return response['hits']['hits'][0]['_source']
 
 
-es = ElasticManager('localhost', 9200, 'tweets')
-print(es)
+if __name__ == '__main__':
 
+    es = ElasticManager('localhost', 9200, 'tweets')
+    print(es.find_one(1057589842425589760))
