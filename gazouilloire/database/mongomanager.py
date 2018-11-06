@@ -21,7 +21,7 @@ class MongoManager:
     def find_one(self, tweet_id):
         return self.db['tweets'].find_one({"_id": tweet_id})
 
-db = MongoManager('localhost', 27017, 'py3')
-print(db)
+if __name__ == '__main__':
 
-
+    db = MongoManager('localhost', 27017, 'py3')
+    print(db)
