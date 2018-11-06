@@ -69,7 +69,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, mongoconf, locale, ex
             if pile_catchup and t["in_reply_to_status_id_str"]:
                 if not db.find_one(t["in_reply_to_status_id_str"]):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
-            db.update(t['_id'],t)
+            db.update(t['_id'], t)
             stored += 1
         if debug and stored:
             log("DEBUG", "Saved %s tweets in MongoDB" % stored)
