@@ -11,11 +11,13 @@ class ElasticManager:
         self.port = port
         self.index_name = db
         self.es = Elasticsearch(host + ':' + str(port))
-        if not self.es.indices.exists(index=db):
+
+    def prepare_indices(self):
+        if not self.es.indices.exists(index=self.index_name):
             try:
                 with open(os.path.dirname(os.path.realpath(__file__)) + '/elasticsearch_mapping.json') as mappingfile:
                     mapping = json.loads(mappingfile.read())
-                    self.es.indices.create(index=db, body=mapping)
+                    self.es.indices.create(index=self.index_name, body=mapping)
             except FileNotFoundError as e:
                 print(
                     'ERROR -', 'Could not open elasticsearch_mapping.json: %s %s' % (type(e), e))
@@ -47,4 +49,5 @@ class ElasticManager:
 if __name__ == '__main__':
 
     es = ElasticManager('localhost', 9200, 'tweets')
+    es.prepare_indices()
     print(es.find_one(1057589842425589760))
