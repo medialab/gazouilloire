@@ -40,7 +40,7 @@ from tweets import prepare_tweet, prepare_tweets, get_timestamp
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 
-from database.mongomanager import MongoManager
+from database.mongomanager import MongoManager as DBManager
 
 def log(typelog, text):
     try:
@@ -54,7 +54,7 @@ def breakable_sleep(delay, exit_event):
         time.sleep(1)
 
 def depiler(pile, pile_deleted, pile_catchup, pile_medias, mongoconf, locale, exit_event, debug=False):
-    db = MongoManager(mongoconf['host'], mongoconf['port'], mongoconf['db'])
+    db = DBManager(mongoconf['host'], mongoconf['port'], mongoconf['db'])
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         while not pile_deleted.empty():
             todelete = pile_deleted.get()
@@ -150,13 +150,15 @@ def resolve_url(url, retries=5, user_agent=None):
 def resolver(mongoconf, exit_event, debug=False):
     ua = UserAgent()
     ua.update()
-    db = MongoClient(mongoconf['host'], mongoconf['port'])[mongoconf['db']]
-    linkscoll = db['links']
-    tweetscoll = db['tweets']
+    db = DBManager(mongoconf['host'], mongoconf['port'], mongoconf['db'])
+    linkscoll = db.db['links']
+    tweetscoll = db.db['tweets']
     while not exit_event.is_set():
         done = 0
-        todo = list(tweetscoll.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=600, sort=[("_id", 1)]))
-        # METHOD todo()
+        # todo = list(tweetscoll.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=600, sort=[("_id", 1)]))
+        todo = db.find_todo(tweetscoll)
+        print(" todo : ", todo)
+        # METHOD find_todo()
         urlstoclear = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
         # METHOD find_alreadydone()
@@ -547,7 +549,7 @@ if __name__=='__main__':
         log('ERROR', 'Unknown timezone set in config.json: %s. Please choose one among the above ones.' % conf['timezone'])
         sys.exit(1)
     try:
-        db = MongoManager(conf['mongo']['host'],
+        db = DBManager(conf['mongo']['host'],
                           conf['mongo']['port'], conf['mongo']['db'])
         db.prepare_indices()
     except Exception as e:
