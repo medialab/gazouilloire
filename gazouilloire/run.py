@@ -155,9 +155,7 @@ def resolver(mongoconf, exit_event, debug=False):
     tweetscoll = db.db['tweets']
     while not exit_event.is_set():
         done = 0
-        # todo = list(tweetscoll.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=600, sort=[("_id", 1)]))
-        todo = db.find_todo(tweetscoll)
-        print(" todo : ", todo)
+        todo = db.find_todo(db.tweets)
         # METHOD find_todo()
         urlstoclear = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
