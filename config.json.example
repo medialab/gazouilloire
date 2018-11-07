@@ -13,8 +13,7 @@
     "elasticsearch": {
         "host": "localhost",
         "port": 9200,
-        "index": "tweets",
-        "index_links": "links"
+        "db": "tweets"
     },
     "keywords": [
         "amour",
