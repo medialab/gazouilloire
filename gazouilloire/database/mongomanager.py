@@ -18,24 +18,21 @@ class MongoManager:
 
     def prepare_indices(self):
         """Initializes the database"""
-        coll = self.tweets
         for f in ['retweet_id', 'in_reply_to_status_id_str', 'timestamp',
                   'links_to_resolve', 'lang', 'user_lang', 'langs']:
-            coll.create_index([(f, ASCENDING)], background=True)
-        coll.create_index(
+            self.tweets.create_index([(f, ASCENDING)], background=True)
+        self.tweets.create_index(
             [('links_to_resolve', ASCENDING), ('_id', ASCENDING)], background=True)
 
     # depiler() methods
 
     def update(self, tweet_id,  new_value):
         """Updates the given tweet to the content of 'new_value' argument"""
-        coll = self.tweets
-        return coll.update_one({'_id': tweet_id}, {'$set': new_value}, upsert=True)
+        return self.tweets.update_one({'_id': tweet_id}, {'$set': new_value}, upsert=True)
 
     def set_deleted(self, tweet_id):
         """Sets the field 'deleted' of the given tweet to True"""
-        coll = self.tweets
-        return coll.update_one({'_id': tweet_id}, {'$set': {'deleted': True}}, upsert=True)
+        return self.tweets.update_one({'_id': tweet_id}, {'$set': {'deleted': True}}, upsert=True)
 
     def find_tweet(self, tweet_id):
         """Returns the tweet corresponding to the given id"""
@@ -59,6 +56,9 @@ class MongoManager:
         """Adds the resolved links to the corresponding tweets"""
         self.tweets.update_many({'$or': [{'_id': tweet_id}, {'retweet_id': tweet_id}]}, {
             '$set': {'proper_links': good_links, 'links_to_resolve': False}}, upsert=False)
+
+    def count(self, parameter):
+        return self.tweets.count({"links_to_resolve": True})
 
 
 if __name__ == '__main__':
