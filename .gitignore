@@ -14,4 +14,5 @@ gazouilloire/web/web.wsgi
 exclude_filters.txt
 medias
 logs
+gazouilloire/database/db_list.json
 
