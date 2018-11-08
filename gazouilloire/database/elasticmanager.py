@@ -12,20 +12,31 @@ except FileNotFoundError as e:
     sys.exit(1)
 
 
+def format_response(response):
+    """Formats the ES find() response into a list of dictionaries"""
+    if response['hits']['total'] == 0:
+        return None
+    result = []
+    for element in response['hits']['hits']:
+        # print("ELEMENT : ", element)
+        result_element = {}
+        result_element['_id'] = element['_id']
+        for key, value in element['_source'].items():
+            result_element[key] = value
+        result.append(result_element)
+    return result
+
+
 class ElasticManager:
-    def __init__(self, host, port, db):
-        with open(os.path.dirname(os.path.realpath(__file__)) + '/db_list.json') as db_list:
-            DB_LIST = json.loads(db_list.read())['db_list']
-            if db not in DB_LIST:
-                DB_LIST.append(db)
-                json.dump(DB_LIST, db_list, indent=2)
-            else:
-                print('INFO -', "Using the existing '" + db + "'", 'database.')
+    def __init__(self, host, port, db, links_index=None):
         self.host = host
         self.port = port
         self.db = Elasticsearch(host + ':' + str(port))
         self.tweets = db + "_tweets"
-        self.links = db + "_links"
+        if links_index:
+            self.links = links_index
+        else:
+            self.links = db + "_links"
 
     # main() methods
 
@@ -67,7 +78,7 @@ class ElasticManager:
 
     # resolver() methods
 
-    def find_tweets_with_unresolved_tweets(self):
+    def find_tweets_with_unresolved_links(self, batch_size=600):
         """Returns a list of tweets where 'links_to_resolve' field is True"""
         # return index.find({"links_to_resolve": True}, projection={
         #     "links": 1, "proper_links": 1, "retweet_id""retweet_id": 1}, limit=600, sort=[("_id", 1)])
@@ -75,7 +86,7 @@ class ElasticManager:
             index=self.tweets,
             body={
                 "_source": ["links", "proper_links", "retweet_id"],
-                "size": 600,
+                "size": batch_size,
                 "sort": [
                     {"_id": "asc"}
                 ],
@@ -87,17 +98,7 @@ class ElasticManager:
                 }
             }
         )
-        if response['hits']['total'] == 0:
-            return None
-        result = []
-        for element in response['hits']['hits']:
-            # print("ELEMENT : ", element)
-            result_element = {}
-            result_element['_id'] = element['_id']
-            for key, value in element['_source'].items():
-                result_element[key] = value
-            result.append(result_element)
-        return result
+        return format_response(response)
 
     def find_already_resolved_links(self, urlstoclear):
         """Returns a list of tweets which ids are in the 'urlstoclear' list argument"""
@@ -110,29 +111,48 @@ class ElasticManager:
                     }
             }
         )
-        if response['hits']['total'] == 0:
-            return None
-        result = []
-        for element in response['hits']['hits']:
-            # print("ELEMENT : ", element)
-            result_element = {}
-            result_element['_id'] = element['_id']
-            for key, value in element['_source'].items():
-                result_element[key] = value
-            result.append(result_element)
-        return result
+        return format_response(response)
 
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
         self.db.index(index=self.links, doc_type='link', id=link,
                       body={'link_id': link, 'real': resolved_link})
 
+    def update_tweets_with_links(self, tweet_id, good_links):
+        """Adds the resolved links to the corresponding tweets"""
+        # self.db[self.tweets].update_many({'$or': [{'_id': tweet_id}, {'retweet_id': tweet_id}]}, {
+        #     '$set': {'proper_links': good_links, 'links_to_resolve': False}}, upsert=False)
+        q = {
+            "script": {
+                "inline": "ctx._source.proper_links="+str(good_links)+";ctx._source.links_to_resolve=false",
+                "lang": "painless"
+            },
+            "query": {
+                "bool": {
+                    "should": [
+                        {
+                            "term": {
+                                "_id": tweet_id
+                            }
+                        },
+                        {
+                            "term": {
+                                "retweet_id": tweet_id
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        self.db.update_by_query(
+            body=q, doc_type='tweet', index=self.tweets)
+
 
 if __name__ == '__main__':
 
     es = ElasticManager('localhost', 9200, 'test')
     es.prepare_indices()
-    todo = es.find_tweets_with_unresolved_tweets()
+    todo = es.find_tweets_with_unresolved_links()
     print('>> todo : ', todo[:10])
     urlstoclear = list(set([l for t in todo if not t.get(
         "proper_links", []) for l in t.get('links', [])]))
@@ -140,3 +160,5 @@ if __name__ == '__main__':
     alreadydone = [{l["_id"]: l["real"]
                     for l in es.find_already_resolved_links(urlstoclear)}]
     print('>> alreadydone : ', alreadydone[:10])
+    es.update_tweets_with_links(
+        1057223983073030144, ["goodlink1", "goodlink2"])

@@ -154,8 +154,8 @@ def resolver(mongoconf, exit_event, debug=False):
     tweetscoll = db.db['tweets']
     while not exit_event.is_set():
         done = 0
-        todo = db.find_tweets_with_unresolved_tweets()
-        # METHOD find_tweets_with_unresolved_tweets()
+        todo = db.find_tweets_with_unresolved_links()
+        # METHOD find_tweets_with_unresolved_links()
         urlstoclear = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
         alreadydone = {l["_id"]: l["real"] for l in db.find_already_resolved_links(urlstoclear)}
         # METHOD find_already_resolved_links()
@@ -184,8 +184,8 @@ def resolver(mongoconf, exit_event, debug=False):
                     log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
                 if link != good:
                     done += 1
-            tweetscoll.update_many({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks, 'links_to_resolve': False}}, upsert=False)
-            # METHOD update_tweetscoll()
+            db.update_tweets_with_links(tweetid, gdlinks)
+            # METHOD update_tweets_with_links()
             batchidsdone.add(tweetid)
         if debug and done:
             left = tweetscoll.count({"links_to_resolve": True})
