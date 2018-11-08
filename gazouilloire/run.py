@@ -151,7 +151,6 @@ def resolver(mongoconf, exit_event, debug=False):
     ua = UserAgent()
     ua.update()
     db = DBManager(mongoconf['host'], mongoconf['port'], mongoconf['db'])
-    linkscoll = db.db['links']
     tweetscoll = db.db['tweets']
     while not exit_event.is_set():
         done = 0
@@ -179,8 +178,8 @@ def resolver(mongoconf, exit_event, debug=False):
                 good = resolve_url(link, user_agent=ua)
                 gdlinks.append(good)
                 try:
-                    linkscoll.insert_one({'_id': link, 'real': good})
-                    # METHOD save_link()
+                    db.insert_link(link, good)
+                    # METHOD insert_link()
                 except Exception as e:
                     log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
                 if link != good:
