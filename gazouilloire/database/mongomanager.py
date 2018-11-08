@@ -50,6 +50,10 @@ class MongoManager:
         """Returns a list of tweets which ids are in the 'urlstoclear' list argument"""
         return list(self.db[self.links].find({"_id": {"$in": urlstoclear}}))
 
+    def insert_link(self, link, resolved_link):
+        """Inserts the given link in the database"""
+        self.db[self.links].insert_one({'_id': link, 'real': resolved_link})
+
 
 if __name__ == '__main__':
 

@@ -122,6 +122,11 @@ class ElasticManager:
             result.append(result_element)
         return result
 
+    def insert_link(self, link, resolved_link):
+        """Inserts the given link in the database"""
+        self.db.index(index=self.links, doc_type='link', id=link,
+                      body={'link_id': link, 'real': resolved_link})
+
 
 if __name__ == '__main__':
 
