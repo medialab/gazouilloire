@@ -67,7 +67,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, mongoconf, locale, ex
             if pile_medias and t["medias"]:
                 pile_medias.put(t)
             if pile_catchup and t["in_reply_to_status_id_str"]:
-                if not db.find_one(t["in_reply_to_status_id_str"]):
+                if not db.find_tweet(t["in_reply_to_status_id_str"]):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
             db.update(t['_id'], t)
             stored += 1
@@ -155,11 +155,11 @@ def resolver(mongoconf, exit_event, debug=False):
     tweetscoll = db.db['tweets']
     while not exit_event.is_set():
         done = 0
-        todo = db.find_todo(db.tweets)
-        # METHOD find_todo()
+        todo = db.find_tweets_with_unresolved_tweets()
+        # METHOD find_tweets_with_unresolved_tweets()
         urlstoclear = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
-        alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": urlstoclear}})}
-        # METHOD find_alreadydone()
+        alreadydone = {l["_id"]: l["real"] for l in db.find_already_resolved_links(urlstoclear)}
+        # METHOD find_already_resolved_links()
         tweetsdone = []
         batchidsdone = set()
         for tweet in todo:
@@ -179,13 +179,13 @@ def resolver(mongoconf, exit_event, debug=False):
                 good = resolve_url(link, user_agent=ua)
                 gdlinks.append(good)
                 try:
-                    linkscoll.save({'_id': link, 'real': good})
+                    linkscoll.insert_one({'_id': link, 'real': good})
                     # METHOD save_link()
                 except Exception as e:
                     log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
                 if link != good:
                     done += 1
-            tweetscoll.update({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks, 'links_to_resolve': False}}, upsert=False, multi=True)
+            tweetscoll.update_many({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks, 'links_to_resolve': False}}, upsert=False)
             # METHOD update_tweetscoll()
             batchidsdone.add(tweetid)
         if debug and done:
