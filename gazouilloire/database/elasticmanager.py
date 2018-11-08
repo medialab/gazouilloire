@@ -4,37 +4,37 @@ import json
 import sys
 import os
 
-with open(os.path.dirname(os.path.realpath(__file__)) + '/db_settings.json', 'r') as db_settings:
-    DB_SETTINGS = json.loads(db_settings.read())
+try:
+    with open(os.path.dirname(os.path.realpath(__file__)) + '/db_mappings.json', 'r') as db_mappings:
+        DB_MAPPINGS = json.loads(db_mappings.read())
+except FileNotFoundError as e:
+    print('ERROR -', 'Could not open db_mappings.json: %s %s' % (type(e), e))
+    sys.exit(1)
 
 
 class ElasticManager:
     def __init__(self, host, port, db):
-        if db not in DB_SETTINGS['db_list']:
-            DB_SETTINGS['db_list'].append(db)
-            with open(os.path.dirname(os.path.realpath(__file__)) + '/db_settings.json', 'w') as db_settings:
-                json.dump(DB_SETTINGS, db_settings, indent=2)
-        else:
-            print('INFO -', "Using the existing '" + db + "'", 'database.')
-            self.host = host
-            self.port = port
-            self.db = Elasticsearch(host + ':' + str(port))
-            self.tweets = db + "_tweets"
-            self.links = db + "_links"
+        with open(os.path.dirname(os.path.realpath(__file__)) + '/db_list.json') as db_list:
+            DB_LIST = json.loads(db_list.read())['db_list']
+            if db not in DB_LIST:
+                DB_LIST.append(db)
+                json.dump(DB_LIST, db_list, indent=2)
+            else:
+                print('INFO -', "Using the existing '" + db + "'", 'database.')
+        self.host = host
+        self.port = port
+        self.db = Elasticsearch(host + ':' + str(port))
+        self.tweets = db + "_tweets"
+        self.links = db + "_links"
 
     # main() methods
 
     def prepare_indices(self):
         if not self.db.indices.exists(index=self.tweets):
-            try:
-                self.db.indices.create(
-                    index=self.tweets, body=DB_SETTINGS['tweets_mapping'])
-                self.db.indices.create(
-                    index=self.links, body=DB_SETTINGS['links_mapping'])
-            except FileNotFoundError as e:
-                print(
-                    'ERROR -', 'Could not open db_settings.json: %s %s' % (type(e), e))
-                sys.exit(1)
+            self.db.indices.create(
+                index=self.tweets, body=DB_MAPPINGS['tweets_mapping'])
+            self.db.indices.create(
+                index=self.links, body=DB_MAPPINGS['links_mapping'])
 
     # depiler() methods
 
