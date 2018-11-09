@@ -184,7 +184,7 @@ def resolver(mongoconf, exit_event, debug=False):
             db.update_tweets_with_links(tweetid, gdlinks)
             batchidsdone.add(tweetid)
         if debug and done:
-            left = db.count_tweets({"links_to_resolve": True})
+            left = db.count_tweets("links_to_resolve", True)
             log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
         # clear tweets potentially rediscovered
         if tweetsdone:

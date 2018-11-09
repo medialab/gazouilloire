@@ -44,9 +44,9 @@ class MongoManager:
         """Returns a list of tweets where 'links_to_resolve' field is True"""
         return list(self.tweets.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=batch_size, sort=[("_id", 1)]))
 
-    def find_links_in(self, urlstoclear):
-        """Returns a list of tweets which ids are in the 'urlstoclear' list argument"""
-        return list(self.links.find({"_id": {"$in": urlstoclear}}))
+    def find_links_in(self, urls_list):
+        """Returns a list of tweets which ids are in the 'urls_list' list argument"""
+        return list(self.links.find({"_id": {"$in": urls_list}}))
 
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
@@ -57,14 +57,16 @@ class MongoManager:
         self.tweets.update_many({'$or': [{'_id': tweet_id}, {'retweet_id': tweet_id}]}, {
             '$set': {'proper_links': good_links, 'links_to_resolve': False}}, upsert=False)
 
-    def count_tweets(self, parameter):
-        """Counts the number of documents with the given parameter"""
-        return self.tweets.count(parameter)
+    def count_tweets(self, key, value):
+        """Counts the number of documents where the given key is equal to the given value"""
+        return self.tweets.count({key: value})
 
     def update_resolved_tweets(self, tweetsdone):
         """Sets the "links_to_resolve" field of the tweets in tweetsdone to False"""
         self.tweets.update({"_id": {"$in": tweetsdone}}, {
             "$set": {"links_to_resolve": False}}, upsert=False, multi=True)
+
+    # prepare_tweets() methods
 
 
 if __name__ == '__main__':
@@ -79,4 +81,4 @@ if __name__ == '__main__':
     alreadydone = [{l["_id"]: l["real"]
                     for l in db.find_links_in(urlstoclear)}]
     print('>> alreadydone : ', alreadydone[:10])
-    print(db.count_tweets({'retweet_id': '1057377903506325506'}))
+    print(db.count_tweets('retweet_id', '1057377903506325506'))
