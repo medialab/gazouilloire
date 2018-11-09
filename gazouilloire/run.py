@@ -152,14 +152,11 @@ def resolver(mongoconf, exit_event, debug=False):
     ua = UserAgent()
     ua.update()
     db = DBManager(mongoconf['host'], mongoconf['port'], mongoconf['db'])
-    tweetscoll = db.db['tweets']
     while not exit_event.is_set():
         done = 0
         todo = db.find_tweets_with_unresolved_links()
-        # METHOD find_tweets_with_unresolved_links()
         urlstoclear = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
-        alreadydone = {l["_id"]: l["real"] for l in db.find_already_resolved_links(urlstoclear)}
-        # METHOD find_already_resolved_links()
+        alreadydone = {l["_id"]: l["real"] for l in db.find_links_in(urlstoclear)}
         tweetsdone = []
         batchidsdone = set()
         for tweet in todo:
@@ -180,22 +177,18 @@ def resolver(mongoconf, exit_event, debug=False):
                 gdlinks.append(good)
                 try:
                     db.insert_link(link, good)
-                    # METHOD insert_link()
                 except Exception as e:
                     log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
                 if link != good:
                     done += 1
             db.update_tweets_with_links(tweetid, gdlinks)
-            # METHOD update_tweets_with_links()
             batchidsdone.add(tweetid)
         if debug and done:
             left = db.count_tweets({"links_to_resolve": True})
-            # METHOD count()
             log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
         # clear tweets potentially rediscovered
         if tweetsdone:
-            tweetscoll.update({"_id": {"$in": tweetsdone}}, {"$set": {"links_to_resolve": False}}, upsert=False, multi=True)
-            # METHOD update_tweetscoll()
+            db.update_resolved_tweets(tweetsdone)
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
