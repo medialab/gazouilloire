@@ -50,7 +50,8 @@ class MongoManager:
 
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
-        self.links.insert_one({'_id': link, 'real': resolved_link})
+        self.links.replace_one(
+            {'_id': link}, {'_id': link, 'real': resolved_link}, True)
 
     def update_tweets_with_links(self, tweet_id, good_links):
         """Adds the resolved links to the corresponding tweets"""

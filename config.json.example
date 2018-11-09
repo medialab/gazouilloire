@@ -5,15 +5,11 @@
         "oauth_token": "xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
         "oauth_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     },
-    "mongo": {
+    "database": {
+        "type": "mongo",
         "host": "localhost",
         "port": 27017,
-        "db": "tweets"
-    },
-    "elasticsearch": {
-        "host": "localhost",
-        "port": 9200,
-        "db": "tweets"
+        "db": "py3"
     },
     "keywords": [
         "amour",
