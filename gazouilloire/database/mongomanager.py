@@ -44,7 +44,7 @@ class MongoManager:
         """Returns a list of tweets where 'links_to_resolve' field is True"""
         return list(self.tweets.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=batch_size, sort=[("_id", 1)]))
 
-    def find_already_resolved_links(self, urlstoclear):
+    def find_links_in(self, urlstoclear):
         """Returns a list of tweets which ids are in the 'urlstoclear' list argument"""
         return list(self.links.find({"_id": {"$in": urlstoclear}}))
 
@@ -61,6 +61,11 @@ class MongoManager:
         """Counts the number of documents with the given parameter"""
         return self.tweets.count(parameter)
 
+    def update_resolved_tweets(self, tweetsdone):
+        """Sets the "links_to_resolve" field of the tweets in tweetsdone to False"""
+        self.tweets.update({"_id": {"$in": tweetsdone}}, {
+            "$set": {"links_to_resolve": False}}, upsert=False, multi=True)
+
 
 if __name__ == '__main__':
 
@@ -72,6 +77,6 @@ if __name__ == '__main__':
         "proper_links", []) for l in t.get('links', [])]))
     print('>> urlstoclear : ', urlstoclear[:10])
     alreadydone = [{l["_id"]: l["real"]
-                    for l in db.find_already_resolved_links(urlstoclear)}]
+                    for l in db.find_links_in(urlstoclear)}]
     print('>> alreadydone : ', alreadydone[:10])
     print(db.count_tweets({'retweet_id': '1057377903506325506'}))
