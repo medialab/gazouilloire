@@ -180,5 +180,5 @@ if __name__ == '__main__':
     print('>> alreadydone : ', alreadydone[:10])
     # es.update_tweets_with_links(
     #     1057377903506325506, ["goodlink3", "goodlink4"])
-    print(es.count_tweets({'retweet_id': '1057377903506325506'}))
+    print(es.count_tweets('retweet_id', '1057377903506325506'))
     es.update_resolved_tweets([1057223967893729280, 1057223975032373249])

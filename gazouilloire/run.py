@@ -41,6 +41,7 @@ from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 
 from database.mongomanager import MongoManager as DBManager
+from database.elasticmanager import ElasticManager
 
 def log(typelog, text):
     try:
@@ -53,8 +54,8 @@ def breakable_sleep(delay, exit_event):
     while time.time() < t and not exit_event.is_set():
         time.sleep(1)
 
-def depiler(pile, pile_deleted, pile_catchup, pile_medias, mongoconf, locale, exit_event, debug=False):
-    db = DBManager(mongoconf['host'], mongoconf['port'], mongoconf['db'])
+def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit_event, debug=False):
+    db = DBManager(db_conf['host'], db_conf['port'], db_conf['db'])
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         while not pile_deleted.empty():
             todelete = pile_deleted.get()
@@ -72,7 +73,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, mongoconf, locale, ex
             db.update(t['_id'], t)
             stored += 1
         if debug and stored:
-            log("DEBUG", "Saved %s tweets in MongoDB" % stored)
+            log("DEBUG", "Saved %s tweets in database" % stored)
         breakable_sleep(2, exit_event)
     log("INFO", "FINISHED depiler")
 
@@ -148,10 +149,10 @@ def resolve_url(url, retries=5, user_agent=None):
 # TODO :
 # - add finalize task to run resolver on all tweets in DB with links but no proper_links
 # - modify the function not to use links_to_resolve anymore
-def resolver(mongoconf, exit_event, debug=False):
+def resolver(db_conf, exit_event, debug=False):
     ua = UserAgent()
     ua.update()
-    db = DBManager(mongoconf['host'], mongoconf['port'], mongoconf['db'])
+    db = DBManager(db_conf['host'], db_conf['port'], db_conf['db'])
     while not exit_event.is_set():
         done = 0
         todo = db.find_tweets_with_unresolved_links()
@@ -540,8 +541,9 @@ if __name__=='__main__':
         log('ERROR', 'Unknown timezone set in config.json: %s. Please choose one among the above ones.' % conf['timezone'])
         sys.exit(1)
     try:
-        db = DBManager(conf['mongo']['host'],
-                          conf['mongo']['port'], conf['mongo']['db'])
+        db_type = 'mongo' # either 'mongo' or 'elasticsearch'
+        db = DBManager(conf[db_type]['host'],
+                          conf[db_type]['port'], conf[db_type]['db'])
         db.prepare_indices()
     except Exception as e:
         log('ERROR', 'Could not initiate connection to database: %s %s' % (type(e), e))
@@ -583,7 +585,7 @@ if __name__=='__main__':
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     exit_event = Event()
-    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf['mongo'], locale, exit_event, conf['debug']))
+    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf[db_type], locale, exit_event, conf['debug']))
     depile.daemon = True
     depile.start()
     if grab_conversations:
@@ -591,7 +593,7 @@ if __name__=='__main__':
         catchup.daemon = True
         catchup.start()
     if resolve_links:
-        resolve = Process(target=resolver, args=(conf['mongo'], exit_event, conf['debug']))
+        resolve = Process(target=resolver, args=(conf[db_type], exit_event, conf['debug']))
         resolve.daemon = True
         resolve.start()
     if dl_medias:
