@@ -57,8 +57,9 @@ class MongoManager:
         self.tweets.update_many({'$or': [{'_id': tweet_id}, {'retweet_id': tweet_id}]}, {
             '$set': {'proper_links': good_links, 'links_to_resolve': False}}, upsert=False)
 
-    def count(self, parameter):
-        return self.tweets.count({"links_to_resolve": True})
+    def count_tweets(self, parameter):
+        """Counts the number of documents with the given parameter"""
+        return self.tweets.count(parameter)
 
 
 if __name__ == '__main__':
@@ -73,3 +74,4 @@ if __name__ == '__main__':
     alreadydone = [{l["_id"]: l["real"]
                     for l in db.find_already_resolved_links(urlstoclear)}]
     print('>> alreadydone : ', alreadydone[:10])
+    print(db.count_tweets({'retweet_id': '1057377903506325506'}))

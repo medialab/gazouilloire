@@ -147,6 +147,7 @@ def resolve_url(url, retries=5, user_agent=None):
 
 # TODO :
 # - add finalize task to run resolver on all tweets in DB with links but no proper_links
+# - modify the function not to use links_to_resolve anymore
 def resolver(mongoconf, exit_event, debug=False):
     ua = UserAgent()
     ua.update()
@@ -188,7 +189,7 @@ def resolver(mongoconf, exit_event, debug=False):
             # METHOD update_tweets_with_links()
             batchidsdone.add(tweetid)
         if debug and done:
-            left = tweetscoll.count({"links_to_resolve": True})
+            left = db.count_tweets({"links_to_resolve": True})
             # METHOD count()
             log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
         # clear tweets potentially rediscovered
