@@ -120,8 +120,6 @@ class ElasticManager:
 
     def update_tweets_with_links(self, tweet_id, good_links):
         """Adds the resolved links to the corresponding tweets"""
-        # self.db[self.tweets].update_many({'$or': [{'_id': tweet_id}, {'retweet_id': tweet_id}]}, {
-        #     '$set': {'proper_links': good_links, 'links_to_resolve': False}}, upsert=False)
         q = {
             "script": {
                 "inline": "ctx._source.proper_links="+str(good_links)+";ctx._source.links_to_resolve=false",
@@ -147,6 +145,10 @@ class ElasticManager:
         self.db.update_by_query(
             body=q, doc_type='tweet', index=self.tweets)
 
+    def count_tweets(self, parameter):
+        """Counts the number of documents with the given parameter"""
+        return self.db.count(index=self.tweets, doc_type='tweet', body={"query": {"term": parameter}})['count']
+
 
 if __name__ == '__main__':
 
@@ -160,5 +162,6 @@ if __name__ == '__main__':
     alreadydone = [{l["_id"]: l["real"]
                     for l in es.find_already_resolved_links(urlstoclear)}]
     print('>> alreadydone : ', alreadydone[:10])
-    es.update_tweets_with_links(
-        1057223983073030144, ["goodlink1", "goodlink2"])
+    # es.update_tweets_with_links(
+    #     1057377903506325506, ["goodlink3", "goodlink4"])
+    print(es.count_tweets({'retweet_id': '1057377903506325506'}))
