@@ -100,14 +100,14 @@ class ElasticManager:
         )
         return format_response(response)
 
-    def find_links_in(self, urlstoclear):
-        """Returns a list of tweets which ids are in the 'urlstoclear' list argument"""
+    def find_links_in(self, urls_list):
+        """Returns a list of tweets which ids are in the 'urls_list' list argument"""
         response = self.db.search(
             index=self.links,
             body={
                 "query":
                     {
-                        "terms": {"_id": urlstoclear}
+                        "terms": {"_id": urls_list}
                     }
             }
         )
@@ -145,9 +145,9 @@ class ElasticManager:
         self.db.update_by_query(
             body=q, doc_type='tweet', index=self.tweets)
 
-    def count_tweets(self, parameter):
-        """Counts the number of documents with the given parameter"""
-        return self.db.count(index=self.tweets, doc_type='tweet', body={"query": {"term": parameter}})['count']
+    def count_tweets(self, key, value):
+        """Counts the number of documents where the given key is equal to the given value"""
+        return self.db.count(index=self.tweets, doc_type='tweet', body={"query": {"term": {key: value}}})['count']
 
     def update_resolved_tweets(self, tweetsdone):
         """Sets the "links_to_resolve" field of the tweets in tweetsdone to False"""
