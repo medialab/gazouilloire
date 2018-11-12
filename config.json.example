@@ -9,7 +9,7 @@
         "type": "mongo",
         "host": "localhost",
         "port": 27017,
-        "db": "py3"
+        "db": "gazouilloire"
     },
     "keywords": [
         "amour",
