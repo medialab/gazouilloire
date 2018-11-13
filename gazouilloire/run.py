@@ -155,8 +155,8 @@ def resolver(db_conf, exit_event, debug=False):
     while not exit_event.is_set():
         done = 0
         todo = db.find_tweets_with_unresolved_links()
-        urlstoclear = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
-        alreadydone = {l["_id"]: l["real"] for l in db.find_links_in(urlstoclear)}
+        urlstoresolve = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
+        alreadydone = {l["_id"]: l["real"] for l in db.find_links_in(urlstoresolve)}
         tweetsdone = []
         batchidsdone = set()
         for tweet in todo:
@@ -175,6 +175,7 @@ def resolver(db_conf, exit_event, debug=False):
                     continue
                 good = resolve_url(link, user_agent=ua)
                 gdlinks.append(good)
+                alreadydone[link] = good
                 try:
                     db.insert_link(link, good)
                 except Exception as e:
