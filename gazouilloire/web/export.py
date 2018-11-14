@@ -119,7 +119,7 @@ CORRESP_FIELDS = {
     "truncated": bool,      # unnecessary since we rebuild text from RTs
     "retweet_count": int,
     "favorite_count": int,
-    "reply_count": int,     # Recently appeared in Twitter data, then dropped
+    "reply_count": int,     # Recently appeared in Twitter data, and quickly dropped as it became paid (~Oct 2017) : equals to None or 0 https://twittercommunity.com/t/reply-count-quote-count-not-available-in-statuses-lookup-answer/95241
     "lang": str,
     "to_user_name": "in_reply_to_screen_name",
     "to_user_id": "in_reply_to_user_id_str",    # Added for better user interaction analysis
