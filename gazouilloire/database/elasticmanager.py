@@ -12,10 +12,10 @@ except FileNotFoundError as e:
     sys.exit(1)
 
 
-def format_response(response):
+def format_response(response, empty_response=None):
     """Formats the ES find() response into a list of dictionaries"""
     if response['hits']['total'] == 0:
-        return None
+        return empty_response
     result = []
     for element in response['hits']['hits']:
         # print("ELEMENT : ", element)
@@ -109,6 +109,16 @@ def format_tweet_fields(tweet):
             "user_verified": tweet['user_verified']}
     return res
 
+def stream(batch, index):
+    for t in batch:
+        yield {
+            '_id': t['_id'],
+            "_type": "tweet",
+            "_index": index,
+            "_source": {"doc": format_tweet_fields(t), "doc_as_upsert": True},
+            '_op_type': 'update'
+        }
+
 
 class ElasticManager:
     def __init__(self, host, port, db, links_index=None):
@@ -138,6 +148,13 @@ class ElasticManager:
         """Updates the given tweet to the content of 'new_value' argument"""
         formatted_new_value = format_tweet_fields(new_value)
         return self.db.update(index=self.tweets, doc_type='tweet', id=tweet_id, body={"doc": formatted_new_value, "doc_as_upsert": True})
+
+    def bulk_update(self, batch):
+        """Updates the batch of tweets given in argument"""
+        tweet_stream = stream(batch, self.tweets)
+        for ok, response in helpers.streaming_bulk(self.db, actions = tweet_stream):
+            if not ok:
+                print(response)
 
     def set_deleted(self, tweet_id):
         """Sets the field 'deleted' of the given tweet to True"""
@@ -185,7 +202,7 @@ class ElasticManager:
         return format_response(response)
 
     def find_links_in(self, urls_list):
-        """Returns a list of tweets which ids are in the 'urls_list' list argument"""
+        """Returns a list of links which ids are in the 'urls_list' argument"""
         response = self.db.search(
             index=self.links,
             body={
@@ -195,7 +212,7 @@ class ElasticManager:
                     }
             }
         )
-        return format_response(response)
+        return format_response(response, empty_response=[])
 
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
@@ -254,15 +271,15 @@ if __name__ == '__main__':
 
     es = ElasticManager('localhost', 9200, 'test')
     es.prepare_indices()
-    todo = es.find_tweets_with_unresolved_links()
-    print('>> todo : ', todo[:10])
-    urlstoclear = list(set([l for t in todo if not t.get(
-        "proper_links", []) for l in t.get('links', [])]))
-    print('>> urlstoclear : ', urlstoclear[:10])
-    alreadydone = [{l["_id"]: l["real"]
-                    for l in es.find_links_in(urlstoclear)}]
-    print('>> alreadydone : ', alreadydone[:10])
-    # es.update_tweets_with_links(
-    #     1057377903506325506, ["goodlink3", "goodlink4"])
-    print(es.count_tweets('retweet_id', '1057377903506325506'))
-    es.update_resolved_tweets([1057223967893729280, 1057223975032373249])
+    # todo = es.find_tweets_with_unresolved_links()
+    # print('>> todo : ', todo[:10])
+    # urlstoclear = list(set([l for t in todo if not t.get(
+    #     "proper_links", []) for l in t.get('links', [])]))
+    # print('>> urlstoclear : ', urlstoclear[:10])
+    # alreadydone = [{l["_id"]: l["real"]
+    #                 for l in es.find_links_in(urlstoclear)}]
+    # print('>> alreadydone : ', alreadydone[:10])
+    # # es.update_tweets_with_links(
+    # #     1057377903506325506, ["goodlink3", "goodlink4"])
+    # print(es.count_tweets('retweet_id', '1057377903506325506'))
+    # es.update_resolved_tweets([1057223967893729280, 1057223975032373249])
