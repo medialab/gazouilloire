@@ -30,6 +30,11 @@ class MongoManager:
         """Updates the given tweet to the content of 'new_value' argument"""
         return self.tweets.update_one({'_id': tweet_id}, {'$set': new_value}, upsert=True)
 
+    def bulk_update(self, batch):
+        """Updates the batch of tweets given in argument"""
+        for t in batch:
+            self.update(t["_id"], t)
+
     def set_deleted(self, tweet_id):
         """Sets the field 'deleted' of the given tweet to True"""
         return self.tweets.update_one({'_id': tweet_id}, {'$set': {'deleted': True}}, upsert=True)
@@ -45,7 +50,7 @@ class MongoManager:
         return list(self.tweets.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=batch_size, sort=[("_id", 1)]))
 
     def find_links_in(self, urls_list):
-        """Returns a list of tweets which ids are in the 'urls_list' list argument"""
+        """Returns a list of links which ids are in the 'urls_list' argument"""
         return list(self.links.find({"_id": {"$in": urls_list}}))
 
     def insert_link(self, link, resolved_link):
@@ -74,12 +79,12 @@ if __name__ == '__main__':
 
     db = MongoManager('localhost', 27017, 'py3')
     db.prepare_indices()
-    todo = db.find_tweets_with_unresolved_links()
-    print('>> todo : ', todo[:10])
-    urlstoclear = list(set([l for t in todo if not t.get(
-        "proper_links", []) for l in t.get('links', [])]))
-    print('>> urlstoclear : ', urlstoclear[:10])
-    alreadydone = [{l["_id"]: l["real"]
-                    for l in db.find_links_in(urlstoclear)}]
-    print('>> alreadydone : ', alreadydone[:10])
-    print(db.count_tweets('retweet_id', '1057377903506325506'))
+    # todo = db.find_tweets_with_unresolved_links()
+    # print('>> todo : ', todo[:10])
+    # urlstoclear = list(set([l for t in todo if not t.get(
+    #     "proper_links", []) for l in t.get('links', [])]))
+    # print('>> urlstoclear : ', urlstoclear[:10])
+    # alreadydone = [{l["_id"]: l["real"]
+    #                 for l in db.find_links_in(urlstoclear)}]
+    # print('>> alreadydone : ', alreadydone[:10])
+    # print(db.count_tweets('retweet_id', '1057377903506325506'))
