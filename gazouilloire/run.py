@@ -63,13 +63,13 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
         while not pile.empty():
             todo.append(pile.get())
         stored = 0
+        db.bulk_update(prepare_tweets(todo, locale))
         for t in prepare_tweets(todo, locale):
             if pile_medias and t["medias"]:
                 pile_medias.put(t)
             if pile_catchup and t["in_reply_to_status_id_str"]:
                 if not db.find_tweet(t["in_reply_to_status_id_str"]):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
-            db.update(t['_id'], t)
             stored += 1
         if debug and stored:
             log("DEBUG", "Saved %s tweets in database" % stored)
@@ -331,7 +331,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                         log("INFO", "Got special data: %s" % str(msg))
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
             log("WARNING", "Stream connection lost, reconnecting in a sec... (%s: %s)" % (type(e), e))
-        except Exception as e:
+        except (Exception, KeyboardInterrupt) as e:
             log("INFO", "closing streamer (%s: %s)..." % (type(e), e))
             exit_event.set()
 
