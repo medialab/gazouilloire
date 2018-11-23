@@ -25,7 +25,7 @@ except:
     sys.exit('ERROR: Unknown timezone set in config.json: %s. Please choose one among the above ones.' %
              conf['timezone'])
 
-query = format_keyword(sys.argv[1].decode('utf-8'))
+query = format_keyword(sys.argv[1])
 print("Querying « %s »:\n" % query)
 for t in t.search.tweets(q=query, count=20, include_entities='true', result_type='recent', tweet_mode='extended')['statuses']:
     pt = prepare_tweet(t, locale)

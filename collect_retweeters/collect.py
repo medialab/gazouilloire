@@ -1,18 +1,22 @@
+from __future__ import print_function
 #/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from builtins import str
 import sys
 from pymongo import MongoClient, ASCENDING
+import os
+sys.path.append(os.path.join(os.getcwd()))
 from gazouilloire.tweets import prepare_tweet, clean_user_entities
 from gazouilloire.api_wrapper import TwitterWrapper
 from gazouilloire.web.export import export_csv, USER_FIELDS
 
 
 def process_account(user_name, api, db):
-    print >> sys.stderr, "- WORKING ON %s" % user_name
+    print("- WORKING ON %s" % user_name, file=sys.stderr)
     user_name = user_name.lstrip('@').strip().lower()
     if db.users.find({'screen_name': user_name, 'finished': True}, limit=1).count():
-        print >> sys.stderr, "  ALREADY DONE!"
+        print("  ALREADY DONE!", file=sys.stderr)
         return
     account_rt_field = "retweets_of_%s" % user_name
     db.users.ensure_index([(account_rt_field, ASCENDING)], background=True)
@@ -31,7 +35,7 @@ def process_account(user_name, api, db):
     db.users.update({'screen_name': user_name}, {"$set": user})
 
     if user['protected']:
-        print >> sys.stderr, "SKIPPING tweets for %s whose account is unfortunately protected" % user_name
+        print("SKIPPING tweets for %s whose account is unfortunately protected" % user_name, file=sys.stderr)
         return
 
     api_args = {
@@ -44,7 +48,7 @@ def process_account(user_name, api, db):
     }
     max_id = db.tweets.find_one({"user_id_str": user['id_str']}, projection=[], sort=[('timestamp', ASCENDING)])
     if max_id:
-        api_args['max_id'] = long(max_id["_id"]) - 1
+        api_args['max_id'] = int(max_id["_id"]) - 1
     tweets = api.call('statuses.user_timeline', api_args)
     while tweets:
         n_retweets_batch = 0
@@ -53,7 +57,7 @@ def process_account(user_name, api, db):
             api_args['max_id'] = min(api_args.get('max_id', tweet['id']), tweet['id'] - 1)
             if tw['retweet_id'] or not tw['retweet_count']:
                 continue
-            print >> sys.stderr, u"  - %s — %s" % (tw["text"].replace('\n', ' '), tw["url"])
+            print(u"  - %s — %s" % (tw["text"].replace('\n', ' '), tw["url"]), file=sys.stderr)
 
             rt_args = {
               '_id': tweet['id'],
@@ -69,7 +73,7 @@ def process_account(user_name, api, db):
             tw["retweeters"] = []
             while rt_args.get('cursor', True):
                 retweets = api.call('statuses.retweeters.ids', rt_args)
-                rt_args['cursor'] = retweets.get('next_cursor', long(retweets.get('next_cursor_str', '')))
+                rt_args['cursor'] = retweets.get('next_cursor', int(retweets.get('next_cursor_str', '')))
                 rt_ids = retweets.get('ids', [])
                 if rt_ids:
                     tw['retweeters'] += rt_ids
@@ -78,7 +82,7 @@ def process_account(user_name, api, db):
 
             n_retweets = len(retweeters)
             n_retweets_batch += n_retweets
-            print >> sys.stderr, "    found %s retweets out of %s" % (n_retweets, tw["retweet_count"])
+            print("    found %s retweets out of %s" % (n_retweets, tw["retweet_count"]), file=sys.stderr)
             if tw["retweeters"]:
                 existing = [u["_id"] for u in db.users.find({"_id": {"$in": tw["retweeters"]}}, projection=[])]
                 news = [clean_user_entities(u) for u in retweeters if u["id"] not in existing]
@@ -87,7 +91,7 @@ def process_account(user_name, api, db):
                 db.users.update({"_id": {"$in": tw["retweeters"]}}, {"$inc": {account_rt_field: 1}}, multi=True)
             db.tweets.update({'_id': tweet['id_str']}, {"$set": tw}, upsert=True)
 
-        print >> sys.stderr, " -> collected %s tweets and %s retweets" % (len(tweets), n_retweets_batch)
+        print(" -> collected %s tweets and %s retweets" % (len(tweets), n_retweets_batch), file=sys.stderr)
         tweets = api.call('statuses.user_timeline', api_args)
 
     db.users.update({'screen_name': user_name}, {"$set": {"finished": True}})
@@ -102,4 +106,4 @@ if __name__ == "__main__":
         process_account(account, api, db)
         extra_fields.append("retweets_of_%s" % account.lstrip('@').strip().lower())
     iterator = db.users.find()
-    print export_csv(iterator, USER_FIELDS, extra_fields).encode("utf-8")
+    print(export_csv(iterator, USER_FIELDS, extra_fields).encode("utf-8"))
