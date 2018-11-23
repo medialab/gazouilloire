@@ -234,5 +234,5 @@ def yield_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
         yield ",".join(format_csv(get_field(k, t)) for k in out_fields)
 
 def export_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
-    return "\n".join([t.decode('utf-8') for t in yield_csv(queryiterator, list_fields, extra_fields)])
+    return "\n".join([t for t in yield_csv(queryiterator, list_fields, extra_fields)])
 

@@ -1,8 +1,11 @@
+from __future__ import print_function
 #/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import sys
 from pymongo import MongoClient, ASCENDING
+import os
+sys.path.append(os.path.join(os.getcwd()))
 from gazouilloire.tweets import prepare_tweet, clean_user_entities
 from gazouilloire.api_wrapper import TwitterWrapper
 from gazouilloire.web.export import export_csv, USER_FIELDS
@@ -21,7 +24,7 @@ def process_accounts(list_users, api, db):
         users = api.call('users.lookup', user_args)
         [clean_user_entities(u) for u in users]
         db.users.insert_many(users)
-        print >> sys.stderr, " -> collected %s users (%s left todo)" % (len(users), len(list_users))
+        print(" -> collected %s users (%s left todo)" % (len(users), len(list_users)), file=sys.stderr)
 
 
 if __name__ == "__main__":
@@ -31,4 +34,4 @@ if __name__ == "__main__":
     db.users.drop()
     process_accounts(ACCOUNTS, api, db)
     iterator = db.users.find(sort=[('screen_name', 1)])
-    print export_csv(iterator, USER_FIELDS).encode("utf-8")
+    print(export_csv(iterator, USER_FIELDS))

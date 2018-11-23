@@ -1,5 +1,5 @@
-from database.mongomanager import MongoManager
-from database.elasticmanager import ElasticManager
+from .mongomanager import MongoManager
+from .elasticmanager import ElasticManager
 
 
 def db_manager(conf):
