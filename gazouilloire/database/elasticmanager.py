@@ -245,7 +245,7 @@ class ElasticManager:
             }
         }
         self.db.update_by_query(
-            body=q, doc_type='tweet', index=self.tweets)
+            body=q, doc_type='tweet', index=self.tweets, conflicts="proceed")
 
     def count_tweets(self, key, value):
         """Counts the number of documents where the given key is equal to the given value"""
