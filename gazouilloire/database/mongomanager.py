@@ -9,7 +9,7 @@ class MongoManager:
     def __init__(self, host, port, db):
         self.host = host
         self.port = port
-        self.db_name = db
+        self.db_name = db.replace(' ', '_')
         self.db = MongoClient(host, port)[db]
         self.tweets = self.db['tweets']
         self.links = self.db['links']

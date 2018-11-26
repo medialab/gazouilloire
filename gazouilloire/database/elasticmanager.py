@@ -125,11 +125,11 @@ class ElasticManager:
         self.host = host
         self.port = port
         self.db = Elasticsearch(host + ':' + str(port))
-        self.tweets = db + "_tweets"
+        self.tweets = db.replace(' ', '_') + "_tweets"
         if links_index:
             self.links = links_index
         else:
-            self.links = db + "_links"
+            self.links = db.replace(' ', '_') + "_links"
 
     # main() methods
 
