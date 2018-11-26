@@ -13,6 +13,7 @@ class MongoManager:
         self.db = MongoClient(host, port)[db]
         self.tweets = self.db['tweets']
         self.links = self.db['links']
+        self.link_id = "_id"
 
     # main() methods
 

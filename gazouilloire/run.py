@@ -156,7 +156,7 @@ def resolver(db_conf, exit_event, debug=False):
         done = 0
         todo = db.find_tweets_with_unresolved_links()
         urlstoresolve = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
-        alreadydone = {l["_id"]: l["real"] for l in db.find_links_in(urlstoresolve)}
+        alreadydone = {l[db.link_id]: l["real"] for l in db.find_links_in(urlstoresolve)}
         tweetsdone = []
         batchidsdone = set()
         for tweet in todo:
