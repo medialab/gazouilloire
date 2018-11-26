@@ -130,6 +130,7 @@ class ElasticManager:
             self.links = links_index
         else:
             self.links = db.replace(' ', '_') + "_links"
+        self.link_id = "link_id"
 
     # main() methods
 
@@ -199,7 +200,7 @@ class ElasticManager:
                 }
             }
         )
-        return format_response(response)
+        return format_response(response, empty_response=[])
 
     def find_links_in(self, urls_list):
         """Returns a list of links which ids are in the 'urls_list' argument"""
@@ -208,7 +209,7 @@ class ElasticManager:
             body={
                 "query":
                     {
-                        "terms": {"_id": urls_list}
+                        "terms": {"link_id": urls_list}
                     }
             }
         )
@@ -216,7 +217,7 @@ class ElasticManager:
 
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
-        self.db.index(index=self.links, doc_type='link', id=link,
+        self.db.index(index=self.links, doc_type='link',
                       body={'link_id': link, 'real': resolved_link})
 
     def update_tweets_with_links(self, tweet_id, good_links):
