@@ -211,7 +211,7 @@ re_split_url_pieces = re.compile(r'[^a-z0-9]+', re.I)
 def format_url_query(urlquery):
     return " ".join([k for k in re_split_url_pieces.split(urlquery) if k.strip()])
 
-def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, locale, geocode, exit_event, debug=False):
+def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event, debug=False):
     # Stream parameters reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters
     # Stream operators reference: https://developer.twitter.com/en/docs/tweets/rules-and-filtering/overview/standard-operators.html
     # Stream special messages reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/streaming-message-types
@@ -260,6 +260,8 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
 
             # prepare stream query arguments
             args = {'filter_level': 'none', 'stall_warnings': 'true'}
+            if language:
+                args['language'] = language
             if geocode:
                 args['locations'] = geocode
             else:
@@ -363,7 +365,8 @@ def write_search_state(state):
 
 # TODO
 # - improve logs : add INFO on result of all queries on a keyword if new
-def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, geocode, exit_event, debug=False):
+
+def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event, debug=False):
     # Search operators reference: https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2)
@@ -442,6 +445,8 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                         stall_queries(next_reset, exit_event)
 
                 args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent', 'tweet_mode': 'extended'}
+                if language:
+                    args['lang'] = language
                 if geocode:
                     args['geocode'] = geocode
                 if max_id:
@@ -546,6 +551,7 @@ if __name__=='__main__':
     except Exception as e:
         log('ERROR', 'Could not initiate connection to database: %s %s' % (type(e), e))
         sys.exit(1)
+    language = conf.get('language', None)
     streamgeocode = None
     searchgeocode = None
     if "geolocalisation" in conf and conf["geolocalisation"]:
@@ -599,10 +605,10 @@ if __name__=='__main__':
         download.daemon = True
         download.start()
     signal.signal(signal.SIGINT, default_handler)
-    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, streamgeocode, exit_event, conf['debug']))
+    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, streamgeocode, exit_event, conf['debug']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, searchgeocode, exit_event, conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event, conf['debug']))
     search.start()
     def stopper(*args):
         exit_event.set()
