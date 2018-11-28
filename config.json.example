@@ -29,6 +29,7 @@
             ["2014-05-08 16:00", "2014-05-08 16:05"]
         ]
     },
+    "language": null,
     "geolocalisation": "Paris, France",
     "geolocalisation": [48.70908786918211, 2.1533203125, 49.00274483644453, 2.610626220703125],
     "geolocalisation_type": "admin", "possible_values": "country/admin/city",
