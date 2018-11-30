@@ -56,6 +56,7 @@ def breakable_sleep(delay, exit_event):
 def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit_event, debug=False):
     db = db_manager(db_conf)
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
+        log("INFO", "Pile length: " + str(pile.qsize()))
         while not pile_deleted.empty():
             todelete = pile_deleted.get()
             db.set_deleted(todelete)
