@@ -94,7 +94,7 @@ def migrate(mongo_host, mongo_port, mongo_db, es_host, es_port, es_index_name):
         try:
             coordinates = tweet['coordinates']['coordinates']
         except:
-            coordinates = tweet['coordinates']
+            coordinates = tweet.get('coordinates', None)
         try:
             proper_links = tweet['proper_links']
         except:
