@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+import json
 import click
 import requests
 import pymongo
@@ -10,209 +11,17 @@ from pprint import pprint
 from datetime import datetime, timedelta
 from distutils.util import strtobool
 
+try:
+    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'gazouilloire', 'database', 'db_mappings.json'), 'r') as db_mappings:
+        DB_MAPPINGS = json.loads(db_mappings.read())
+except FileNotFoundError as e:
+    print('ERROR -', 'Could not open db_mappings.json: %s %s' % (type(e), e))
+    sys.exit(1)
+
 pymongo.unicode_decode_output = False
 
-ES_TWEETS_MAPPINGS = {
-    "settings": {"index": {"refresh_interval": "60s"}},
-    "mappings": {
-        "tweet": {
-            "properties": {
-                "collected_at_timestamp": {
-                    "format": "epoch_second",
-                    "type": "date"
-                },
-                "collected_via_search": {
-                    "type": "boolean"
-                },
-                "collected_via_stream": {
-                    "type": "boolean"
-                },
-                "coordinates": {
-                    "type": "geo_point"
-                },
-                "created_at": {
-                    "index": False,
-                    "type": "keyword"
-                },
-                "deleted": {
-                    "type": "boolean"
-                },
-                "favorite_count": {
-                    "type": "integer"
-                },
-                "hashtags": {
-                    "type": "keyword"
-                },
-                "in_reply_to_screen_name": {
-                    "type": "keyword"
-                },
-                "in_reply_to_status_id_str": {
-                    "type": "keyword"
-                },
-                "in_reply_to_user_id_str": {
-                    "type": "keyword"
-                },
-                "lang": {
-                    "type": "keyword"
-                },
-                "langs": {
-                    "type": "keyword"
-                },
-                "links": {
-                    "type": "keyword"
-                },
-                "links_to_resolve": {
-                    "type": "boolean"
-                },
-                "medias": {
-                    "type": "keyword"
-                },
-                "mentions_ids": {
-                    "type": "keyword"
-                },
-                "mentions_names": {
-                    "type": "keyword"
-                },
-                "possibly_sensitive": {
-                    "type": "boolean"
-                },
-                "proper_links": {
-                    "type": "keyword"
-                },
-                "quoted_id": {
-                    "type": "keyword"
-                },
-                "quoted_timestamp": {
-                    "format": "epoch_second",
-                    "type": "date"
-                },
-                "quoted_user": {
-                    "type": "keyword"
-                },
-                "quoted_user_id": {
-                    "type": "keyword"
-                },
-                "reply_count": {
-                    "type": "integer"
-                },
-                "retweet_count": {
-                    "type": "integer"
-                },
-                "retweet_id": {
-                    "type": "keyword"
-                },
-                "retweet_timestamp": {
-                    "format": "epoch_second",
-                    "type": "date"
-                },
-                "retweet_user": {
-                    "type": "keyword"
-                },
-                "retweet_user_id": {
-                    "type": "keyword"
-                },
-                "source": {
-                    "type": "text"
-                },
-                "text": {
-                    "type": "text"
-                },
-                "timestamp": {
-                    "format": "epoch_second",
-                    "type": "date"
-                },
-                "truncated": {
-                    "type": "boolean"
-                },
-                "tweet_id": {
-                    "type": "long"
-                },
-                "url": {
-                    "type": "keyword"
-                },
-                "user_created_at": {
-                    "index": False,
-                    "type": "keyword"
-                },
-                "user_created_at_timestamp": {
-                    "format": "epoch_second",
-                    "type": "date"
-                },
-                "user_description": {
-                    "type": "text"
-                },
-                "user_favourites": {
-                    "type": "integer"
-                },
-                "user_followers": {
-                    "type": "integer"
-                },
-                "user_friends": {
-                    "type": "integer"
-                },
-                "user_id_str": {
-                    "type": "keyword"
-                },
-                "user_lang": {
-                    "type": "keyword"
-                },
-                "user_listed": {
-                    "type": "integer"
-                },
-                "user_location": {
-                    "type": "keyword"
-                },
-                "user_name": {
-                    "type": "keyword"
-                },
-                "user_profile_image_url": {
-                    "type": "text"
-                },
-                "user_profile_image_url_https": {
-                    "type": "text"
-                },
-                "user_screen_name": {
-                    "type": "keyword"
-                },
-                "user_statuses": {
-                    "type": "integer"
-                },
-                "user_time_zone": {
-                    "type": "keyword"
-                },
-                "user_url": {
-                    "type": "keyword"
-                },
-                "user_utc_offset": {
-                    "type": "integer"
-                },
-                "user_verified": {
-                    "type": "boolean"
-                }
-            }
-        }
-    }
-}
-
-ES_LINKS_MAPPINGS = {
-    "settings": {
-        "index": {
-            "refresh_interval": "20s"
-        }
-    },
-    "mappings": {
-        "link": {
-            "properties": {
-                "link_id": {
-                    "type": "keyword"
-                },
-                "real": {
-                    "type": "keyword"
-                }
-            }
-        }
-    }
-}
+ES_TWEETS_MAPPINGS = DB_MAPPINGS['tweets_mapping']
+ES_LINKS_MAPPINGS = DB_MAPPINGS['links_mapping']
 
 
 @click.command()
