@@ -48,13 +48,10 @@ def format_tweet_fields(tweet):
         proper_links = tweet['proper_links']
     except:
         proper_links = None
-    try:
-        collected_via_search = tweet['collected_via_search']
-    except:
-        collected_via_search = None
     res = {
             "collected_at_timestamp": tweet['collected_at_timestamp'],
-            "collected_via_search": collected_via_search,
+            "collected_via_search": tweet.get('collected_via_search', None),
+            "collected_via_stream": tweet.get('collected_via_stream', None),
             "coordinates": coordinates,
             "created_at": tweet['created_at'],
             "deleted": False,
@@ -109,13 +106,13 @@ def format_tweet_fields(tweet):
             "user_verified": tweet['user_verified']}
     return res
 
-def stream(batch, index):
+def stream(batch, index, upsert=False):
     for t in batch:
         yield {
             '_id': t['_id'],
             "_type": "tweet",
             "_index": index,
-            "_source": {"doc": format_tweet_fields(t), "doc_as_upsert": True},
+            "_source": {"doc": format_tweet_fields(t), "doc_as_upsert": upsert},
             '_op_type': 'update'
         }
 
@@ -152,8 +149,8 @@ class ElasticManager:
 
     def bulk_update(self, batch):
         """Updates the batch of tweets given in argument"""
-        tweet_stream = stream(batch, self.tweets)
-        for ok, response in helpers.streaming_bulk(self.db, actions = tweet_stream):
+        tweet_stream = stream(batch, self.tweets, upsert=True)
+        for ok, response in helpers.streaming_bulk(self.db, actions=tweet_stream):
             if not ok:
                 print(response)
 
@@ -220,32 +217,46 @@ class ElasticManager:
         self.db.index(index=self.links, doc_type='link',
                       body={'link_id': link, 'real': resolved_link})
 
+    def stream_update_actions(self, query, field_update=None, upsert=False):
+        """Yields an update action for every id corresponding to the search query"""
+        search_result = self.db.search(
+            index=self.tweets,
+            body={
+                "query": query
+            }
+        )
+        for tweet in search_result['hits']['hits']:
+            yield {
+                '_id': tweet['_id'],
+                "_type": "tweet",
+                "_index": self.tweets,
+                "_source": {"doc": field_update, "doc_as_upsert": upsert},
+                '_op_type': 'update'
+            }
+
     def update_tweets_with_links(self, tweet_id, good_links):
         """Adds the resolved links to the corresponding tweets"""
-        q = {
-            "script": {
-                "inline": "ctx._source.proper_links="+str(good_links)+";ctx._source.links_to_resolve=false",
-                "lang": "painless"
-            },
-            "query": {
-                "bool": {
-                    "should": [
-                        {
-                            "term": {
-                                "_id": tweet_id
-                            }
-                        },
-                        {
-                            "term": {
-                                "retweet_id": tweet_id
-                            }
+        query = {
+            "bool": {
+                "should": [
+                    {
+                        "term": {
+                            "_id": tweet_id
                         }
-                    ]
-                }
+                    },
+                    {
+                        "term": {
+                            "retweet_id": tweet_id
+                        }
+                    }
+                ]
             }
         }
-        self.db.update_by_query(
-            body=q, doc_type='tweet', index=self.tweets, conflicts="proceed")
+        field_update = {"proper_links": good_links,
+            "links_to_resolve": False}
+        actions_stream = self.stream_update_actions(
+            query, field_update=field_update, upsert=False)
+        helpers.bulk(self.db, actions_stream)
 
     def count_tweets(self, key, value):
         """Counts the number of documents where the given key is equal to the given value"""
@@ -253,8 +264,6 @@ class ElasticManager:
 
     def update_resolved_tweets(self, tweetsdone):
         """Sets the "links_to_resolve" field of the tweets in tweetsdone to False"""
-        # self.tweets.update({"_id": {"$in": tweetsdone}}, {
-        #     "$set": {"links_to_resolve": False}}, upsert=False, multi=True)
         q = {
             "script": {
                 "inline": "ctx._source.links_to_resolve=false",
@@ -270,7 +279,7 @@ class ElasticManager:
 
 if __name__ == '__main__':
 
-    es = ElasticManager('localhost', 9200, 'test')
+    es = ElasticManager('localhost', 9200, 'juliacage')
     es.prepare_indices()
     # todo = es.find_tweets_with_unresolved_links()
     # print('>> todo : ', todo[:10])
