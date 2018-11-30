@@ -8,6 +8,9 @@
             "format": "epoch_second",
             "type": "date"
           },
+          "collected_via_search": {
+            "type": "boolean"
+          },
           "collected_via_stream": {
             "type": "boolean"
           },

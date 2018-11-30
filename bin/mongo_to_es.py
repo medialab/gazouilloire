@@ -21,6 +21,9 @@ ES_TWEETS_MAPPINGS = {
                     "format": "epoch_second",
                     "type": "date"
                 },
+                "collected_via_search": {
+                    "type": "boolean"
+                },
                 "collected_via_stream": {
                     "type": "boolean"
                 },
@@ -277,15 +280,12 @@ def migrate(mongo_host, mongo_port, mongo_db, es_host, es_port, es_index_name):
             proper_links = tweet['proper_links']
         except:
             proper_links = None
-        try:
-            collected_via_search = tweet['collected_via_search']
-        except:
-            collected_via_search = None
         load = {
             '_id': tweet['_id'],
             '_source': {
                 "collected_at_timestamp": tweet['collected_at_timestamp'],
-                "collected_via_search": collected_via_search,
+                "collected_via_search": tweet.get('collected_via_search', None),
+                "collected_via_stream": tweet.get('collected_via_stream', None),
                 "coordinates": coordinates,
                 "created_at": tweet['created_at'],
                 "deleted": False,
