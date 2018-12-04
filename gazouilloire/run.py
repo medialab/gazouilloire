@@ -203,7 +203,7 @@ def format_keyword(k):
         return "from:%s OR to:%s OR @%s" % (k, k, k)
     if " AND " in k or " + " in k:
         k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
-    return quote(k, '')
+    return quote(k.encode('utf-8'), '')
 
 def format_url_queries(urlpieces):
     return [format_url_query(q) for q in urlpieces]
