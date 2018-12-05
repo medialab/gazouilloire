@@ -123,7 +123,7 @@ bin/export_all_text.py
     sudo [YOUR TEXT EDITOR] /etc/elasticsearch/elasticsearch.yml
     ```
 
-    Edit the value of **`gateway.recover_after_nodes`** to match your number of nodes (usually `1`).
+    Edit the value of **`gateway.recover_after_nodes`** to match your number of nodes (usually `1` - easily checked here : *http://host:port/_nodes*).
 
 ## Publications using Gazouilloire
 
