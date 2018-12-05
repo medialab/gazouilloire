@@ -107,15 +107,17 @@ bin/export_all_text.py
   - If you encounter this Elasticsearch error message:
     `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`:
 
-    Increase the **`max_map_count`** value:
+    :arrow_right:  Increase the `max_map_count` value:
 
     ```bash
     sudo sysctl -w vm.max_map_count=262144
     ```
 
+    ([source](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html))
+
   - If you get a _ClusterBlockException_ `[SERVICE_UNAVAILABLE/1/state not recovered / initialized]` when starting Elasticsearch:
 
-    Check the value of **`gateway.recover_after_nodes`** in /etc/elasticsearch/elasticsearch.yml:
+    :arrow_right:  Check the value of `gateway.recover_after_nodes` in _/etc/elasticsearch/elasticsearch.yml_:
 
     ```bash
     sudo [YOUR TEXT EDITOR] /etc/elasticsearch/elasticsearch.yml
