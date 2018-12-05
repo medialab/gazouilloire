@@ -1,19 +1,20 @@
-Gazouilloire
-============
+# Gazouilloire
 
 Twitter stream + search API grabber handling various config options such as collecting only during specific time periods, or limiting the collection to some locations.
 
-HowTo
------
+Python 2.7 & 3.x compatible.
+
+## HowTo
+
+- Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch#ga-release) (version 6.X) and/or [MongoDB](https://www.mongodb.com/download-center/community) (version 4.0)
 
 - Install dependencies:
 
 ```bash
-    sudo apt-get install mongodb-10gen
     pip install -r requirements.txt
 ```
 
-- Copy config.json.example to config.json
+- Copy `config.json.example` to `config.json`
 
 - Set your [Twitter API key](https://apps.twitter.com/app/) and generate the related Access Token
 
@@ -27,8 +28,21 @@ HowTo
 
 ```
 
+- Choose the database you want to use:
+
+```json
+"database": {
+        "type": "elasticsearch",
+        "host": "localhost",
+        "port": 27017,
+        "db": "gazouilloire"
+    }
+```
+
+Note that `type` is either `mongo` or `elasticsearch`, and that default ports for MongoDB & Elasticsearch are respectively `27017` and `9200`.
+
 - Write down the list of desired **keywords** and **@users** and/or the list of desired **url_pieces** as json arrays:
-  
+
   ```json
     "keywords": [
         "amour",
@@ -41,9 +55,10 @@ HowTo
 
   Avoid using accented characters (Twitter will automatically return both tweets with and without accents, for instance searching "heros" will find both tweets with "heros" and "héros").
 
-  Note that there are two possibilities to filter further:
-  
-  - geolocalisation mode: just add ``"geolocalisation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box as shown in the config example file
+  Note that there are three possibilities to filter further:
+
+  - language mode, in order to collect only tweets written in a specific language : just add `"language": "fr"` to the config (the language should be written in [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes))
+  - geolocalisation mode: just add `"geolocalisation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box as shown in the config example file
   - time limited keywords mode, in order to filter on specific keywords during planned time period:
 
   ```json
@@ -60,16 +75,15 @@ HowTo
     },
   ```
 
-
 - Run with:
 
 ```bash
     ./restart.sh
     # or
     ./gazouilloire/run.py
-``` 
+```
 
-- Data is stored in your mongo, you can also export it easily with simple scripts such as those in the `bin` directory:
+- Data is stored in your Mongo/Elasticsearch, you can also export it easily with simple scripts such as those in the `bin` directory:
 
 ```bash
 # To export a csv with most fields (formatted similarily to [DMI's TCAT](https://github.com/digitalmethodsinitiative/dmi-tcat)):
@@ -88,17 +102,15 @@ bin/export_all_text.py
 
 ## Publications using Gazouilloire
 
-* RICCI, Donato, COLOMBO, Gabriele, MEUNIER, Axel, et al. [Designing Digital Methods to monitor and inform Urban Policy. The case of Paris and its Urban Nature initiative](https://re.public.polimi.it/bitstream/11311/1038509/1/IPPA_Ricci-Colombo-Meunier-Brilli.pdf). In : 3rd International Conference on Public Policy (ICPP3)-Panel T10P6 Session 1 Digital Methods for Public Policy. SGP, 2017. p. 1-37.
+- RICCI, Donato, COLOMBO, Gabriele, MEUNIER, Axel, et al. [Designing Digital Methods to monitor and inform Urban Policy. The case of Paris and its Urban Nature initiative](https://re.public.polimi.it/bitstream/11311/1038509/1/IPPA_Ricci-Colombo-Meunier-Brilli.pdf). In : 3rd International Conference on Public Policy (ICPP3)-Panel T10P6 Session 1 Digital Methods for Public Policy. SGP, 2017. p. 1-37.
 
-* DOUAY, Nicolas, REYS, Aurélien, ROBIN, Sabrina. [L’usage de Twitter par les maires d’Île-de-France](https://journals.openedition.org/netcom/2089). NETCOM, 29-3/4 | 2015 : Visualisation des réseaux, de l’information et de l’espace, p. 275-296.
-
+- DOUAY, Nicolas, REYS, Aurélien, ROBIN, Sabrina. [L’usage de Twitter par les maires d’Île-de-France](https://journals.openedition.org/netcom/2089). NETCOM, 29-3/4 | 2015 : Visualisation des réseaux, de l’information et de l’espace, p. 275-296.
 
 ## Publications talking about Gazouilloire
 
-* JULLIARD, Virginie. [#Theoriedugenre: comment débat-on du genre sur Twitter ?](https://www.cairn.info/revue-questions-de-communication-2016-2-page-135.html). Questions de communication, 2016, no 2, p. 135-157.
+- JULLIARD, Virginie. [#Theoriedugenre: comment débat-on du genre sur Twitter ?](https://www.cairn.info/revue-questions-de-communication-2016-2-page-135.html). Questions de communication, 2016, no 2, p. 135-157.
 
-* BOTTINI, Thomas et JULLIARD, Virginie. [Entre informatique et sémiotique](https://www.cairn.info/revue-reseaux-2017-4-page-35.htm). Réseaux, 2017, no 4, p. 35-69.
-
+- BOTTINI, Thomas et JULLIARD, Virginie. [Entre informatique et sémiotique](https://www.cairn.info/revue-reseaux-2017-4-page-35.htm). Réseaux, 2017, no 4, p. 35-69.
 
 ## Credits & License
 
@@ -109,4 +121,3 @@ Discover more of our projects at [médialab tools](http://tools.medialab.science
 This work is supported by [DIME-Web](http://dimeweb.dime-shs.sciences-po.fr/), part of [DIME-SHS](http://www.sciencespo.fr/dime-shs/) research equipment financed by the EQUIPEX program (ANR-10-EQPX-19-01).
 
 Gazouilloire is a free open source software released under [GPL 3.0 license](LICENSE).
-
