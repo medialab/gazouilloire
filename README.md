@@ -100,6 +100,29 @@ bin/export_csv.py
 bin/export_all_text.py
 ```
 
+## Troubleshooting
+
+- Elasticsearch
+
+  - If you encounter this Elasticsearch error message:
+    `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`:
+
+    Increase the **`max_map_count`** value:
+
+    ```bash
+    sudo sysctl -w vm.max_map_count=262144
+    ```
+
+  - If you get a _ClusterBlockException_ `[SERVICE_UNAVAILABLE/1/state not recovered / initialized]` when starting Elasticsearch:
+
+    Check the value of **`gateway.recover_after_nodes`** in /etc/elasticsearch/elasticsearch.yml:
+
+    ```bash
+    sudo [YOUR TEXT EDITOR] /etc/elasticsearch/elasticsearch.yml
+    ```
+
+    Edit the value of **`gateway.recover_after_nodes`** to match your number of nodes (usually `1`).
+
 ## Publications using Gazouilloire
 
 - RICCI, Donato, COLOMBO, Gabriele, MEUNIER, Axel, et al. [Designing Digital Methods to monitor and inform Urban Policy. The case of Paris and its Urban Nature initiative](https://re.public.polimi.it/bitstream/11311/1038509/1/IPPA_Ricci-Colombo-Meunier-Brilli.pdf). In : 3rd International Conference on Public Policy (ICPP3)-Panel T10P6 Session 1 Digital Methods for Public Policy. SGP, 2017. p. 1-37.
