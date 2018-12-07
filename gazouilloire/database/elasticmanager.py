@@ -7,7 +7,7 @@ import os
 try:
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)),'db_mappings.json'), 'r') as db_mappings:
         DB_MAPPINGS = json.loads(db_mappings.read())
-except FileNotFoundError as e:
+except (FileNotFoundError, json.JSONDecodeError) as e:
     print('ERROR -', 'Could not open db_mappings.json: %s %s' % (type(e), e))
     sys.exit(1)
 
