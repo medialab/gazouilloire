@@ -9,7 +9,10 @@ from elasticsearch import helpers
 try:
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)),'db_mappings.json'), 'r') as db_mappings:
         DB_MAPPINGS = json.loads(db_mappings.read())
-except (FileNotFoundError, json.JSONDecodeError) as e:
+        # ensure intended mappings are there
+        for key in ["tweet", "link"]:
+            DB_MAPPINGS[key + "s_mapping"]["mappings"][key]["properties"]
+except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
     print('ERROR -', 'Could not open db_mappings.json: %s %s' % (type(e), e))
     sys.exit(1)
 
