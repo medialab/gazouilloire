@@ -1,6 +1,6 @@
 virtualenvwrapper
-pymongo>=3.0
-twitter>=1.14.1
+pymongo >= 3.0
+twitter >= 1.14.1
 pytz
 requests
 urllib3[secure]
@@ -10,6 +10,9 @@ csvkit
 flask
 Flask-Caching
 flask-compress
-networkx==2.2
+# required for py3.7+
+networkx == 2.2
 future
-elasticsearch>=6.0.0,<7.0.0
+elasticsearch >= 6.0.0, < 7.0.0
+# commented since code piece was integrated
+#urlsresolver
