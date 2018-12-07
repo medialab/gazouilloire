@@ -28,13 +28,6 @@ from multiprocessing import Process, Queue, Event
 import signal
 from url_resolver import resolve_url as resolve_redirects
 from fake_useragent import UserAgent
-from elasticsearch import Elasticsearch
-from elasticsearch import helpers
-from pymongo import ASCENDING
-try:
-    from pymongo import MongoClient
-except:
-    from pymongo import Connection as MongoClient
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from tweets import prepare_tweet, prepare_tweets, get_timestamp
 from pytz import timezone, all_timezones

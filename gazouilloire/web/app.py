@@ -3,7 +3,10 @@
 
 import os, json, sys, re, time
 from datetime import date, timedelta, datetime
-from pymongo import MongoClient
+try:
+    from pymongo import MongoClient
+except:
+    from pymongo import Connection as MongoClient
 from export import export_csv, get_thread_ids_from_query
 from flask import Flask, render_template, request, make_response
 from flask_caching import Cache
