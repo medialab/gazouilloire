@@ -1,11 +1,11 @@
-from __future__ import print_function
-#/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
 from builtins import str
 import sys
-from pymongo import MongoClient, ASCENDING
 import os
+from pymongo import MongoClient, ASCENDING
 sys.path.append(os.path.join(os.getcwd()))
 from gazouilloire.tweets import prepare_tweet, clean_user_entities
 from gazouilloire.api_wrapper import TwitterWrapper
