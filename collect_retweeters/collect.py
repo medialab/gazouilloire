@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 from builtins import str
+from builtins import int
 import sys
 import os
 from pymongo import MongoClient, ASCENDING
