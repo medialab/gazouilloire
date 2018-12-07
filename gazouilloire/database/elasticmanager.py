@@ -163,12 +163,11 @@ class ElasticManager:
         response = self.db.search(
             index="tweets",
             body={
-                "query":
-                    {
-                        "match": {
-                            "_id": tweet_id
-                        }
+                "query": {
+                    "match": {
+                        "_id": tweet_id
                     }
+                }
             }
         )
         if response['hits']['total'] == 0:
@@ -186,14 +185,11 @@ class ElasticManager:
             body={
                 "_source": ["links", "proper_links", "retweet_id"],
                 "size": batch_size,
-                "sort": [
-                    {"_id": "asc"}
-                ],
-                "query":
-                    {
-                        "match": {
-                            "links_to_resolve": True
-                        }
+                "sort": [{"_id": "asc"}],
+                "query": {
+                    "match": {
+                        "links_to_resolve": True
+                    }
                 }
             }
         )
@@ -204,10 +200,9 @@ class ElasticManager:
         response = self.db.search(
             index=self.links,
             body={
-                "query":
-                    {
-                        "terms": {"link_id": urls_list}
-                    }
+                "query": {
+                    "terms": {"link_id": urls_list}
+                }
             }
         )
         return format_response(response, empty_response=[])
