@@ -55,13 +55,13 @@ class ElasticManager:
     def __init__(self, host, port, db, links_index=None):
         self.host = host
         self.port = port
+        self.db_name = db.replace(' ', '_')
         self.db = Elasticsearch(host + ':' + str(port))
-        self.tweets = db.replace(' ', '_') + "_tweets"
+        self.tweets = self.db_name + "_tweets"
         if links_index:
             self.links = links_index
         else:
-            self.links = db.replace(' ', '_') + "_links"
-        self.link_id = "link_id"
+            self.links = self.db_name + "_links"
 
     # main() methods
 
@@ -76,7 +76,7 @@ class ElasticManager:
 
     # depiler() methods
 
-    def update(self, tweet_id,  new_value):
+    def update(self, tweet_id, new_value):
         """Updates the given tweet to the content of 'new_value' argument"""
         formatted_new_value = format_tweet_fields(new_value)
         return self.db.update(index=self.tweets, doc_type='tweet', id=tweet_id, body={"doc": formatted_new_value, "doc_as_upsert": True})

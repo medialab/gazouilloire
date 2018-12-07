@@ -10,7 +10,7 @@ class MongoManager:
         self.host = host
         self.port = port
         self.db_name = db.replace(' ', '_')
-        self.db = MongoClient(host, port)[db]
+        self.db = MongoClient(host, port)[self.db_name]
         self.tweets = self.db['tweets']
         self.links = self.db['links']
         self.link_id = "_id"
@@ -27,7 +27,7 @@ class MongoManager:
 
     # depiler() methods
 
-    def update(self, tweet_id,  new_value):
+    def update(self, tweet_id, new_value):
         """Updates the given tweet to the content of 'new_value' argument"""
         return self.tweets.update_one({'_id': tweet_id}, {'$set': new_value}, upsert=True)
 

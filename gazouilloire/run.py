@@ -173,6 +173,7 @@ def resolver(db_conf, exit_event, debug=False):
                 try:
                     db.insert_link(link, good)
                 except Exception as e:
+                    # Possible error in Mongo when storing too long urls as _id
                     log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
                 if link != good:
                     done += 1
