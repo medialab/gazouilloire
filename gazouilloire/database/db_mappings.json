@@ -1,6 +1,5 @@
 {
   "tweets_mapping": {
-    "settings": {"index": {"refresh_interval": "60s"}},
     "mappings": {
       "tweet": {
         "properties": {
@@ -178,16 +177,29 @@
           }
         }
       }
+    },
+    "settings": {
+      "index": {
+        "refresh_interval": "60s"
+      }
     }
   },
   "links_mapping": {
-    "settings": {"index": {"refresh_interval": "20s"}},
     "mappings": {
       "link": {
         "properties": {
-          "link_id": {"type": "keyword"},
-          "real": {"type": "keyword"}
+          "link_id": {
+            "type": "keyword"
+          },
+          "real": {
+            "type": "keyword"
+          }
         }
+      }
+    },
+    "settings": {
+      "index": {
+        "refresh_interval": "20s"
       }
     }
   }
