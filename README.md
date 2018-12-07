@@ -143,7 +143,7 @@ bin/export_all_text.py
 
 ## Credits & License
 
-[Benjamin Ooghe-Tabanou](https://github.com/boogheta) @ [Sciences Po médialab](https://github.com/medialab)
+[Benjamin Ooghe-Tabanou](https://github.com/boogheta), [Jules Farjas](https://github.com/farjasju) & al @ [Sciences Po médialab](https://github.com/medialab)
 
 Discover more of our projects at [médialab tools](http://tools.medialab.sciences-po.fr/).
 
