@@ -40,16 +40,6 @@ def format_tweet_fields(tweet):
         elastic_tweet["coordinates"] = elastic_tweet["coordinates"].get('coordinates', None)
     return elastic_tweet
 
-def stream(batch, index, upsert=False):
-    for t in batch:
-        yield {
-            "_id": t["_id"],
-            "_type": "tweet",
-            "_index": index,
-            "_source": {"doc": format_tweet_fields(t), "doc_as_upsert": upsert},
-            "_op_type": "update"
-        }
-
 
 class ElasticManager:
 
@@ -84,10 +74,29 @@ class ElasticManager:
         formatted_new_value = format_tweet_fields(new_value)
         return self.db.update(index=self.tweets, doc_type="tweet", id=tweet_id, body={"doc": formatted_new_value, "doc_as_upsert": True})
 
+    def stream_tweets_batch(self, tweets, upsert=False, common_update=None):
+        """Yields an update action for every tweet of a list"""
+        for tweet in tweets:
+            if common_update:
+                doc = common_update
+            else:
+                doc = format_tweet_fields(tweet)
+            yield {
+                "_id": tweet["_id"],
+                "_type": "tweet",
+                "_index": self.tweets,
+                "_op_type": "update",
+                "_source": {
+                    "doc": doc,
+                    "doc_as_upsert": upsert
+                }
+            }
+
     def bulk_update(self, batch):
         """Updates the batch of tweets given in argument"""
-        tweet_stream = stream(batch, self.tweets, upsert=True)
-        for ok, response in helpers.streaming_bulk(self.db, actions=tweet_stream):
+        streaming_bulk = helpers.streaming_bulk(self.db,
+            actions=stream_tweets_batch(batch, upsert=True))
+        for ok, response in streaming_bulk:
             if not ok:
                 print(response)
 
@@ -149,22 +158,6 @@ class ElasticManager:
         self.db.index(index=self.links, doc_type="link",
                       body={self.link_id: link, "real": resolved_link})
 
-    def stream_update_actions(self, query, field_update=None, upsert=False):
-        """Yields an update action for every id corresponding to the search query"""
-        search_result = self.db.search(
-            index=self.tweets,
-            body={
-                "query": query
-            }
-        )
-        for tweet in search_result["hits"]["hits"]:
-            yield {
-                "_id": tweet["_id"],
-                "_type": "tweet",
-                "_index": self.tweets,
-                "_source": {"doc": field_update, "doc_as_upsert": upsert},
-                "_op_type": "update"
-            }
 
     def update_tweets_with_links(self, tweet_id, good_links):
         """Adds the resolved links to the corresponding tweets"""
@@ -184,11 +177,18 @@ class ElasticManager:
                 ]
             }
         }
-        field_update = {"proper_links": good_links,
-            "links_to_resolve": False}
-        actions_stream = self.stream_update_actions(
-            query, field_update=field_update, upsert=False)
-        helpers.bulk(self.db, actions_stream)
+        search_result = self.db.search(
+            index=self.tweets,
+            body={"query": query}
+        )
+        actions_stream = self.stream_tweets_batch(
+            search_result["hits"]["hits"],
+            common_update={
+                "proper_links": good_links,
+                "links_to_resolve": False
+            }
+        )
+        helpers.bulk(self.db, actions=actions_stream)
 
     def count_tweets(self, key, value):
         """Counts the number of documents where the given key is equal to the given value"""
