@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 from __future__ import print_function
 import os
 import csv
 import sys
 import json
+sys.path.append(os.path.join(os.getcwd()))
 from pymongo import MongoClient
 from config import CSV_SOURCE, CSV_DELIMITER, CSV_ENCODING, CSV_TWITTER_FIELD, MONGO_DATABASE, TWITTER
-sys.path.append(os.path.join(os.getcwd()))
 from gazouilloire.tweets import prepare_tweet, clean_user_entities
 from gazouilloire.api_wrapper import TwitterWrapper
 from gazouilloire.database import db_manager

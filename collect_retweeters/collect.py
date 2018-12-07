@@ -4,10 +4,10 @@
 from __future__ import print_function
 from builtins import str
 from builtins import int
-import sys
 import os
-from pymongo import MongoClient, ASCENDING
+import sys
 sys.path.append(os.path.join(os.getcwd()))
+from pymongo import MongoClient, ASCENDING
 from gazouilloire.tweets import prepare_tweet, clean_user_entities
 from gazouilloire.api_wrapper import TwitterWrapper
 from gazouilloire.web.export import export_csv, USER_FIELDS
