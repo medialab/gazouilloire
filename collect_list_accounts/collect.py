@@ -11,16 +11,15 @@ from pymongo import MongoClient
 from config import CSV_SOURCE, CSV_DELIMITER, CSV_ENCODING, CSV_TWITTER_FIELD, MONGO_DATABASE, TWITTER
 from gazouilloire.tweets import prepare_tweet, clean_user_entities
 from gazouilloire.api_wrapper import TwitterWrapper
-from gazouilloire.database import db_manager
 
 try:
-    with open(os.path.join(os.getcwd(),'config.json')) as confile:
+    with open(os.path.join(os.getcwd(), 'config.json')) as confile:
         db_conf = json.loads(confile.read())['database']
 except Exception as e:
     print('ERROR', 'Could not open config.json: %s %s' % (type(e), e))
     sys.exit(1)
 
-with open(os.path.join(os.getcwd(),'collect_list_accounts',CSV_SOURCE)) as f:
+with open(os.path.join(os.getcwd(), 'collect_list_accounts', CSV_SOURCE)) as f:
     data = list(csv.DictReader(f, delimiter=CSV_DELIMITER))
 
 api = TwitterWrapper(TWITTER)
