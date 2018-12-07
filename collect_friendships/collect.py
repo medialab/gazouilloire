@@ -1,7 +1,7 @@
-from __future__ import print_function
-#/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
 import csv
 from pymongo import MongoClient
 from config import CSV_SOURCE, CSV_ENCODING, CSV_TWITTER_FIELD, MONGO_DATABASE, TWITTER
