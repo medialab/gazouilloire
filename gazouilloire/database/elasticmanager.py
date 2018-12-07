@@ -7,26 +7,26 @@ from elasticsearch import helpers
 
 
 try:
-    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)),'db_mappings.json'), 'r') as db_mappings:
+    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "db_mappings.json"), "r") as db_mappings:
         DB_MAPPINGS = json.loads(db_mappings.read())
         # ensure intended mappings are there
         for key in ["tweet", "link"]:
             DB_MAPPINGS[key + "s_mapping"]["mappings"][key]["properties"]
 except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
-    print('ERROR -', 'Could not open db_mappings.json: %s %s' % (type(e), e))
+    print("ERROR - Could not open db_mappings.json: %s %s" % (type(e), e))
     sys.exit(1)
 
 
 def reformat_elastic_document(doc):
-    res = dict(doc['_source'])
-    res['_id'] = doc['_id']
+    res = dict(doc["_source"])
+    res["_id"] = doc["_id"]
     return res
 
 def format_response(response, empty_response=None):
     """Formats the ES find() response into a list of dictionaries"""
-    if response['hits']['total'] == 0:
+    if response["hits"]["total"] == 0:
         return empty_response
-    return [reformat_elastic_document(element) for element in response['hits']['hits']]
+    return [reformat_elastic_document(element) for element in response["hits"]["hits"]]
 
 def format_tweet_fields(tweet):
     """Adapts the fields of the given tweet to fit the index mapping"""
@@ -43,11 +43,11 @@ def format_tweet_fields(tweet):
 def stream(batch, index, upsert=False):
     for t in batch:
         yield {
-            '_id': t['_id'],
+            "_id": t["_id"],
             "_type": "tweet",
             "_index": index,
             "_source": {"doc": format_tweet_fields(t), "doc_as_upsert": upsert},
-            '_op_type': 'update'
+            "_op_type": "update"
         }
 
 
@@ -58,8 +58,8 @@ class ElasticManager:
     def __init__(self, host, port, db, links_index=None):
         self.host = host
         self.port = port
-        self.db_name = db.replace(' ', '_')
-        self.db = Elasticsearch(host + ':' + str(port))
+        self.db_name = db.replace(" ", "_")
+        self.db = Elasticsearch(host + ":" + str(port))
         self.tweets = self.db_name + "_tweets"
         if links_index:
             self.links = links_index
@@ -72,17 +72,17 @@ class ElasticManager:
         """Initializes the database"""
         if not self.db.indices.exists(index=self.tweets):
             self.db.indices.create(
-                index=self.tweets, body=DB_MAPPINGS['tweets_mapping'])
+                index=self.tweets, body=DB_MAPPINGS["tweets_mapping"])
         if not self.db.indices.exists(index=self.links):
             self.db.indices.create(
-                index=self.links, body=DB_MAPPINGS['links_mapping'])
+                index=self.links, body=DB_MAPPINGS["links_mapping"])
 
     # depiler() methods
 
     def update(self, tweet_id, new_value):
         """Updates the given tweet to the content of 'new_value' argument"""
         formatted_new_value = format_tweet_fields(new_value)
-        return self.db.update(index=self.tweets, doc_type='tweet', id=tweet_id, body={"doc": formatted_new_value, "doc_as_upsert": True})
+        return self.db.update(index=self.tweets, doc_type="tweet", id=tweet_id, body={"doc": formatted_new_value, "doc_as_upsert": True})
 
     def bulk_update(self, batch):
         """Updates the batch of tweets given in argument"""
@@ -93,7 +93,7 @@ class ElasticManager:
 
     def set_deleted(self, tweet_id):
         """Sets the field 'deleted' of the given tweet to True"""
-        return self.db.update(index=self.tweets, doc_type='tweet', id=tweet_id, body={"doc": {"deleted": True}, "doc_as_upsert": True})
+        return self.db.update(index=self.tweets, doc_type="tweet", id=tweet_id, body={"doc": {"deleted": True}, "doc_as_upsert": True})
 
     def find_tweet(self, tweet_id):
         """Returns the tweet corresponding to the given id"""
@@ -107,9 +107,9 @@ class ElasticManager:
                 }
             }
         )
-        if response['hits']['total'] == 0:
+        if response["hits"]["total"] == 0:
             return None
-        return reformat_elastic_document(response['hits']['hits'][0])
+        return reformat_elastic_document(response["hits"]["hits"][0])
 
     # resolver() methods
 
@@ -146,8 +146,8 @@ class ElasticManager:
 
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
-        self.db.index(index=self.links, doc_type='link',
-                      body={self.link_id: link, 'real': resolved_link})
+        self.db.index(index=self.links, doc_type="link",
+                      body={self.link_id: link, "real": resolved_link})
 
     def stream_update_actions(self, query, field_update=None, upsert=False):
         """Yields an update action for every id corresponding to the search query"""
@@ -157,13 +157,13 @@ class ElasticManager:
                 "query": query
             }
         )
-        for tweet in search_result['hits']['hits']:
+        for tweet in search_result["hits"]["hits"]:
             yield {
-                '_id': tweet['_id'],
+                "_id": tweet["_id"],
                 "_type": "tweet",
                 "_index": self.tweets,
                 "_source": {"doc": field_update, "doc_as_upsert": upsert},
-                '_op_type': 'update'
+                "_op_type": "update"
             }
 
     def update_tweets_with_links(self, tweet_id, good_links):
@@ -206,22 +206,22 @@ class ElasticManager:
             }
         }
         self.db.update_by_query(
-            body=q, doc_type='tweet', index=self.tweets)
+            body=q, doc_type="tweet", index=self.tweets)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    es = ElasticManager('localhost', 9200, 'juliacage')
+    es = ElasticManager("localhost", 9200, "gazouilloire")
     es.prepare_indices()
     # todo = es.find_tweets_with_unresolved_links()
-    # print('>> todo : ', todo[:10])
+    # print(">> todo : ", todo[:10])
     # urlstoclear = list(set([l for t in todo if not t.get(
-    #     "proper_links", []) for l in t.get('links', [])]))
-    # print('>> urlstoclear : ', urlstoclear[:10])
+    #     "proper_links", []) for l in t.get("links", [])]))
+    # print(">> urlstoclear : ", urlstoclear[:10])
     # alreadydone = [{l["_id"]: l["real"]
     #                 for l in es.find_links_in(urlstoclear)}]
-    # print('>> alreadydone : ', alreadydone[:10])
+    # print(">> alreadydone : ", alreadydone[:10])
     # # es.update_tweets_with_links(
     # #     1057377903506325506, ["goodlink3", "goodlink4"])
-    # print(es.count_tweets('retweet_id', '1057377903506325506'))
+    # print(es.count_tweets("retweet_id", "1057377903506325506"))
     # es.update_resolved_tweets([1057223967893729280, 1057223975032373249])
