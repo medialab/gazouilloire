@@ -56,17 +56,17 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
         todo = []
         while not pile.empty():
             todo.append(pile.get())
-        stored = 0
-        db.bulk_update(prepare_tweets(todo, locale))
+        tweets_bulk = []
         for t in prepare_tweets(todo, locale):
             if pile_medias and t["medias"]:
                 pile_medias.put(t)
             if pile_catchup and t["in_reply_to_status_id_str"]:
                 if not db.find_tweet(t["in_reply_to_status_id_str"]):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
-            stored += 1
-        if debug and stored:
-            log("DEBUG", "Saved %s tweets in database" % stored)
+            tweets_bulk.append(t)
+        db.bulk_update(tweets_bulk)
+        if debug and tweets_bulk:
+            log("DEBUG", "Saved %s tweets in database" % len(tweets_bulk))
         breakable_sleep(2, exit_event)
     log("INFO", "FINISHED depiler")
 
