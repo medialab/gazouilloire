@@ -52,6 +52,9 @@ def stream(batch, index, upsert=False):
 
 
 class ElasticManager:
+
+    link_id = "link_id"
+
     def __init__(self, host, port, db, links_index=None):
         self.host = host
         self.port = port
@@ -135,7 +138,7 @@ class ElasticManager:
             index=self.links,
             body={
                 "query": {
-                    "terms": {"link_id": urls_list}
+                    "terms": {self.link_id: urls_list}
                 }
             }
         )
@@ -144,7 +147,7 @@ class ElasticManager:
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
         self.db.index(index=self.links, doc_type='link',
-                      body={'link_id': link, 'real': resolved_link})
+                      body={self.link_id: link, 'real': resolved_link})
 
     def stream_update_actions(self, query, field_update=None, upsert=False):
         """Yields an update action for every id corresponding to the search query"""
