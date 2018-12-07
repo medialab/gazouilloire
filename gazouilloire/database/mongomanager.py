@@ -6,6 +6,9 @@ except:
 
 
 class MongoManager:
+
+    link_id = "_id"
+
     def __init__(self, host, port, db):
         self.host = host
         self.port = port
@@ -13,7 +16,6 @@ class MongoManager:
         self.db = MongoClient(host, port)[self.db_name]
         self.tweets = self.db['tweets']
         self.links = self.db['links']
-        self.link_id = "_id"
 
     # main() methods
 
@@ -52,12 +54,12 @@ class MongoManager:
 
     def find_links_in(self, urls_list):
         """Returns a list of links which ids are in the 'urls_list' argument"""
-        return list(self.links.find({"_id": {"$in": urls_list}}))
+        return list(self.links.find({self.link_id: {"$in": urls_list}}))
 
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
         self.links.update_one(
-            {'_id': link}, {"$set": {'_id': link, 'real': resolved_link}}, upsert=True)
+            {self.link_id: link}, {"$set": {self.link_id: link, 'real': resolved_link}}, upsert=True)
 
     def update_tweets_with_links(self, tweet_id, good_links):
         """Adds the resolved links to the corresponding tweets"""
@@ -85,7 +87,7 @@ if __name__ == '__main__':
     # urlstoclear = list(set([l for t in todo if not t.get(
     #     "proper_links", []) for l in t.get('links', [])]))
     # print('>> urlstoclear : ', urlstoclear[:10])
-    # alreadydone = [{l["_id"]: l["real"]
-    #                 for l in db.find_links_in(urlstoclear)}]
-    # print('>> alreadydone : ', alreadydone[:10])
+    alreadydone = [{l[db.link_id]: l["real"]
+                     for l in db.find_links_in(urlstoclear)}]
+    print('>> alreadydone : ', alreadydone[:10])
     # print(db.count_tweets('retweet_id', '1057377903506325506'))
