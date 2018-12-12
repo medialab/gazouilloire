@@ -23,10 +23,14 @@ def reformat_elastic_document(doc):
     return res
 
 
-def format_response(response, empty_response=None):
+def format_response(response, single_result=False):
     """Formats the ES find() response into a list of dictionaries"""
     if response["hits"]["total"] == 0:
-        return empty_response
+        if single_result:
+            return None
+        return []
+    if single_result:
+        return reformat_elastic_document(response["hits"]["hits"][0])
     return [reformat_elastic_document(element) for element in response["hits"]["hits"]]
 
 
@@ -119,9 +123,7 @@ class ElasticManager:
                 }
             }
         )
-        if response["hits"]["total"] == 0:
-            return None
-        return reformat_elastic_document(response["hits"]["hits"][0])
+        return format_response(response, single_result=True)
 
     # resolver() methods
 
@@ -142,7 +144,7 @@ class ElasticManager:
                 }
             }
         )
-        return format_response(response, empty_response=[])
+        return format_response(response)
 
     def find_links_in(self, urls_list):
         """Returns a list of links which ids are in the 'urls_list' argument"""
@@ -154,7 +156,7 @@ class ElasticManager:
                 }
             }
         )
-        return format_response(response, empty_response=[])
+        return format_response(response)
 
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
