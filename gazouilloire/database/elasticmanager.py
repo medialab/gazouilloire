@@ -22,11 +22,13 @@ def reformat_elastic_document(doc):
     res["_id"] = doc["_id"]
     return res
 
+
 def format_response(response, empty_response=None):
     """Formats the ES find() response into a list of dictionaries"""
     if response["hits"]["total"] == 0:
         return empty_response
     return [reformat_elastic_document(element) for element in response["hits"]["hits"]]
+
 
 def format_tweet_fields(tweet):
     """Adapts the fields of the given tweet to fit the index mapping"""
@@ -37,7 +39,8 @@ def format_tweet_fields(tweet):
     if not elastic_tweet["deleted"]:
         elastic_tweet["deleted"] = False
     if elastic_tweet["coordinates"]:
-        elastic_tweet["coordinates"] = elastic_tweet["coordinates"].get('coordinates', None)
+        elastic_tweet["coordinates"] = elastic_tweet["coordinates"].get(
+            'coordinates', None)
     return elastic_tweet
 
 
@@ -94,8 +97,8 @@ class ElasticManager:
 
     def bulk_update(self, batch):
         """Updates the batch of tweets given in argument"""
-        streaming_bulk = helpers.streaming_bulk(self.db,
-            actions=stream_tweets_batch(batch, upsert=True))
+        streaming_bulk = helpers.streaming_bulk(
+            self.db, actions=self.stream_tweets_batch(batch, upsert=True))
         for ok, response in streaming_bulk:
             if not ok:
                 print(response)
@@ -157,7 +160,6 @@ class ElasticManager:
         """Inserts the given link in the database"""
         self.db.index(index=self.links, doc_type="link",
                       body={self.link_id: link, "real": resolved_link})
-
 
     def update_tweets_with_links(self, tweet_id, good_links):
         """Adds the resolved links to the corresponding tweets"""
