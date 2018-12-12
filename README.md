@@ -104,6 +104,8 @@ bin/export_all_text.py
 
 - Elasticsearch
 
+  - Remember to [set the heap size](https://www.elastic.co/guide/en/elasticsearch/reference/current/heap-size.html) (at 1GB by default) when moving to production.
+
   - If you encounter this Elasticsearch error message:
     `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`:
 
