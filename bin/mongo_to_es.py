@@ -1,24 +1,21 @@
 # -*- coding: utf-8 -*-
-from distutils.util import strtobool
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
+import json
+import os
+import sys
+from builtins import input, int, open, str
 from datetime import datetime, timedelta
+from distutils.util import strtobool
 from pprint import pprint
-from elasticsearch import helpers
-from elasticsearch import Elasticsearch
+
+import click
 import pymongo
 import requests
-import click
-import json
-import sys
-import os
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from builtins import open
-from builtins import input
-from builtins import int
-from builtins import str
+from elasticsearch import Elasticsearch, helpers
 from future import standard_library
+
 standard_library.install_aliases()
 
 try:
