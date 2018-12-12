@@ -1,4 +1,15 @@
 # -*- coding: utf-8 -*-
+from distutils.util import strtobool
+from datetime import datetime, timedelta
+from pprint import pprint
+from elasticsearch import helpers
+from elasticsearch import Elasticsearch
+import pymongo
+import requests
+import click
+import json
+import sys
+import os
 from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import division
@@ -9,17 +20,6 @@ from builtins import int
 from builtins import str
 from future import standard_library
 standard_library.install_aliases()
-import os
-import sys
-import json
-import click
-import requests
-import pymongo
-from elasticsearch import Elasticsearch
-from elasticsearch import helpers
-from pprint import pprint
-from datetime import datetime, timedelta
-from distutils.util import strtobool
 
 try:
     with open(os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'gazouilloire', 'database', 'db_mappings.json'), 'r') as db_mappings:
@@ -80,25 +80,9 @@ def migrate(mongo_host, mongo_port, mongo_db, es_host, es_port, es_index_name):
     for tweet in MONGO_DB.tweets.find():
         i += 1
         try:
-            user_created_at_timestamp = tweet['user_created_at_timestamp']
-        except:
-            user_created_at_timestamp = None
-        try:
-            possibly_sensitive = tweet['possibly_sensitive']
-        except:
-            possibly_sensitive = None
-        try:
-            reply_count = tweet['reply_count']
-        except:
-            reply_count = None
-        try:
             coordinates = tweet['coordinates']['coordinates']
         except:
             coordinates = tweet.get('coordinates', None)
-        try:
-            proper_links = tweet['proper_links']
-        except:
-            proper_links = None
         load = {
             '_id': tweet['_id'],
             '_source': {
@@ -120,13 +104,13 @@ def migrate(mongo_host, mongo_port, mongo_db, es_host, es_port, es_index_name):
                 "medias": tweet.get('medias', None),
                 "mentions_ids": tweet.get('mentions_ids', None),
                 "mentions_names": tweet.get('mentions_names', None),
-                "possibly_sensitive": possibly_sensitive,
-                "proper_links": proper_links,
+                "possibly_sensitive": tweet.get('possibly_sensitive', None),
+                "proper_links": tweet.get('proper_links', None),
                 "quoted_id": tweet.get('quoted_id', None),
                 "quoted_timestamp": tweet.get('quoted_timestamp', None),
                 "quoted_user": tweet.get('quoted_user', None),
                 "quoted_user_id": tweet.get('quoted_user_id', None),
-                "reply_count": reply_count,
+                "reply_count": tweet.get('reply_count', None),
                 "retweet_count": tweet.get('retweet_count', None),
                 "retweet_id": tweet.get('retweet_id', None),
                 "retweet_timestamp": tweet.get('retweet_timestamp', None),
@@ -139,7 +123,7 @@ def migrate(mongo_host, mongo_port, mongo_db, es_host, es_port, es_index_name):
                 "tweet_id": tweet.get('_id', None),
                 "url": tweet.get('url', None),
                 "user_created_at": tweet.get('user_created_at', None),
-                "user_created_at_timestamp": user_created_at_timestamp,
+                "user_created_at_timestamp": tweet.get('user_created_at_timestamp', None),
                 "user_description": tweet.get('user_description', None),
                 "user_favourites": tweet.get('user_favourites', None),
                 "user_followers": tweet.get('user_followers', None),
@@ -172,15 +156,10 @@ def migrate(mongo_host, mongo_port, mongo_db, es_host, es_port, es_index_name):
     for link in MONGO_DB.links.find():
         i += 1
 
-        try:
-            real = link['real']
-        except:
-            real = None
-
         load = {
             '_source': {
                 "link_id": link['_id'],
-                "real": real
+                "real": link.get('real', None)
             }}
 
         links_bulkload.append(load)
