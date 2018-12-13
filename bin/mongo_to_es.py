@@ -32,18 +32,20 @@ ES_LINKS_MAPPINGS = DB_MAPPINGS['links_mapping']
 
 
 @click.command()
-@click.argument('mongo_host')
-@click.argument('mongo_port')
 @click.argument('mongo_db')
-@click.argument('es_host')
-@click.argument('es_port')
-@click.argument('es_index_name')
+@click.argument('mongo_host', default='localhost')
+@click.argument('mongo_port', default=27017)
+@click.argument('es_index_name', default='')
+@click.argument('es_host', default='localhost')
+@click.argument('es_port', default=9200)
 def migrate(mongo_host, mongo_port, mongo_db, es_host, es_port, es_index_name):
+    if not es_index_name:
+        es_index_name = mongo_db
     print("Initialising Mongo & ES clients...")
     MONGO_CLIENT = pymongo.MongoClient(
-        'mongodb://' + mongo_host + ':' + mongo_port + '/')
+        'mongodb://%s:%s/' % (mongo_host, mongo_port))
     MONGO_DB = MONGO_CLIENT[mongo_db]
-    ES_CLIENT = Elasticsearch('http://' + es_host + ':' + es_port)
+    ES_CLIENT = Elasticsearch('http://%s:%s' % (es_host, es_port))
     ES_INDEX_NAME = es_index_name
     ES_LINKS_INDEX = ES_INDEX_NAME + '_links'
     ES_TWEETS_INDEX = ES_INDEX_NAME + '_tweets'
