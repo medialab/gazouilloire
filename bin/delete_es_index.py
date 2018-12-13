@@ -1,4 +1,6 @@
+#!/usr/bin/env python
 # coding: utf8
+
 from builtins import input
 import click
 from elasticsearch import Elasticsearch
