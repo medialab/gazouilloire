@@ -339,9 +339,15 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
 
 chunkize = lambda a, n: [a[i:i+n] for i in range(0, len(a), n)]
 
-def get_twitter_rates(conn, conn2):
-    rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
-    rate_limits2 = conn2.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
+def get_twitter_rates(conn, conn2, retry=0):
+    try:
+        rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
+        rate_limits2 = conn2.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
+    except urllib2.URLError as e:
+        if retry:
+            time.sleep(1)
+            return get_twitter_rates(conn, conn2, retry=retry-1)
+        raise e
     return min(int(rate_limits['reset']), int(rate_limits2['reset'])), (rate_limits['limit'] + rate_limits2['limit']), (rate_limits['remaining'] + rate_limits2['remaining'])
 
 def stall_queries(next_reset, exit_event):
@@ -364,7 +370,7 @@ def write_search_state(state):
 def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event, debug=False):
     # Search operators reference: https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators
     try:
-        next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2)
+        next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2, retry=3)
     except Exception as e:
         log("ERROR", "Connecting to Twitter API: could not get rate limits %s: %s" % (type(e), e))
         sys.exit(1)
@@ -394,7 +400,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
       try:
         if time.time() > next_reset:
             try:
-                next_reset, _, left = get_twitter_rates(searchco, searchco2)
+                next_reset, _, left = get_twitter_rates(searchco, searchco2, retry=1)
             except Exception as e:
                 log("ERROR", "Issue while collecting twitter rates, applying default 15 min values. %s: %s" % (type(e), e))
                 next_reset += 15*60
@@ -431,7 +437,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
             while not exit_event.is_set():
                 while not left and not exit_event.is_set():
                     try:
-                        next_reset, _, left = get_twitter_rates(searchco, searchco2)
+                        next_reset, _, left = get_twitter_rates(searchco, searchco2, retry=1)
                         if debug and left:
                             log("DEBUG", "Resuming search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
                     except Exception as e:
