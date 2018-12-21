@@ -105,7 +105,13 @@ bin/export_all_text.py
 - Elasticsearch
 
   - Remember to [set the heap size](https://www.elastic.co/guide/en/elasticsearch/reference/current/heap-size.html) (at 1GB by default) when moving to production. 1GB is fine for indices under 15-20 million tweets, but be sure to set a higher value for heavier corpora.
-  Set the value here : `/etc/elasticsearch/jvm.options`
+  
+    Set these values here `/etc/elasticsearch/jvm.options` (if you use Elasticsearch as a service) or here `your_installation_folder/config/jvm.options` (if you have a custom installation folder):
+    ```
+    -Xms2g
+    -Xmx2g
+    ```
+    Here the heap size is set at 2GB (set the values at `-Xms5g -Xmx5g` if you need 5GB, etc).
 
   - If you encounter this Elasticsearch error message:
     `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`:
