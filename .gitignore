@@ -1,6 +1,8 @@
 config.py
 config.json
 *.pyc
+*.bak
+*~
 backups
 .search_state.json
 *.csv
@@ -8,6 +10,7 @@ backups
 *.tmp
 gazouilloire/web/apache.conf
 gazouilloire/web/web.wsgi
+gazouilloire/web/node_modules
 exclude_filters.txt
 medias
 logs
