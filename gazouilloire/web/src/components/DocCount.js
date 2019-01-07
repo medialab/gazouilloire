@@ -84,9 +84,9 @@ class UnstyledDocCount extends React.Component {
       );
     }
 
-    var docCount = this.props.data['indices']['tweets']['primaries']['docs'][
-      'count'
-    ];
+    var docCount = this.props.data['indices'][this.props.index]['primaries'][
+      'docs'
+    ]['count'];
 
     return (
       <Grid container spacing={16} style={{marginTop: '-15px'}}>

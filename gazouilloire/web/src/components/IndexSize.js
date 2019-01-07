@@ -76,9 +76,9 @@ class UnstyledIndexSize extends React.Component {
       );
     }
 
-    var data = this.props.data['indices']['tweets']['primaries']['store'][
-      'size_in_bytes'
-    ];
+    var data = this.props.data['indices'][this.props.index]['primaries'][
+      'store'
+    ]['size_in_bytes'];
 
     return (
       <Grid container spacing={16}>

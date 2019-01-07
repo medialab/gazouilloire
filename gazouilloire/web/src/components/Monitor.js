@@ -25,7 +25,7 @@ const styles = theme => ({
 });
 
 const refreshInterval = 4;
-var index_name = 'tweets';
+var index_name = 'juliacage_tweets';
 
 const initialState = {
   data: null,
@@ -69,16 +69,19 @@ class UnstyledMonitor extends React.Component {
         const data = json;
         if (!this.state.penultimatecount)
           var penultimatecount =
-            data['indices']['tweets']['primaries']['docs']['count'];
+            data['indices'][this.props.index]['primaries']['docs']['count'];
         else var penultimatecount = this.state.lastcount;
-        var lastcount = data['indices']['tweets']['primaries']['docs']['count'];
+        var lastcount =
+          data['indices'][this.props.index]['primaries']['docs']['count'];
         var now = new Date();
         var newCountXAxis = this.state.countXAxis.concat({
           time: now.getTime(),
           count: lastcount
         });
         var data_size =
-          data['indices']['tweets']['primaries']['store']['size_in_bytes'];
+          data['indices'][this.props.index]['primaries']['store'][
+            'size_in_bytes'
+          ];
         var newSizeXAxis = this.state.sizeXAxis.concat({
           time: now.getTime(),
           size: data_size
@@ -175,7 +178,7 @@ class UnstyledMonitor extends React.Component {
                   style={{fontStyle: 'italic'}}
                   color="primary"
                 >
-                  {index_name}
+                  {this.props.index}
                 </Typography>
               </Grid>
             </Grid>
@@ -211,6 +214,7 @@ class UnstyledMonitor extends React.Component {
                 data={this.state.data}
                 lastcount={this.state.lastcount}
                 penultimatecount={this.state.penultimatecount}
+                index={this.props.index}
               />
             </Grid>
             <Grid item>
@@ -219,12 +223,14 @@ class UnstyledMonitor extends React.Component {
                   <DocCount
                     data={this.state.data}
                     countXAxis={this.state.countXAxis}
+                    index={this.props.index}
                   />
                 </Grid>
                 <Grid item xs>
                   <IndexSize
                     data={this.state.data}
                     sizeXAxis={this.state.sizeXAxis}
+                    index={this.props.index}
                   />
                 </Grid>
               </Grid>

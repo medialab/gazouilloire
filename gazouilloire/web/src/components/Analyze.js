@@ -5,7 +5,7 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 import Grid from '@material-ui/core/Grid';
 import classNames from 'classnames';
 import Button from '@material-ui/core/Button';
-import {BrowserRouter as Link} from 'react-router-dom';
+import {Link} from 'react-router-dom';
 import Icon from '@material-ui/core/Icon';
 
 import TweetList from './TweetList';

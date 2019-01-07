@@ -19,6 +19,9 @@ import Monitor from './Monitor';
 
 const drawerWidth = '350px';
 
+const indexName = 'juliacage';
+const tweetIndex = indexName.concat('_tweets');
+
 const theme = createMuiTheme({
   palette: {
     primary: {
@@ -82,7 +85,11 @@ function UnstyledApplication(props) {
     <MuiPickersUtilsProvider utils={DateFnsUtils}>
       <MuiThemeProvider theme={theme}>
         <Router>
-          <div className={classes.root} style={{margin: 0, float: 'top'}}>
+          <div
+            className={classes.root}
+            style={{margin: 0, float: 'top'}}
+            index={tweetIndex}
+          >
             <AppBar />
 
             <main style={{marginTop: '65px'}} className={classes.content}>
@@ -96,12 +103,30 @@ function UnstyledApplication(props) {
                 style={{marginTop: '10px'}}
               >
                 <Grid item>*/}
-              <Route path="/collect" component={StyledParameters} />
-              <Route path="/analyze" component={AnalyzePage} />
-              <Route path="/elasticanalyze" component={ElasticAnalyze} />
-              <Route path="/timeevolution" component={TimeSeries} />
-              <Route path="/userrepartition" component={UserRepartition} />
-              <Route path="/monitor" component={Monitor} />
+              <Route
+                path="/collect"
+                render={() => <StyledParameters index={tweetIndex} />}
+              />
+              <Route
+                path="/analyze"
+                render={() => <AnalyzePage index={tweetIndex} />}
+              />
+              <Route
+                path="/elasticanalyze"
+                render={() => <ElasticAnalyze index={tweetIndex} />}
+              />
+              <Route
+                path="/timeevolution"
+                render={() => <TimeSeries index={tweetIndex} />}
+              />
+              <Route
+                path="/userrepartition"
+                render={() => <UserRepartition index={tweetIndex} />}
+              />
+              <Route
+                path="/monitor"
+                render={() => <Monitor index={tweetIndex} />}
+              />
             </main>
           </div>
         </Router>

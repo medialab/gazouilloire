@@ -13,6 +13,9 @@ ROOT_PATH = os.path.dirname(os.path.realpath(__file__))
 
 PUBLIC_PATH = os.path.join(ROOT_PATH, 'public')
 
+INDEX_NAME = "juliacage"
+TWEETS = INDEX_NAME + "_tweets"
+
 # Creating the Flask object
 app = Flask(__name__)
 CORS(app)
@@ -51,7 +54,7 @@ def getTweetsMDB():
 
 @app.route("/elasticdata")
 def getTweetsES():
-    data = es.search(index="tweets", body={
+    data = es.search(index=TWEETS, body={
                      "from": 0, "size": 100, "query": {"match_all": {}}})
     normalized_data = normalize_data(data)
     return make_response(jsonify(normalized_data))
@@ -67,7 +70,7 @@ def getDayCount():
 @app.route("/elastictimeevolution")
 def getDayCountES():
     data = es.search(
-        index="tweets",
+        index=TWEETS,
         body={
             "query":
             {
@@ -100,7 +103,7 @@ def getUserCount():
 @app.route("/elasticuserrepartition")
 def getUserCountES():
     data = es.search(
-        index="tweets",
+        index=TWEETS,
         body={
             "query":
                 {
@@ -124,7 +127,7 @@ def getUserCountES():
 
 @app.route("/indexstats")
 def getIndexStats():
-    data = es.indices.stats('tweets')
+    data = es.indices.stats(TWEETS)
     #normalized_data = normalize_data(data)
     return make_response(jsonify(data))
 
