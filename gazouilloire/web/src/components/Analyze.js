@@ -152,6 +152,26 @@ class UnstyledAnalyzePage extends React.Component {
                   color: 'white'
                 }}
                 component={Link}
+                to="/textanalysis"
+                variant="extendedFab"
+                className={classes.button}
+              >
+                <Icon
+                  style={{marginRight: '8px', fontSize: 18}}
+                  className={classNames(classes.icon, 'fas fa-align-left')}
+                />
+                Text analysis
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button
+                style={{
+                  margin: '0px',
+                  background:
+                    'linear-gradient(45deg, #247ba0, #4278ac, #6473b0, #876bac,#bb5b89 )',
+                  color: 'white'
+                }}
+                component={Link}
                 to="/userrepartition"
                 variant="extendedFab"
                 className={classes.button}
