@@ -4,8 +4,8 @@
       "tweet": {
         "properties": {
           "collected_at_timestamp": {
-            "format": "epoch_second",
-            "type": "date"
+            "type": "date",
+            "format": "epoch_second"
           },
           "collected_via_search": {
             "type": "boolean"
@@ -17,8 +17,8 @@
             "type": "geo_point"
           },
           "created_at": {
-            "index": false,
-            "type": "keyword"
+            "type": "keyword",
+            "index": false
           },
           "deleted": {
             "type": "boolean"
@@ -69,8 +69,8 @@
             "type": "keyword"
           },
           "quoted_timestamp": {
-            "format": "epoch_second",
-            "type": "date"
+            "type": "date",
+            "format": "epoch_second"
           },
           "quoted_user": {
             "type": "keyword"
@@ -88,8 +88,8 @@
             "type": "keyword"
           },
           "retweet_timestamp": {
-            "format": "epoch_second",
-            "type": "date"
+            "type": "date",
+            "format": "epoch_second"
           },
           "retweet_user": {
             "type": "keyword"
@@ -101,11 +101,18 @@
             "type": "text"
           },
           "text": {
-            "type": "text"
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            },
+            "analyzer": "french",
+            "fielddata": true
           },
           "timestamp": {
-            "format": "epoch_second",
-            "type": "date"
+            "type": "date",
+            "format": "epoch_second"
           },
           "truncated": {
             "type": "boolean"
@@ -117,15 +124,22 @@
             "type": "keyword"
           },
           "user_created_at": {
-            "index": false,
-            "type": "keyword"
+            "type": "keyword",
+            "index": false
           },
           "user_created_at_timestamp": {
-            "format": "epoch_second",
-            "type": "date"
+            "type": "date",
+            "format": "epoch_second"
           },
           "user_description": {
-            "type": "text"
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            },
+            "analyzer": "french",
+            "fielddata": true
           },
           "user_favourites": {
             "type": "integer"
