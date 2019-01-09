@@ -228,12 +228,10 @@ class UnstyledTimeSeries extends React.Component {
   //Data-linked functions
 
   componentDidMount() {
-    console.log('componentDidMount');
     this._getData();
   }
 
   _getData() {
-    console.log('_getData');
     fetch('http://127.0.0.1:5000/elastictimeevolution')
       .then(response => {
         if (response.ok) {
@@ -251,12 +249,6 @@ class UnstyledTimeSeries extends React.Component {
         const data = json;
 
         for (var i = 0; i < data.length; i++) {
-          console.log(
-            '1st element - ',
-            data[0]['date'],
-            ', 2nd element - ',
-            data[1]['date']
-          );
           if (
             (stringToDate(data[1]['date']) - stringToDate(data[0]['date'])) /
               (1000 * 60 * 60 * 24) >
@@ -271,22 +263,16 @@ class UnstyledTimeSeries extends React.Component {
           }
         }
         var startDate = stringToDate(data[0]['date']);
-        console.log('startDate : ', startDate);
         var endDate = stringToDate(data[data.length - 1]['date']);
         this.setState({
           data: data,
           startDate: startDate,
           endDate: endDate
         });
-        console.log('json', json);
       });
-
-    console.log('Fin _getData');
   }
 
   render() {
-    console.log('data : ', this.state.data);
-    console.log('this.state.startDate : ', this.state.startDate);
     var data = this.state.data;
     const {classes} = this.props;
 
@@ -305,7 +291,6 @@ class UnstyledTimeSeries extends React.Component {
 
     var startDate = stringToDate(data[0]['date']);
     startDate.setHours(0);
-    console.log('startDate : ', startDate);
     var endDate = stringToDate(data[data.length - 1]['date']);
     endDate.setHours(0);
 
@@ -331,7 +316,6 @@ class UnstyledTimeSeries extends React.Component {
     }
 
     this.state.completeData = completeData;
-    console.log('completeData: ', completeData);
 
     const {
       barIndex,

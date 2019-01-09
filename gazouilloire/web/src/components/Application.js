@@ -3,6 +3,9 @@ import {BrowserRouter as Router, Route} from 'react-router-dom';
 
 import PropTypes from 'prop-types';
 import {withStyles} from '@material-ui/core/styles';
+import Grid from '@material-ui/core/Grid';
+import Typography from '@material-ui/core/Typography';
+import TextField from '@material-ui/core/TextField';
 
 import {MuiThemeProvider, createMuiTheme} from '@material-ui/core/styles';
 import MuiPickersUtilsProvider from 'material-ui-pickers/utils/MuiPickersUtilsProvider';
@@ -16,6 +19,7 @@ import AppBar from './AppBar';
 import HomePage from './HomePage';
 import UserRepartition from './UserRepartition';
 import Monitor from './Monitor';
+import TextAnalysis from './TextAnalysis';
 
 const drawerWidth = '350px';
 
@@ -78,61 +82,87 @@ const styles = theme => ({
   body: {margin: '0px'}
 });
 
-function UnstyledApplication(props) {
-  const {classes} = props;
-  console.log(styles.toolbar);
-  return (
-    <MuiPickersUtilsProvider utils={DateFnsUtils}>
-      <MuiThemeProvider theme={theme}>
-        <Router>
-          <div
-            className={classes.root}
-            style={{margin: 0, float: 'top'}}
-            index={tweetIndex}
-          >
-            <AppBar />
+class UnstyledApplication extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {index: 'default'};
+  }
 
-            <main style={{marginTop: '65px'}} className={classes.content}>
-              <Route exact path="/" component={HomePage} />
-              {/*<Grid
-                container
-                className={classes.mainGrid}
-                spacing={24}
-                justify="center"
-                alignItems="stretch"
-                style={{marginTop: '10px'}}
-              >
-                <Grid item>*/}
-              <Route
-                path="/collect"
-                render={() => <StyledParameters index={tweetIndex} />}
-              />
-              <Route
-                path="/analyze"
-                render={() => <AnalyzePage index={tweetIndex} />}
-              />
-              <Route
-                path="/elasticanalyze"
-                render={() => <ElasticAnalyze index={tweetIndex} />}
-              />
-              <Route
-                path="/timeevolution"
-                render={() => <TimeSeries index={tweetIndex} />}
-              />
-              <Route
-                path="/userrepartition"
-                render={() => <UserRepartition index={tweetIndex} />}
-              />
-              <Route
-                path="/monitor"
-                render={() => <Monitor index={tweetIndex} />}
-              />
-            </main>
-          </div>
-        </Router>
-      </MuiThemeProvider>
-    </MuiPickersUtilsProvider>
-  );
+  updateIndex = name => {
+    this.setState({
+      index: name
+    });
+  };
+
+  render() {
+    const {classes} = this.props;
+    console.log(styles.toolbar);
+    let body;
+
+    if (!this.state.index) {
+      body = (
+        <Grid container justify="center" alignItems="center">
+          <Grid item>
+            <Typography>Please specify an index name just above.</Typography>
+          </Grid>
+        </Grid>
+      );
+    } else {
+      body = (
+        <div>
+          <Route exact path="/" component={HomePage} />
+          <Route
+            path="/collect"
+            render={() => <StyledParameters index={tweetIndex} />}
+          />
+          <Route
+            path="/analyze"
+            render={() => <AnalyzePage index={tweetIndex} />}
+          />
+          <Route
+            path="/elasticanalyze"
+            render={() => <ElasticAnalyze index={tweetIndex} />}
+          />
+          <Route
+            path="/timeevolution"
+            render={() => <TimeSeries index={tweetIndex} />}
+          />
+          <Route
+            path="/userrepartition"
+            render={() => <UserRepartition index={tweetIndex} />}
+          />
+          <Route
+            path="/monitor"
+            render={() => <Monitor index={tweetIndex} />}
+          />
+          <Route
+            path="/textanalysis"
+            render={() => <TextAnalysis index={tweetIndex} />}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <MuiPickersUtilsProvider utils={DateFnsUtils}>
+        <MuiThemeProvider theme={theme}>
+          <Router>
+            <div
+              className={classes.root}
+              style={{margin: 0, float: 'top'}}
+              index={tweetIndex}
+            >
+              <AppBar index={this.state.index} updateIndex={this.updateIndex} />
+
+              <main style={{marginTop: '65px'}} className={classes.content}>
+                {body}
+              </main>
+            </div>
+          </Router>
+        </MuiThemeProvider>
+      </MuiPickersUtilsProvider>
+    );
+  }
 }
 
 UnstyledApplication.propTypes = {

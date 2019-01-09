@@ -25,7 +25,6 @@ const styles = theme => ({
 });
 
 const refreshInterval = 4;
-var index_name = 'juliacage_tweets';
 
 const initialState = {
   data: null,
@@ -86,7 +85,6 @@ class UnstyledMonitor extends React.Component {
           time: now.getTime(),
           size: data_size
         });
-        console.log('SIZEXAXIS.push ', now.getTime(), ', ', data_size);
         this.setState({
           data: data,
           lastcount: lastcount,
@@ -95,17 +93,8 @@ class UnstyledMonitor extends React.Component {
           sizeXAxis: newSizeXAxis
         });
       });
-    console.log('SizeXAxis: ', this.state.sizeXAxis);
-    console.log(
-      'lastcount: ',
-      this.state.lastcount,
-      ', penultimatecount: ',
-      this.state.penultimatecount
-    );
   }
   render() {
-    console.log('data : ', this.state.data);
-    console.log('COUNTXAXIS: ', this.state.countXAxis);
     var data = this.state.data;
     const {classes} = this.props;
 
@@ -121,12 +110,6 @@ class UnstyledMonitor extends React.Component {
 
     var collect_state;
     var collect_state_color;
-    console.log(
-      'lastcount: ',
-      this.state.lastcount,
-      ', penultimatecount: ',
-      this.state.penultimatecount
-    );
     const ok = green;
     var countXAxis = this.state.countXAxis;
     if (!countXAxis[countXAxis.length - 5]) {

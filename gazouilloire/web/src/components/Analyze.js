@@ -73,16 +73,13 @@ class UnstyledAnalyzePage extends React.Component {
   }
 
   componentDidMount() {
-    console.log('componentDidMount');
     this._getData();
   }
 
   _getData() {
-    console.log('_getData');
     fetch('http://127.0.0.1:5000/elasticdata')
       .then(response => {
         if (response.ok) {
-          console.log('Response ok', response);
           return response;
         } else {
           console.log('Response pas ok', response);
@@ -95,11 +92,9 @@ class UnstyledAnalyzePage extends React.Component {
       .then(json => {
         this.setState({data: json});
       });
-    console.log('data : ', this.state.data);
   }
 
   render() {
-    console.log('data : ', this.state.data);
     if (!this.state.data) {
       return (
         <Grid container justify="center" alignItems="center">
@@ -109,7 +104,6 @@ class UnstyledAnalyzePage extends React.Component {
         </Grid>
       );
     }
-    console.log(this.state.data);
     const {classes} = this.props;
 
     return (

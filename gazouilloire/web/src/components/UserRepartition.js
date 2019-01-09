@@ -20,13 +20,13 @@ class UnstyledUserRepartition extends React.Component {
   }
 
   componentDidMount() {
-    console.log('componentDidMount');
     this._getData();
   }
 
   _getData() {
-    console.log('_getData');
-    fetch('http://127.0.0.1:5000/elasticuserrepartition')
+    fetch(
+      'http://127.0.0.1:5000/elasticuserrepartition?index=' + this.props.index
+    )
       .then(response => {
         if (response.ok) {
           console.log('Flask server response ok', response);
@@ -44,10 +44,7 @@ class UnstyledUserRepartition extends React.Component {
         this.setState({
           data: data
         });
-        console.log('json', json);
       });
-
-    console.log('Fin _getData');
   }
 
   render() {

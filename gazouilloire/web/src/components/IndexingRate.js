@@ -74,14 +74,7 @@ class UnstyledIndexingRate extends React.Component {
         (this.props.lastcount - this.props.penultimatecount) /
         refreshInterval
       ).toFixed(0) + ' tweets/s';
-    console.log(
-      'indexingRate : ',
-      this.props.lastcount,
-      ' - ',
-      this.props.penultimatecountindexingRate,
-      '= ',
-      indexingRate
-    );
+
     return (
       <Grid container spacing={16} direction="row">
         <Grid item>

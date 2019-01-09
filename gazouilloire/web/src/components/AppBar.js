@@ -1,6 +1,6 @@
 import React from 'react';
 
-import {BrowserRouter as Router, Route, Link} from 'react-router-dom';
+import {Link} from 'react-router-dom';
 import MaterialAppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Icon from '@material-ui/core/Icon';
@@ -9,6 +9,8 @@ import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 import PropTypes from 'prop-types';
 import {withStyles} from '@material-ui/core/styles';
+import TextField from '@material-ui/core/TextField';
+import grey from '@material-ui/core/colors/grey';
 
 const drawerWidth = '350px';
 
@@ -47,8 +49,16 @@ const styles = theme => ({
 });
 
 class UnstyledAppBar extends React.Component {
+  handleSubmit = e => {
+    e.preventDefault();
+    this.props.updateIndex;
+  };
+
+  handleChange = e => {};
+
   render() {
     const {classes} = this.props;
+
     return (
       <MaterialAppBar position="absolute" className={classes.appBar}>
         <Toolbar>
@@ -68,6 +78,24 @@ class UnstyledAppBar extends React.Component {
           >
             Gazouilloire
           </Typography>
+          <form
+            className={classes.container}
+            onSubmit={this.handleSubmit}
+            noValidate
+            autoComplete="off"
+          >
+            <TextField
+              id="outlined-name"
+              label="Index"
+              className={classes.textField}
+              onChange={this.handleChange}
+              value={this.props.index}
+              margin="normal"
+              variant="outlined"
+              style={{borderColor: grey[50], color: grey[50], margin: '10px'}}
+              margin="dense"
+            />
+          </form>
           <Button
             component={Link}
             to="/monitor"

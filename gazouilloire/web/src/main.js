@@ -14,7 +14,6 @@ renderApplication(Application);
 
 // Handling HMR
 if (module.hot) {
-  console.log('hot reload');
   // Reloading components
   module.hot.accept('./components/Application', () => {
     const NextApplication = require('./components/Application').default;

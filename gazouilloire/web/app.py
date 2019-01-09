@@ -102,8 +102,9 @@ def getUserCount():
 
 @app.route("/elasticuserrepartition")
 def getUserCountES():
+    index = request.args.get('index')
     data = es.search(
-        index=TWEETS,
+        index=index + '_tweets',
         body={
             "query":
                 {
@@ -115,7 +116,6 @@ def getUserCountES():
                 }
 
         }
-
     )
     users = []
     for user in data['aggregations']['users']['buckets']:
@@ -130,6 +130,70 @@ def getIndexStats():
     data = es.indices.stats(TWEETS)
     #normalized_data = normalize_data(data)
     return make_response(jsonify(data))
+
+
+@app.route("/textanalysis")
+def getSignificantTerms():
+    query_string = request.args.get('query_string')
+    include_retweets = request.args.get('include_retweets')
+    size = request.args.get('size')
+    if not include_retweets:
+        data = es.search(
+            index=TWEETS,
+            body={
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "match": {
+                                    "text": query_string
+                                }
+                            }
+                        ],
+                        "must_not": [
+                            {
+                                "exists": {
+                                    "field": "retweet_id"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "aggs": {
+                    "products": {
+                        "significant_terms": {
+                            "field": "text",
+                            "size": 30
+                        }
+                    }
+                },
+                "size": 0
+            }
+        )
+    else:
+        data = es.search(
+            index=TWEETS,
+            body={
+                "query": {
+                    "match": {
+                        "text": query_string
+                    }
+                },
+                "aggs": {
+                    "products": {
+                        "significant_terms": {
+                            "field": "text",
+                            "size": 30
+                        }
+                    }
+                },
+                "size": 0
+            }
+        )
+    significant_terms = []
+    for term in data['aggregations']['products']['buckets']:
+        significant_terms.append(term)
+    return make_response(jsonify(significant_terms))
 
 
 if __name__ == '__main__':

@@ -68,16 +68,13 @@ class UnstyledTweetList extends React.Component {
   }
 
   componentDidMount() {
-    console.log('componentDidMount');
     if (!this.props.data) this._getData();
   }
 
   _getData() {
-    console.log('_getData');
     fetch('http://127.0.0.1:5000/data')
       .then(response => {
         if (response.ok) {
-          console.log('Response ok', response);
           return response;
         } else {
           console.log('Response pas ok', response);
