@@ -77,7 +77,9 @@ class UnstyledAnalyzePage extends React.Component {
   }
 
   _getData() {
-    fetch('http://127.0.0.1:5000/elasticdata')
+    fetch(
+      'http://127.0.0.1:5000/elasticdata?index=' + this.props.index + '_tweets'
+    )
       .then(response => {
         if (response.ok) {
           return response;

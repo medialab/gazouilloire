@@ -55,7 +55,13 @@ class UnstyledTextAnalysis extends React.Component {
     this.setState({
       fetchingData: true
     });
-    fetch('http://127.0.0.1:5000/textanalysis?' + query)
+    fetch(
+      'http://127.0.0.1:5000/textanalysis?index=' +
+        this.props.index +
+        '_tweets' +
+        '&' +
+        query
+    )
       .then(response => {
         if (response.ok) {
           console.log('Flask server response ok', response);

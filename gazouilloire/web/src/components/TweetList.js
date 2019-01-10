@@ -72,7 +72,7 @@ class UnstyledTweetList extends React.Component {
   }
 
   _getData() {
-    fetch('http://127.0.0.1:5000/data')
+    fetch('http://127.0.0.1:5000/data?index=' + this.props.index + '_tweets')
       .then(response => {
         if (response.ok) {
           return response;

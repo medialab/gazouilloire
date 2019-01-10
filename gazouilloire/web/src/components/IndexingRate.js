@@ -39,7 +39,9 @@ class UnstyledIndexingRate extends React.Component {
   }
 
   _getData() {
-    fetch('http://127.0.0.1:5000/indexstats')
+    fetch(
+      'http://127.0.0.1:5000/indexstats?index=' + this.props.index + '_tweets'
+    )
       .then(response => {
         if (response.ok) {
           return response;

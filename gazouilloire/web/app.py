@@ -13,8 +13,6 @@ ROOT_PATH = os.path.dirname(os.path.realpath(__file__))
 
 PUBLIC_PATH = os.path.join(ROOT_PATH, 'public')
 
-INDEX_NAME = "juliacage"
-TWEETS = INDEX_NAME + "_tweets"
 
 # Creating the Flask object
 app = Flask(__name__)
@@ -54,7 +52,8 @@ def getTweetsMDB():
 
 @app.route("/elasticdata")
 def getTweetsES():
-    data = es.search(index=TWEETS, body={
+    index = request.args.get('index')
+    data = es.search(index=index, body={
                      "from": 0, "size": 100, "query": {"match_all": {}}})
     normalized_data = normalize_data(data)
     return make_response(jsonify(normalized_data))
@@ -69,8 +68,9 @@ def getDayCount():
 
 @app.route("/elastictimeevolution")
 def getDayCountES():
+    index = request.args.get('index')
     data = es.search(
-        index=TWEETS,
+        index=index,
         body={
             "query":
             {
@@ -104,7 +104,7 @@ def getUserCount():
 def getUserCountES():
     index = request.args.get('index')
     data = es.search(
-        index=index + '_tweets',
+        index=index,
         body={
             "query":
                 {
@@ -127,19 +127,21 @@ def getUserCountES():
 
 @app.route("/indexstats")
 def getIndexStats():
-    data = es.indices.stats(TWEETS)
+    index = request.args.get('index')
+    data = es.indices.stats(index)
     #normalized_data = normalize_data(data)
     return make_response(jsonify(data))
 
 
 @app.route("/textanalysis")
 def getSignificantTerms():
+    index = request.args.get('index')
     query_string = request.args.get('query_string')
     include_retweets = request.args.get('include_retweets')
     size = request.args.get('size')
     if not include_retweets:
         data = es.search(
-            index=TWEETS,
+            index=index,
             body={
                 "query": {
                     "bool": {
@@ -172,7 +174,7 @@ def getSignificantTerms():
         )
     else:
         data = es.search(
-            index=TWEETS,
+            index=index,
             body={
                 "query": {
                     "match": {

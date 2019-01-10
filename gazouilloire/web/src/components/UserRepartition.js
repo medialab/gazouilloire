@@ -25,7 +25,9 @@ class UnstyledUserRepartition extends React.Component {
 
   _getData() {
     fetch(
-      'http://127.0.0.1:5000/elasticuserrepartition?index=' + this.props.index
+      'http://127.0.0.1:5000/elasticuserrepartition?index=' +
+        this.props.index +
+        '_tweets'
     )
       .then(response => {
         if (response.ok) {

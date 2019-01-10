@@ -23,8 +23,8 @@ import TextAnalysis from './TextAnalysis';
 
 const drawerWidth = '350px';
 
-const indexName = 'juliacage';
-const tweetIndex = indexName.concat('_tweets');
+// const indexName = 'juliacage';
+// const tweetIndex = indexName.concat('_tweets');
 
 const theme = createMuiTheme({
   palette: {
@@ -92,6 +92,7 @@ class UnstyledApplication extends React.Component {
     this.setState({
       index: name
     });
+    console.log('global index updated to ', name);
   };
 
   render() {
@@ -109,37 +110,37 @@ class UnstyledApplication extends React.Component {
       );
     } else {
       body = (
-        <div>
+        <Grid item>
           <Route exact path="/" component={HomePage} />
           <Route
             path="/collect"
-            render={() => <StyledParameters index={tweetIndex} />}
+            render={() => <StyledParameters index={this.state.index} />}
           />
           <Route
             path="/analyze"
-            render={() => <AnalyzePage index={tweetIndex} />}
+            render={() => <AnalyzePage index={this.state.index} />}
           />
           <Route
             path="/elasticanalyze"
-            render={() => <ElasticAnalyze index={tweetIndex} />}
+            render={() => <ElasticAnalyze index={this.state.index} />}
           />
           <Route
             path="/timeevolution"
-            render={() => <TimeSeries index={tweetIndex} />}
+            render={() => <TimeSeries index={this.state.index} />}
           />
           <Route
             path="/userrepartition"
-            render={() => <UserRepartition index={tweetIndex} />}
+            render={() => <UserRepartition index={this.state.index} />}
           />
           <Route
             path="/monitor"
-            render={() => <Monitor index={tweetIndex} />}
+            render={() => <Monitor index={this.state.index} />}
           />
           <Route
             path="/textanalysis"
-            render={() => <TextAnalysis index={tweetIndex} />}
+            render={() => <TextAnalysis index={this.state.index} />}
           />
-        </div>
+        </Grid>
       );
     }
 
@@ -147,17 +148,19 @@ class UnstyledApplication extends React.Component {
       <MuiPickersUtilsProvider utils={DateFnsUtils}>
         <MuiThemeProvider theme={theme}>
           <Router>
-            <div
+            <Grid
+              container
+              justify="center"
+              alignItems="center"
               className={classes.root}
               style={{margin: 0, float: 'top'}}
-              index={tweetIndex}
             >
               <AppBar index={this.state.index} updateIndex={this.updateIndex} />
 
               <main style={{marginTop: '65px'}} className={classes.content}>
                 {body}
               </main>
-            </div>
+            </Grid>
           </Router>
         </MuiThemeProvider>
       </MuiPickersUtilsProvider>

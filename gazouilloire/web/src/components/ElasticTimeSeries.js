@@ -219,7 +219,11 @@ class UnstyledTimeSeries extends React.Component {
 
   _getData() {
     console.log('_getData');
-    fetch('http://127.0.0.1:5000/elastictimeevolution')
+    fetch(
+      'http://127.0.0.1:5000/elastictimeevolution?index=' +
+        this.props.index +
+        '_tweets'
+    )
       .then(response => {
         if (response.ok) {
           console.log('Flask server response ok', response);
@@ -235,7 +239,8 @@ class UnstyledTimeSeries extends React.Component {
       .then(json => {
         const data = json;
         if (
-          (stringToDate(data[1]['_source']['timestamp']) - stringToDate(data[0]['_source']['timestamp'])) /
+          (stringToDate(data[1]['_source']['timestamp']) -
+            stringToDate(data[0]['_source']['timestamp'])) /
             (1000 * 60 * 60 * 24) >
           300
         ) {
@@ -246,7 +251,9 @@ class UnstyledTimeSeries extends React.Component {
         }
         var startDate = stringToDate(data[0]['_source']['timestamp']);
         console.log('startDate : ', startDate);
-        var endDate = stringToDate(data[data.length - 1]['_source']['timestamp']);
+        var endDate = stringToDate(
+          data[data.length - 1]['_source']['timestamp']
+        );
         this.setState({
           data: data,
           startDate: startDate,
@@ -309,7 +316,8 @@ class UnstyledTimeSeries extends React.Component {
       top,
       bottom
     } = this.state;
-    {/*console.log(
+    {
+      /*console.log(
       'left : ',
       left,
       ', right : ',
@@ -322,7 +330,8 @@ class UnstyledTimeSeries extends React.Component {
       refAreaLeftNumber,
       ', refAreaRightNumber : ',
       refAreaRightNumber
-    );*/}
+    );*/
+    }
     return (
       <Grid
         container

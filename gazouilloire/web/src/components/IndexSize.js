@@ -44,7 +44,9 @@ class UnstyledIndexSize extends React.Component {
   }
 
   _getData() {
-    fetch('http://127.0.0.1:5000/indexstats')
+    fetch(
+      'http://127.0.0.1:5000/indexstats?index=' + this.props.index + '_tweets'
+    )
       .then(response => {
         if (response.ok) {
           return response;
@@ -76,9 +78,9 @@ class UnstyledIndexSize extends React.Component {
       );
     }
 
-    var data = this.props.data['indices'][this.props.index]['primaries'][
-      'store'
-    ]['size_in_bytes'];
+    var data = this.props.data['indices'][this.props.index + '_tweets'][
+      'primaries'
+    ]['store']['size_in_bytes'];
 
     return (
       <Grid container spacing={16}>

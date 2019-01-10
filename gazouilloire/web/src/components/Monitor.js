@@ -51,7 +51,9 @@ class UnstyledMonitor extends React.Component {
   }
 
   _getData() {
-    fetch('http://127.0.0.1:5000/indexstats')
+    fetch(
+      'http://127.0.0.1:5000/indexstats?index=' + this.props.index + '_tweets'
+    )
       .then(response => {
         if (response.ok) {
           console.log('Flask server response ok', response);
@@ -68,17 +70,21 @@ class UnstyledMonitor extends React.Component {
         const data = json;
         if (!this.state.penultimatecount)
           var penultimatecount =
-            data['indices'][this.props.index]['primaries']['docs']['count'];
+            data['indices'][this.props.index + '_tweets']['primaries']['docs'][
+              'count'
+            ];
         else var penultimatecount = this.state.lastcount;
         var lastcount =
-          data['indices'][this.props.index]['primaries']['docs']['count'];
+          data['indices'][this.props.index + '_tweets']['primaries']['docs'][
+            'count'
+          ];
         var now = new Date();
         var newCountXAxis = this.state.countXAxis.concat({
           time: now.getTime(),
           count: lastcount
         });
         var data_size =
-          data['indices'][this.props.index]['primaries']['store'][
+          data['indices'][this.props.index + '_tweets']['primaries']['store'][
             'size_in_bytes'
           ];
         var newSizeXAxis = this.state.sizeXAxis.concat({

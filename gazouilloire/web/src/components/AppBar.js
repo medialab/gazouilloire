@@ -10,7 +10,6 @@ import Button from '@material-ui/core/Button';
 import PropTypes from 'prop-types';
 import {withStyles} from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
-import grey from '@material-ui/core/colors/grey';
 
 const drawerWidth = '350px';
 
@@ -45,16 +44,50 @@ const styles = theme => ({
     padding: theme.spacing.unit * 3,
     minWidth: 0 // So the Typography noWrap works
   },
-  toolbar: theme.mixins.toolbar
+  toolbar: theme.mixins.toolbar,
+  cssLabel: {
+    $notchedOutline: {
+      color: 'white'
+    }
+  },
+  cssOutlinedInput: {
+    '&$cssFocused $notchedOutline': {
+      borderColor: `${'#00486D'} !important`
+    }
+  },
+  cssFocused: {
+    color: 'white !important',
+    borderColor: 'white !important',
+    '&$cssFocused $notchedOutline': {
+      borderColor: `${'white'} !important`,
+      color: 'white !important',
+      borderWidth: '1px'
+    }
+  },
+  notchedOutline: {
+    borderWidth: '1px',
+    borderColor: '#00486D !important'
+  }
 });
 
 class UnstyledAppBar extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {index: ''};
+  }
+
   handleSubmit = e => {
+    console.log('handleSubmit : ', this.state.index);
     e.preventDefault();
-    this.props.updateIndex;
+    this.props.updateIndex(this.state.index);
   };
 
-  handleChange = e => {};
+  handleChange = name => event => {
+    console.log('handleChange : ', event.target.value);
+    this.setState({
+      [name]: event.target.value
+    });
+  };
 
   render() {
     const {classes} = this.props;
@@ -74,10 +107,11 @@ class UnstyledAppBar extends React.Component {
             variant="title"
             color="inherit"
             noWrap
-            style={{flex: 1, textDecoration: 'none', outline: 0}}
+            style={{flex: 1, textDecoration: 'none', outline: 0, width: '25vw'}}
           >
             Gazouilloire
           </Typography>
+          <div />
           <form
             className={classes.container}
             onSubmit={this.handleSubmit}
@@ -88,11 +122,24 @@ class UnstyledAppBar extends React.Component {
               id="outlined-name"
               label="Index"
               className={classes.textField}
-              onChange={this.handleChange}
-              value={this.props.index}
+              onChange={this.handleChange('index')}
+              value={this.state.index}
               margin="normal"
               variant="outlined"
-              style={{borderColor: grey[50], color: grey[50], margin: '10px'}}
+              style={{margin: '10px'}}
+              InputLabelProps={{
+                classes: {
+                  root: classes.cssLabel,
+                  focused: classes.cssLabel
+                }
+              }}
+              InputProps={{
+                classes: {
+                  root: classes.cssOutlinedInput,
+                  focused: classes.cssFocused,
+                  notchedOutline: classes.notchedOutline
+                }
+              }}
               margin="dense"
             />
           </form>
