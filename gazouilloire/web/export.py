@@ -4,59 +4,61 @@
 import re, sys
 from datetime import datetime
 
+# More details on Twitter's tweets metadata can be read here: https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object
 TWEET_FIELDS = [
-  "id",
-  "time",
-  "created_at",
-  "from_user_name",
-  "text",
-  "filter_level",
-  "possibly_sensitive",
-  "withheld_copyright",
-  "withheld_scope",
-  "withheld_countries",
-  "truncated",
-  "retweet_count",
-  "favorite_count",
-  "reply_count",
-  "lang",
-  "to_user_name",
-  "to_user_id",
-  "in_reply_to_status_id",
-  "source",
-  "source_name",
-  "source_url",
-  "location",
-  "lat",
-  "lng",
-  "from_user_id",
-  "from_user_realname",
-  "from_user_verified",
-  "from_user_description",
-  "from_user_url",
-  "from_user_profile_image_url",
-  "from_user_utcoffset",
-  "from_user_timezone",
-  "from_user_lang",
-  "from_user_tweetcount",
-  "from_user_followercount",
-  "from_user_friendcount",
-  "from_user_favourites_count",
-  "from_user_listed",
-  "from_user_withheld_scope",
-  "from_user_withheld_countries",
-  "from_user_created_at",
-  "retweeted_id",
-  "retweeted_user_name",
-  "retweeted_user_id",
-  "links",
-  "medias_urls",
-  "medias_files",
-  "mentioned_user_names",
-  "mentioned_user_ids",
-  "hashtags"
+  "id",                             # digital ID
+  "time",                           # UNIX timestamp of creation
+  "created_at",                     # ISO datetime of creation
+  "from_user_name",                 # author's user text ID (@user)
+  "text",                           # message's text content
+  "filter_level",                   # internal TCAT field, ignorable
+  "possibly_sensitive",             # whether a link present in the message might contain sensitive content according to Twitter
+  "withheld_copyright",             # whether the tweet might be censored by Twitter following copyright requests, ignorable
+  "withheld_scope",                 # whether the content withheld is the "status" or a "user", ignorable
+  "withheld_countries",             # list of ISO country codes in which the message is withheld, separated by |, ignorable
+  "truncated",                      # whether the tweet is bigger than 140 characters, obsolete
+  "retweet_count",                  # number of retweets of the message (at collection time)
+  "favorite_count",                 # number of likes of the message (at collection time)
+  "reply_count",                    # number of answers to the message, dropped by Twitter (since Oct 17, now charged), unreliable and ignorable
+  "lang",                           # language of the message automatically identified by Twitter's algorithms (equals "und" when no language could be detected)
+  "to_user_name",                   # text ID of the user the message is answering to
+  "to_user_id",                     # digital ID of the user the message is answering to
+  "in_reply_to_status_id",          # digital ID of the tweet the message is answering to
+  "source",                         # medium used by the user to post the message
+  "source_name",                    # name of the medium used to post the message
+  "source_url",                     # link to the medium used to post the message
+  "location",                       # location declared in the user's profile (at collection time)
+  "lat",                            # latitude of messages geolocalized
+  "lng",                            # longitude of messages geolocalized
+  "from_user_id",                   # author's user digital ID
+  "from_user_realname",             # author's detailed textual name (at collection time)
+  "from_user_verified",             # whether the author's account is certified
+  "from_user_description",          # description given in the author's profile (at collection time)
+  "from_user_url",                  # link to a website given in the author's profile (at collection time)
+  "from_user_profile_image_url",    # link to the image avatar of the author's profile (at collection time)
+  "from_user_utcoffset",            # time offset due to the user's timezone, dropped by Twitter (since May 18), ignorable
+  "from_user_timezone",             # timezone declared in the user's profile, dropped by Twitter (since May 18), ignorable
+  "from_user_lang",                 # language declared in the user's profile (at collection time)
+  "from_user_tweetcount",           # number of tweets sent by the user (at collection time)
+  "from_user_followercount",        # number of users following the author (at collection time)
+  "from_user_friendcount",          # number of users the author is following (at collection time)
+  "from_user_favourites_count",     # number of likes the author has expressed (at collection time)
+  "from_user_listed",               # number of users lists the author has been included in (at collection time)
+  "from_user_withheld_scope",       # whether the user content is withheld, ignorable
+  "from_user_withheld_countries",   # list of ISO country codes in which the user content is withheld, separated by |, ignorable
+  "from_user_created_at",           # ISO datetime of creation of the author's account
+  "retweeted_id",                   # digital ID of the retweeted message
+  "retweeted_user_name",            # text ID of the user who authored the retweeted message
+  "retweeted_user_id",              # digital ID of the user who authoring the retweeted message
+  "links",                          # list of links included in the text content, with redirections resolved, separated by |
+  "medias_urls",                    # list of links to images/videos embedded, separated by |
+  "medias_files",                   # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabled
+  "mentioned_user_names",           # list of text IDs of users mentionned, separated by |
+  "mentioned_user_ids",             # list of digital IDs of users mentionned, separated by |
+  "hashtags"                        # list of hashtags used, lowercased, separated by |
 ]
 
+# More details on Twitter's users metadata can be read here: https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/user-object
 USER_FIELDS = [
   'id',
   'screen_name',
@@ -110,7 +112,7 @@ CORRESP_FIELDS = {
     "truncated": bool,      # unnecessary since we rebuild text from RTs
     "retweet_count": int,
     "favorite_count": int,
-    "reply_count": int,     # Recently appeared in Twitter data
+    "reply_count": int,     # Recently appeared in Twitter data, then dropped
     "lang": str,
     "to_user_name": "in_reply_to_screen_name",
     "to_user_id": "in_reply_to_user_id_str",    # Added for better user interaction analysis
