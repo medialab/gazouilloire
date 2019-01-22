@@ -13,6 +13,9 @@
           "collected_via_stream": {
             "type": "boolean"
           },
+          "collected_via_thread": {
+            "type": "boolean"
+          },
           "coordinates": {
             "type": "geo_point"
           },
