@@ -38,9 +38,7 @@
     "download_medias": false,
     "medias_directory": "medias",
     "timezone": "Europe/Paris",
-    "elasticsearch_text_analysis": {
-        "analyzer": "french"
-    },
+    "text_analyzer": "french"
     "export": {
         "selected_field": "selected",
         "extra_fields": ["selected"]
