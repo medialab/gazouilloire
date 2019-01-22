@@ -107,7 +107,7 @@
                 "type": "keyword"
               }
             },
-            "analyzer": "french",
+            "analyzer": "standard",
             "fielddata": true
           },
           "timestamp": {
@@ -138,7 +138,7 @@
                 "type": "keyword"
               }
             },
-            "analyzer": "french",
+            "analyzer": "standard",
             "fielddata": true
           },
           "user_favourites": {
