@@ -78,8 +78,8 @@ Note that `type` is either `mongo` or `elasticsearch`, and that default ports fo
   ```json
   "text_analyzer": "french",
   ```
-  The complete list of analyzers is [here](https://www.elastic.co/guide/en/elasticsearch/reference/current/normalizer.html).
-  
+  The complete list of analyzers is [here](https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-analyzers.html).
+
 
 - Run with:
 
