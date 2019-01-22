@@ -74,6 +74,12 @@ Note that `type` is either `mongo` or `elasticsearch`, and that default ports fo
         ]
     },
   ```
+  One can also choose the analyzer used by Elasticsearch to tokenize text:
+  ```json
+  "text_analyzer": "french",
+  ```
+  The complete list of analyzers is [here](https://www.elastic.co/guide/en/elasticsearch/reference/current/normalizer.html).
+  
 
 - Run with:
 

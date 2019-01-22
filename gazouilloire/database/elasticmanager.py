@@ -23,7 +23,7 @@ except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
     sys.exit(1)
 
 # updating the text analyzer according to the config.json
-analyzer = conf['elasticsearch_text_analysis']['analyzer']
+analyzer = conf.get('text_analyzer', 'standard')
 DB_MAPPINGS['tweets_mapping']['mappings']['tweet']['properties']['user_description']['analyzer'] = analyzer
 DB_MAPPINGS['tweets_mapping']['mappings']['tweet']['properties']['text']['analyzer'] = analyzer
 
