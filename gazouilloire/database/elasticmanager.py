@@ -5,6 +5,12 @@ from copy import deepcopy
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
 
+try:
+    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), "config.json"), "r") as confile:
+        conf = json.loads(confile.read())
+except Exception as e:
+    print('ERROR - Could not open config.json: %s %s' % (type(e), e))
+    sys.exit(1)
 
 try:
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "db_mappings.json"), "r") as db_mappings:
@@ -15,6 +21,11 @@ try:
 except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
     print("ERROR - Could not open db_mappings.json: %s %s" % (type(e), e))
     sys.exit(1)
+
+# updating the text analyzer according to the config.json
+analyzer = conf['elasticsearch_text_analysis']['analyzer']
+DB_MAPPINGS['tweets_mapping']['mappings']['tweet']['properties']['user_description']['analyzer'] = analyzer
+DB_MAPPINGS['tweets_mapping']['mappings']['tweet']['properties']['text']['analyzer'] = analyzer
 
 
 def reformat_elastic_document(doc):
