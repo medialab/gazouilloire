@@ -225,7 +225,7 @@ def get_thread_ids_from_query(query, mongocoll):
 
 def yield_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
     out_fields = list_fields + extra_fields
-    yield ",".join(out_fields)
+    yield ",".join(out_fields).encode('utf-8')
     for t in queryiterator:
         yield ",".join(format_csv(get_field(k, t)) for k in out_fields)
 
