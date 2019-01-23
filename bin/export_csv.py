@@ -11,7 +11,7 @@ with open('config.json') as confile:
 db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
 
 print "url,user_screen_name,timestamp,user_lang,lang,coordinates,text,reply_to_url,is_retweet"
-for t in db.find({}, sort=[("_id", -1)]):
+for t in db.find({}, sort=[("timestamp", -1)]):
     ts = datetime.strptime(t['created_at'], '%a %b %d %H:%M:%S +0000 %Y').isoformat()
     coords = "::".join([str(a) for a in t["geo"]["coordinates"]]) if t["geo"] else ""
     text = '"' + t["text"].replace('"', '""').replace("\n", " ").replace("\r", "") + '"'
