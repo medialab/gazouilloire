@@ -44,4 +44,4 @@ if verbose:
     bar = progressbar.ProgressBar(max_value=count)
     iterator = bar(iterator)
 for t in iterator:
-    print t
+    print t.encode("utf-8")
