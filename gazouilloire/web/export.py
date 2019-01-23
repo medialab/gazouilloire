@@ -118,8 +118,8 @@ CORRESP_FIELDS = {
     "to_user_id": "in_reply_to_user_id_str",    # Added for better user interaction analysis
     "in_reply_to_status_id": "in_reply_to_status_id_str",
     "source": str,
-    "source_name": lambda x: re.split(r"[<>]", x.get("source", "<>"))[2],   # Added for simplier postprocess
-    "source_url": lambda x: x.get("source", '"').split('"')[1],             # Added for simplier postprocess
+    "source_name": lambda x: re.split(r"[<>]", (x.get("source", "<>") or "<>"))[2],   # Added for simplier postprocess
+    "source_url": lambda x: (x.get("source", '"') or '"').split('"')[1],             # Added for simplier postprocess
     "location": "user_location",
     "lat": lambda x: get_coords(x)[1],
     "lng": lambda x: get_coords(x)[0],
