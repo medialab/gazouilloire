@@ -12,3 +12,4 @@ flask
 Flask-Caching
 flask-compress
 networkx
+ural
