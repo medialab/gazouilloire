@@ -12,7 +12,8 @@ with open('config.json') as confile:
 db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
 
 urls = {}
-query = {"langs": "fr"}
+query = {}
+#query["langs"] = "fr"
 print "Counting matching results..."
 count = db.count(query)
 
