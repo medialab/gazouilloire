@@ -47,9 +47,13 @@ TWEET_FIELDS = [
   "from_user_withheld_scope",       # whether the user content is withheld, ignorable
   "from_user_withheld_countries",   # list of ISO country codes in which the user content is withheld, separated by |, ignorable
   "from_user_created_at",           # ISO datetime of creation of the author's account
+  "collected_via_thread",           # whether the tweet was retrieved only as part of a thread including a tweet matching the desired query
   "retweeted_id",                   # digital ID of the retweeted message
   "retweeted_user_name",            # text ID of the user who authored the retweeted message
   "retweeted_user_id",              # digital ID of the user who authoring the retweeted message
+  "quoted_id",                      # digital ID of the retweeted message
+  "quoted_user_name",               # text ID of the user who authored the retweeted message
+  "quoted_user_id",                 # digital ID of the user who authoring the retweeted message
   "links",                          # list of links included in the text content, with redirections resolved, separated by |
   "medias_urls",                    # list of links to images/videos embedded, separated by |
   "medias_files",                   # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabled
@@ -141,9 +145,13 @@ CORRESP_FIELDS = {
     "from_user_withheld_countries": lambda x: x.get("user_withheld_countries", []),      # Added since this is the most interesting info from withheld fields
     "from_user_created_at": lambda x: isodate(x.get("user_created_at", "")),
     # More added fields:
+    "collected_via_thread": lambda x: bool(x.get("collected_via_thread") and not (x.get("collected_via_search") or x.get("collected_via_stream"))),
     "retweeted_id": "retweet_id",
     "retweeted_user_name": "retweet_user",
     "retweeted_user_id": "retweet_user_id",
+    "quoted_id": "quoted_id",
+    "quoted_user_name": "quoted_user",
+    "quoted_user_id": "quoted_user_id",
     "links": lambda x: x.get("proper_links", x.get("links", [])),
     "medias_urls": lambda x: [_url for _id,_url in x.get("medias", [])],
     "medias_files": lambda x: [_id for _id,_url in x.get("medias", [])],
