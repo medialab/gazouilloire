@@ -99,7 +99,7 @@ def queryData(args):
     if args["include_threads"]:
         ids = get_thread_ids_from_query(query, mongodb)
         query = {"_id": {"$in": ids}}
-    mongoiterator = mongodb.find(query, sort=[("_id", 1)])
+    mongoiterator = mongodb.find(query, sort=[("timestamp", 1)])
     csv = export_csv(mongoiterator, extra_fields=EXTRA_FIELDS)
     res = make_response(csv)
     res.headers["Content-Type"] = "text/csv; charset=UTF-8"

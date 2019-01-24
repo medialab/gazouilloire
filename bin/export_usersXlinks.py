@@ -17,7 +17,8 @@ db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[
     conf['mongo']['db']]['tweets']
 
 print("user_screenname,links,is_retweet")
-query = {"langs": "fr"}
+query = {}
+#query["langs"] = "fr"
 count = db.count(query)
 
 bar = progressbar.ProgressBar(max_value=count)

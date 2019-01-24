@@ -14,5 +14,6 @@ flask-compress
 networkx == 2.2
 future
 elasticsearch >= 6.0.0, < 7.0.0
+ural
 # commented since code piece was integrated
 #urlsresolver
