@@ -25,10 +25,10 @@ if len(sys.argv) == 2:
             sys.stderr.write("WARNING: query wrongly formatted: %s\n" % sys.argv[1])
             sys.exit("%s: %s\n" % (type(e), e))
     elif os.path.exists(sys.argv[1]):
-          with open(sys.argv[1]) as f:
-              ids = sorted([t.get("id", t.get("_id")) for t in csv.DictReader(f)])
-          ids = get_thread_ids_from_ids(ids, db)
-          query = {"_id": {"$in": ids}}
+        with open(sys.argv[1]) as f:
+            ids = sorted([t.get("id", t.get("_id")) for t in csv.DictReader(f)])
+        ids = get_thread_ids_from_ids(ids, db)
+        query = {"_id": {"$in": ids}}
     else:
         query = {"text": re.compile(sys.argv[1].replace(' ', '\s+'), re.I)}
 elif len(sys.argv) > 2:
