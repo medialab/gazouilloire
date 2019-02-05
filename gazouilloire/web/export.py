@@ -236,7 +236,7 @@ def get_thread_idset_from_idset(ids, mongocoll):
     return all_ids
 
 # Recursive version kept for archive but crashing for excessive recursion in some cases
-def get_thread_idset_from_idset(ids, mongocoll, known_ids=set()):
+def recursive_get_thread_idset_from_idset(ids, mongocoll, known_ids=set()):
     all_ids = ids | known_ids
     new_ids = set()
     ids_list = list(ids)
