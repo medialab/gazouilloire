@@ -95,7 +95,7 @@ def queryData(args):
               "text": {"$not": re.compile(r"%s" % q, re.I)}
             })
     if SELECTED_FIELD and args['selected'] == 'checked':
-        query["$and"].append({"selected_field": True})
+        query["$and"].append({SELECTED_FIELD: True})
     if args["include_threads"]:
         ids = get_thread_ids_from_query(query, mongodb)
         query = {"_id": {"$in": ids}}
