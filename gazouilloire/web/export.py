@@ -213,7 +213,30 @@ isodate = lambda x: datetime.strptime(x, '%a %b %d %H:%M:%S +0000 %Y').isoformat
 
 format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val)
 
-def get_thread_idset_from_idset(ids, mongocoll, known_ids=set()):
+def add_and_report(sett, val):
+  leng = len(sett)
+  sett.add(val)
+  return len(sett) != leng
+
+def get_thread_idset_from_idset(ids, mongocoll):
+    ids_list = list(ids)
+    all_ids = ids.copy()
+    while ids_list:
+        todo_ids = set()
+        for t in mongocoll.find({"$or": [
+            {"_id": {"$in": ids_list}},
+            {"in_reply_to_status_id_str": {"$in": ids_list}}
+          ]}, projection={"in_reply_to_status_id_str": 1}):
+            if add_and_report(all_ids, t["_id"]):
+                todo_ids.add(t["_id"])
+            origin = t.get("in_reply_to_status_id_str")
+            if origin and add_and_report(all_ids, origin):
+                todo_ids.add(origin)
+        ids_list = list(todo_ids)
+    return all_ids
+
+# Recursive version kept for archive but crashing for excessive recursion in some cases
+def recursive_get_thread_idset_from_idset(ids, mongocoll, known_ids=set()):
     all_ids = ids | known_ids
     new_ids = set()
     ids_list = list(ids)
