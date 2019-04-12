@@ -5,14 +5,14 @@ from __future__ import print_function
 import json, sys
 import progressbar
 from collections import defaultdict
-from pymongo import MongoClient
 from ural import normalize_url
+from gazouilloire.database.mongomanager import MongoManager
 from gazouilloire.web.export import format_csv
 
 with open('config.json') as confile:
     conf = json.loads(confile.read())
 
-db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
+db = MongoManager(conf['database']['host'], conf['database']['port'], conf['database']['db']).tweets
 
 urls = defaultdict(int)
 query = {}
