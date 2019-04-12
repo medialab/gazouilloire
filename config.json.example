@@ -6,9 +6,9 @@
         "oauth_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     },
     "database": {
-        "type": "mongo",
+        "type": "elasticsearch",
         "host": "localhost",
-        "port": 27017,
+        "port": 9200,
         "db": "gazouilloire"
     },
     "keywords": [

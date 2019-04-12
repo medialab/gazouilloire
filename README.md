@@ -34,7 +34,7 @@ Python 2.7 & 3.x compatible.
 "database": {
         "type": "elasticsearch",
         "host": "localhost",
-        "port": 27017,
+        "port": 9200,
         "db": "gazouilloire"
     }
 ```
@@ -57,9 +57,9 @@ Note that `type` is either `mongo` or `elasticsearch`, and that default ports fo
 
   Note that there are three possibilities to filter further:
 
-  - language mode, in order to collect only tweets written in a specific language : just add `"language": "fr"` to the config (the language should be written in [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes))
-  - geolocalisation mode: just add `"geolocalisation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box as shown in the config example file
-  - time limited keywords mode, in order to filter on specific keywords during planned time period:
+  - **language**: in order to collect only tweets written in a specific language : just add `"language": "fr"` to the config (the language should be written in [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes))
+  - **geolocalisation**: just add `"geolocalisation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box as shown in the config example file
+  - **time_limited_keywords**: in order to filter on specific keywords during planned time period:
 
   ```json
   "time_limited_keywords": {
@@ -89,19 +89,24 @@ Note that `type` is either `mongo` or `elasticsearch`, and that default ports fo
     ./gazouilloire/run.py
 ```
 
-- Data is stored in your Mongo/Elasticsearch, you can also export it easily with simple scripts such as those in the `bin` directory:
+- Data is stored in your MongoDB/ElasticSearch, which you can direcly query. But you can also export it easily with simple scripts such as those in the `bin` directory:
 
 ```bash
 # To export a csv with most fields (formatted similarily to [DMI's TCAT](https://github.com/digitalmethodsinitiative/dmi-tcat)):
 bin/export_csv_as_tcat.py
+
 # To export a csv of all tweets having a specific word in their text:
 bin/export_csv_as_tcat.py medialab
+
 # To export a csv of all tweets having one of many specific words in their text:
 bin/export_csv_as_tcat.py medialab digitalhumanities datajournalism '#python'
+
 # To export a csv of all tweets matching a specific MongoDB query, for instance by user_name:
 bin/export_csv_as_tcat.py "{'user_screen_name': 'medialab_ScPo'}"
+
 # To export a csv with the most useful fields:
 bin/export_csv.py
+
 # To export the whole text content of the tweets:
 bin/export_all_text.py
 ```
