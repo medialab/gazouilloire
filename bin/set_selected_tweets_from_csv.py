@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import sys, json, csv
-import pymongo
 import progressbar
+from gazouilloire.database.mongomanager import MongoManager
 
 try:
     with open(sys.argv[1]) as csvfile:
@@ -23,7 +23,7 @@ if not SELECTED_FIELD:
     exit(1)
 
 
-db = pymongo.MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
+db = MongoManager(conf['database']['host'], conf['database']['port'], conf['database']['db']).tweets
 db.create_index(SELECTED_FIELD)
 
 bar = progressbar.ProgressBar(max_value=len(data) - 1)

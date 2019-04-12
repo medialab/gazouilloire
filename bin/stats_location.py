@@ -6,16 +6,12 @@ import json
 import sys
 import progressbar
 from collections import defaultdict
-try:
-    from pymongo import MongoClient
-except ImportError:
-    from pymongo.connection import Connection as MongoClient
+from gazouilloire.database.mongomanager import MongoManager
 
 with open('config.json') as confile:
     conf = json.loads(confile.read())
 
-db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[
-    conf['mongo']['db']]['tweets']
+db = MongoManager(conf['database']['host'], conf['database']['port'], conf['database']['db']).tweets
 
 locations = defaultdict(int)
 

@@ -93,22 +93,22 @@ Note that `type` is either `mongo` or `elasticsearch`, and that default ports fo
 
 ```bash
 # To export a csv with most fields (formatted similarily to [DMI's TCAT](https://github.com/digitalmethodsinitiative/dmi-tcat)):
-bin/export_csv_as_tcat.py
+PYTHONPATH=. bin/export_csv_as_tcat.py
 
 # To export a csv of all tweets having a specific word in their text:
-bin/export_csv_as_tcat.py medialab
+PYTHONPATH=. bin/export_csv_as_tcat.py medialab
 
 # To export a csv of all tweets having one of many specific words in their text:
-bin/export_csv_as_tcat.py medialab digitalhumanities datajournalism '#python'
+PYTHONPATH=. bin/export_csv_as_tcat.py medialab digitalhumanities datajournalism '#python'
 
 # To export a csv of all tweets matching a specific MongoDB query, for instance by user_name:
-bin/export_csv_as_tcat.py "{'user_screen_name': 'medialab_ScPo'}"
+PYTHONPATH=. bin/export_csv_as_tcat.py "{'user_screen_name': 'medialab_ScPo'}"
 
 # To export a csv with the most useful fields:
-bin/export_csv.py
+PYTHONPATH=. bin/export_csv.py
 
 # To export the whole text content of the tweets:
-bin/export_all_text.py
+PYTHONPATH=. bin/export_all_text.py
 ```
 
 ## Troubleshooting

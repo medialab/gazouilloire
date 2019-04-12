@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
-from pymongo import MongoClient, ASCENDING
+from gazouilloire.database.mongomanager import MongoManager, ASCENDING
 from fake_useragent import UserAgent
 
 from gazouilloire.run import resolve_url
@@ -10,7 +10,7 @@ from gazouilloire.run import resolve_url
 with open('config.json') as confile:
     conf = json.loads(confile.read())
 
-db = MongoClient(conf["mongo"]["host"], conf["mongo"]["port"])[conf["mongo"]["db"]]
+db = MongoManager(conf['database']['host'], conf['database']['port'], conf['database']['db']).db
 
 # TODO: refacto all of this with gazouilloire/run.py
 

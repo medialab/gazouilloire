@@ -8,10 +8,7 @@ import sys
 import re
 import csv
 import json
-try:
-    from pymongo import MongoClient
-except ImportError:
-    from pymongo.connection import Connection as MongoClient
+from gazouilloire.database.mongomanager import MongoManager
 from gazouilloire.web.export import yield_csv, get_thread_ids_from_ids
 
 try:
@@ -25,7 +22,7 @@ SELECTED_FIELD = conf.get('export', {}).get('selected_field', None)
 EXTRA_FIELDS = conf.get('export', {}).get('extra_fields', [])
 
 try:
-    mongodb = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
+    mongodb = MongoManager(conf['database']['host'], conf['database']['port'], conf['database']['db']).tweets
 except Exception as e:
     sys.stderr.write("ERROR: Could not initiate connection to MongoDB: %s %s" % (type(e), e))
     exit(1)

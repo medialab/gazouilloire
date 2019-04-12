@@ -6,16 +6,12 @@ from builtins import str
 import json
 import sys
 from datetime import datetime
-try:
-    from pymongo import MongoClient
-except ImportError:
-    from pymongo.connection import Connection as MongoClient
+from gazouilloire.database.mongomanager import MongoManager
 
 with open('config.json') as confile:
     conf = json.loads(confile.read())
 
-db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[
-    conf['mongo']['db']]['tweets']
+db = MongoManager(conf['database']['host'], conf['database']['port'], conf['database']['db']).tweets
 
 print("url,user_screen_name,timestamp,user_lang,lang,coordinates,text,reply_to_url,is_retweet")
 for t in db.find({}, sort=[("timestamp", -1)]):
