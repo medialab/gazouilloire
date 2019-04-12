@@ -109,6 +109,9 @@ PYTHONPATH=. bin/export_csv.py
 
 # To export the whole text content of the tweets:
 PYTHONPATH=. bin/export_all_text.py
+
+# To compute the top shared web domains in the collected tweets:
+PYTHONPATH=. bin/export_shared_domains.py
 ```
 
 ## Troubleshooting
