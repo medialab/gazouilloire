@@ -166,6 +166,8 @@ PYTHONPATH=. bin/export_shared_domains.py
 
 [Benjamin Ooghe-Tabanou](https://github.com/boogheta), [Jules Farjas](https://github.com/farjasju) & al @ [Sciences Po médialab](https://github.com/medialab)
 
+Read more about Gazouilloire's migration from Python2 & Mongo to Python3 & ElasticSearch in [Jules' report](https://github.com/farjasju/medialabInternshipReport).
+
 Discover more of our projects at [médialab tools](http://tools.medialab.sciences-po.fr/).
 
 This work is supported by [DIME-Web](http://dimeweb.dime-shs.sciences-po.fr/), part of [DIME-SHS](http://www.sciencespo.fr/dime-shs/) research equipment financed by the EQUIPEX program (ANR-10-EQPX-19-01).
