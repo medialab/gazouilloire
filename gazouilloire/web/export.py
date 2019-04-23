@@ -41,7 +41,7 @@ TWEET_FIELDS = [
   "from_user_profile_image_url",    # link to the image avatar of the author's profile (at collection time)
   "from_user_utcoffset",            # time offset due to the user's timezone, dropped by Twitter (since May 18), ignorable
   "from_user_timezone",             # timezone declared in the user's profile, dropped by Twitter (since May 18), ignorable
-  "from_user_lang",                 # language declared in the user's profile (at collection time)
+  "from_user_lang",                 # language declared in the user's profile (at collection time), dropped by Twitter (since May 19), ignorable
   "from_user_tweetcount",           # number of tweets sent by the user (at collection time)
   "from_user_followercount",        # number of users following the author (at collection time)
   "from_user_friendcount",          # number of users the author is following (at collection time)
@@ -72,12 +72,12 @@ USER_FIELDS = [
   'name',
   'description',
   'url',
-  'lang',
+  'lang',                               # dropped from tweet objects only by Twitter (since May 19)
   'created_at',
-  'utc_offset',
-  'time_zone',
+  'utc_offset',                         # dropped by Twitter (since May 18), ignorable
+  'time_zone',                          # dropped by Twitter (since May 18), ignorable
   'location',
-  'geo_enabled',
+  'geo_enabled',                        # dropped by Twitter (since May 19), ignorable
   'verified',
   'protected',
   'statuses_count',
@@ -85,23 +85,24 @@ USER_FIELDS = [
   'friends_count',
   'favourites_count',
   'listed_count',
-  'is_translator',
-  'translator_type',
-  'is_translation_enabled',
+  'is_translator',                      # dropped by Twitter (since May 19), ignorable
+  'translator_type',                    # dropped by Twitter (since May 19), ignorable
+  'is_translation_enabled',             # dropped by Twitter (since May 19), ignorable
   'default_profile',
   'default_profile_image',
-  'has_extended_profile',
-  'profile_use_background_image',
-  'profile_background_image_url_https',
-  'profile_background_tile',
-  'profile_background_color',
-  'profile_banner_url',
-  'profile_link_color',
-  'profile_image_url',
-  'profile_text_color',
+  'has_extended_profile',               # dropped by Twitter (since May 19), ignorable
+  'profile_image_url',                  # dropped by Twitter (since May 19), ignorable
   'profile_image_url_https',
-  'profile_sidebar_fill_color',
-  'profile_sidebar_border_color'
+  'profile_banner_url',
+  'profile_use_background_image',       # dropped by Twitter (since May 19), ignorable
+  'profile_background_image_url',       # dropped by Twitter (since May 19), ignorable
+  'profile_background_image_url_https', # dropped by Twitter (since May 19), ignorable
+  'profile_background_tile',            # dropped by Twitter (since May 19), ignorable
+  'profile_background_color',           # dropped by Twitter (since May 19), ignorable
+  'profile_link_color',                 # dropped by Twitter (since May 19), ignorable
+  'profile_text_color',                 # dropped by Twitter (since May 19), ignorable
+  'profile_sidebar_fill_color',         # dropped by Twitter (since May 19), ignorable
+  'profile_sidebar_border_color'        # dropped by Twitter (since May 19), ignorable
 ]
 
 # Based and enriched from TCAT fields
