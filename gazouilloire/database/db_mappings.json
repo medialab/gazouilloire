@@ -168,9 +168,6 @@
           "user_name": {
             "type": "keyword"
           },
-          "user_profile_image_url": {
-            "type": "text"
-          },
           "user_profile_image_url_https": {
             "type": "text"
           },
@@ -180,14 +177,8 @@
           "user_statuses": {
             "type": "integer"
           },
-          "user_time_zone": {
-            "type": "keyword"
-          },
           "user_url": {
             "type": "keyword"
-          },
-          "user_utc_offset": {
-            "type": "integer"
           },
           "user_verified": {
             "type": "boolean"
