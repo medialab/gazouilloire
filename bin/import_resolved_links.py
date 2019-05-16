@@ -5,6 +5,8 @@ import os, sys
 import csv, json
 from pymongo import MongoClient
 
+BULK_SIZE = 1000
+
 verbose = True
 if len(sys.argv) > 1 and "--quiet" in sys.argv:
     sys.argv.remove("--quiet")
@@ -14,14 +16,13 @@ try:
     with open(os.path.join(os.path.dirname(__file__), '..', 'config.json')) as confile:
          conf = json.loads(confile.read())
 except Exception as e:
-    sys.stderr.write("ERROR: Impossible to read config.json: %s %s" % (type(e), e))
+    sys.stderr.write("ERROR: Impossible to read config.json: %s %s\n" % (type(e), e))
     exit(1)
 
 try:
-    #db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['links']
-    db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])["tweets-polarisation-2"]['links']
+    db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['links']
 except Exception as e:
-    sys.stderr.write("ERROR: Could not initiate connection to MongoDB: %s %s" % (type(e), e))
+    sys.stderr.write("ERROR: Could not initiate connection to MongoDB: %s %s\n" % (type(e), e))
     exit(1)
 
 try:
@@ -37,11 +38,26 @@ try:
         else:
             iterator = csv.reader(f, delimiter="\t")
         iterator.next()
+        bulk = []
+        counter = 0
         for row in iterator:
+            bulk.append({"_id": row[0], "real": row[1]})
+            counter += 1
+            if counter % BULK_SIZE == 0:
+                try:
+                    db.insert_many(bulk)
+                except Exception as e:
+                    sys.stderr.write("- WARNING: Could not insert bulk: %s: %s\n" % (type(e), e))
+                    exit(1)
+                bulk = []
+                counter = 0
+        if counter:
             try:
-                db.save({"_id": row[0], "real": row[1]})
+                db.insert_many(bulk)
             except Exception as e:
-                print "- WARNING: Could not store resolved link %s -> %s because %s: %s" % (row[0], row[1], type(e), e)
+                sys.stderr.write("- WARNING: Could not insert bulk: %s: %s\n" % (type(e), e))
+                exit(1)
+
 except Exception as e:
     sys.stderr.write("ERROR: Could not open TSV file %s: %s %s" % (sys.argv[1], type(e), e))
     exit(1)

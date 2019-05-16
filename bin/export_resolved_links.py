@@ -9,13 +9,13 @@ try:
     with open(os.path.join(os.path.dirname(__file__), '..', 'config.json')) as confile:
          conf = json.loads(confile.read())
 except Exception as e:
-    sys.stderr.write("ERROR: Impossible to read config.json: %s %s" % (type(e), e))
+    sys.stderr.write("ERROR: Impossible to read config.json: %s %s\n" % (type(e), e))
     exit(1)
 
 try:
     db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['links']
 except Exception as e:
-    sys.stderr.write("ERROR: Could not initiate connection to MongoDB: %s %s" % (type(e), e))
+    sys.stderr.write("ERROR: Could not initiate connection to MongoDB: %s %s\n" % (type(e), e))
     exit(1)
 
 verbose = True
