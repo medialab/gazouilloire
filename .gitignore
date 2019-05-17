@@ -9,5 +9,6 @@ backups
 gazouilloire/web/apache.conf
 gazouilloire/web/web.wsgi
 exclude_filters.txt
+report_filters.txt
 medias
 logs
