@@ -498,9 +498,11 @@ if __name__=='__main__':
     try:
         with open('config.json') as confile:
             conf = json.loads(confile.read())
-            for k in ['keywords', 'url_pieces', 'time_limited_keywords']:
+            for k in ['keywords', 'url_pieces']:
                 if k not in conf:
                     conf[k] = []
+            if 'time_limited_keywords' not in conf:
+                conf['time_limited_keywords'] = {}
     except Exception as e:
         log('ERROR', 'Could not open config.json: %s %s' % (type(e), e))
         sys.exit(1)
