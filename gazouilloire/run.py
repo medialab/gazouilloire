@@ -315,6 +315,8 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
             log("WARNING", "Stream connection lost, reconnecting in a sec... (%s: %s)" % (type(e), e))
         except Exception as e:
+            import traceback
+            print(traceback.format_exc())
             log("INFO", "closing streamer (%s: %s)..." % (type(e), e))
             exit_event.set()
 
