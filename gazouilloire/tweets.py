@@ -65,7 +65,7 @@ def grab_extra_meta(source, result, locale=None):
     # grouped langs field for faster querying across both
     result['langs'] = []
     for lang_field in ['lang', 'user_lang']:
-        lang = result.get(lang_field, '').lower()
+        lang = (result.get(lang_field, '') or '').lower()
         if lang and lang not in result['langs']:
             result['langs'].append(lang)
     return result
