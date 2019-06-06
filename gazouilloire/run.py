@@ -159,6 +159,7 @@ def resolver(mongoconf, exit_event, debug=False):
                     continue
                 good = resolve_url(link, user_agent=ua)
                 gdlinks.append(good)
+                alreadydone[link] = good
                 try:
                     linkscoll.save({'_id': link, 'real': good})
                 except Exception as e:

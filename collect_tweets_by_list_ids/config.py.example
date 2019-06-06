@@ -1,0 +1,7 @@
+MONGO_DATABASE = 'tweets_by_ids'
+TWITTER = {
+  'KEY': 'xxxxxxxxxxxxxxxxxxxxx',
+  'SECRET': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  'OAUTH_TOKEN': 'xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  'OAUTH_SECRET': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+}

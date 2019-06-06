@@ -1,7 +1,7 @@
 #/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json
+import sys, json
 from time import time, sleep
 from datetime import datetime
 from twitter import Twitter, OAuth, OAuth2, TwitterHTTPError
@@ -33,17 +33,17 @@ class TwitterWrapper(object):
                 if route not in self.waits:
                     self.waits[route] = {"user": now, "app": now}
                 self.waits[route][auth] = reset
-                print "REACHED API LIMITS on %s %s until %s for auth %s" % (route, args, reset, auth)
+                print >> sys.stderr, "REACHED API LIMITS on %s %s until %s for auth %s" % (route, args, reset, auth)
                 minwait = sorted([(a, w) for a, w in self.waits[route].items()], key=lambda x: x[1])[0]
                 if minwait[1] > now:
                     sleeptime = 5 + max(0, int(minwait[1] - now))
-                    print "  will wait for %s for the next %ss (%s)" % (minwait[0], sleeptime, datetime.fromtimestamp(now + sleeptime).isoformat()[11:19])
+                    print >> sys.stderr, "  will wait for %s for the next %ss (%s)" % (minwait[0], sleeptime, datetime.fromtimestamp(now + sleeptime).isoformat()[11:19])
                     sleep(sleeptime)
                 self.auth[route] = minwait[0]
                 return self.call(route, args, tryouts)
             elif tryouts:
                 return self.call(route, args, tryouts-1)
             else:
-                print "ERROR after %s tryouts for %s %s %s" % (self.MAX_TRYOUTS, route, auth, args)
-                print "%s: %s" % (type(e), e)
+                print >> sys.stderr, "ERROR after %s tryouts for %s %s %s" % (self.MAX_TRYOUTS, route, auth, args)
+                print >> sys.stderr, "%s: %s" % (type(e), e)
 
