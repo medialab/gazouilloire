@@ -20,4 +20,5 @@ else
   CSVOPT="--type=csv"
 fi
 
-mongoexport -d "$DBNAME" -c tweets -f _id $CSVOPT > "$BACKUPDIR/${DBNAME}_tweets_ids.csv"
+mongoexport -d "$DBNAME" -c tweets -f _id $CSVOPT --quiet > "$BACKUPDIR/${DBNAME}_tweets_ids.csv"
+gzip -q -f "$BACKUPDIR/${DBNAME}_tweets_ids.csv"
