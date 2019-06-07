@@ -14,7 +14,7 @@ else
   DBNAME=$(grep '"db":' config.json | awk -F '"' '{print $4}')
 fi
 
-if mongo --version | grep 'version: 2'; then
+if mongo --version | grep -q 'version: 2'; then
   CSVOPT="--csv"
 else
   CSVOPT="--type=csv"
