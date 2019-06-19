@@ -186,7 +186,7 @@ def format_keyword(k):
         return "from:%s OR to:%s OR @%s" % (kutf, kutf, kutf)
     if " AND " in k or " + " in k:
         k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
-    query = urllib.quote(k.encode('utf-8'), '')
+    query = urllib.quote(k.encode('utf-8'), ' ')
     for operator in ["from", "to", "list", "filter", "lang", "url", "since", "until"]:
         query = query.replace(operator + "%3A", operator + ":")
     return query
