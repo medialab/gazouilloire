@@ -186,7 +186,7 @@ def format_keyword(k):
         return "from:%s OR to:%s OR @%s" % (kutf, kutf, kutf)
     if " AND " in k or " + " in k:
         k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
-    query = urllib.quote(k.encode('utf-8'), '')
+    query = urllib.quote(k.encode('utf-8'), ' ')
     for operator in ["from", "to", "list", "filter", "lang", "url", "since", "until"]:
         query = query.replace(operator + "%3A", operator + ":")
     return query
@@ -198,7 +198,7 @@ re_split_url_pieces = re.compile(r'[^a-z0-9]+', re.I)
 def format_url_query(urlquery):
     return " ".join([k for k in re_split_url_pieces.split(urlquery) if k.strip()])
 
-def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, locale, geocode, exit_event, debug=False):
+def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event, debug=False):
     # Stream parameters reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters
     # Stream operators reference: https://developer.twitter.com/en/docs/tweets/rules-and-filtering/overview/standard-operators.html
     # Stream special messages reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/streaming-message-types
@@ -247,6 +247,8 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
 
             # prepare stream query arguments
             args = {'filter_level': 'none', 'stall_warnings': 'true'}
+            if language:
+                args['language'] = language
             if geocode:
                 args['locations'] = geocode
             else:
@@ -352,7 +354,8 @@ def write_search_state(state):
 
 # TODO
 # - improve logs : add INFO on result of all queries on a keyword if new
-def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, geocode, exit_event, debug=False):
+
+def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event, no_rollback=False, debug=False):
     # Search operators reference: https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2)
@@ -423,14 +426,19 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                 while not left and not exit_event.is_set():
                     try:
                         next_reset, _, left = get_twitter_rates(searchco, searchco2)
-                        if debug and left:
-                            log("DEBUG", "Resuming search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
+                        if debug:
+                            if left:
+                                log("DEBUG", "Resuming search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
+                            else:
+                                log("DEBUG", "No more queries available, stalling until %s" % next_reset)
                     except Exception as e:
                         log("ERROR", "Issue while collecting twitter rates. %s: %s" % (type(e), e))
                     if not left:
                         stall_queries(next_reset, exit_event)
 
                 args = {'q': query, 'count': 100, 'include_entities': True, 'result_type': 'recent', 'tweet_mode': 'extended'}
+                if language:
+                    args['lang'] = language
                 if geocode:
                     args['geocode'] = geocode
                 if max_id:
@@ -464,6 +472,8 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                         continue
                     if since < tid:
                         since = tid + 1
+                        if no_rollback and not queries_since_id[query]:
+                            break
                     if not max_id or max_id > tid:
                         max_id = tid - 1
                     if planning is not None:
@@ -478,13 +488,13 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                     tw["gazouilloire_source"] = "search"
                     pile.put(dict(tw))
                     news += 1
-                if news == 0:
-                    break
-                if debug:
+                if debug and news:
                     log("DEBUG", "[search] +%d tweets (%s)" % (news, query))
+                if news < 25:
+                    break
             queries_since_id[query] = since
             write_search_state(queries_since_id)
-        breakable_sleep(max(timegap, next_reset - time.time() - 2*left), exit_event)
+        breakable_sleep(max(timegap, next_reset - time.time() - 1.5*left), exit_event)
       except KeyboardInterrupt:
         log("INFO", "closing searcher...")
         exit_event.set()
@@ -541,6 +551,7 @@ if __name__=='__main__':
     except Exception as e:
         log('ERROR', 'Could not initiate connection to MongoDB: %s %s' % (type(e), e))
         sys.exit(1)
+    language = conf.get('language', None)
     streamgeocode = None
     searchgeocode = None
     if "geolocalisation" in conf and conf["geolocalisation"]:
@@ -565,6 +576,7 @@ if __name__=='__main__':
                 sys.exit(1)
     grab_conversations = "grab_conversations" in conf and conf["grab_conversations"]
     resolve_links = "resolve_redirected_links" in conf and conf["resolve_redirected_links"]
+    no_rollback = "catchup_past_week" not in conf or not conf["catchup_past_week"]
     dl_medias = "download_medias" in conf and conf["download_medias"]
     if dl_medias:
         medias_dir = conf.get("medias_directory", "medias")
@@ -594,10 +606,10 @@ if __name__=='__main__':
         download.daemon = True
         download.start()
     signal.signal(signal.SIGINT, default_handler)
-    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, streamgeocode, exit_event, conf['debug']))
+    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, streamgeocode, exit_event, conf['debug']))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, searchgeocode, exit_event, conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event, no_rollback, conf['debug']))
     search.start()
     def stopper(*args):
         exit_event.set()

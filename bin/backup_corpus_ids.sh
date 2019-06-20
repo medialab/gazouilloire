@@ -21,4 +21,8 @@ else
 fi
 
 mongoexport -d "$DBNAME" -c tweets -f _id $CSVOPT --quiet > "$BACKUPDIR/${DBNAME}_tweets_ids.csv"
-gzip -q -f "$BACKUPDIR/${DBNAME}_tweets_ids.csv"
+if [ "$?" -eq 0 ] && test -s "$BACKUPDIR/${DBNAME}_tweets_ids.csv"; then
+  gzip -q -f "$BACKUPDIR/${DBNAME}_tweets_ids.csv"
+else
+  echo "WARNING, it seems there was an error while backupping tweets IDs in $BACKUPDIR/${DBNAME}_tweets_ids.csv"
+fi
