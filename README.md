@@ -41,6 +41,7 @@ a `config.json` file is created. Open it to configure the collection parameters.
     ```json
     "keywords": [
         "amour",
+        "\"mots successifs\"",
         "@medialab_scpo"
     ],
     "url_pieces": [
@@ -48,36 +49,37 @@ a `config.json` file is created. Open it to configure the collection parameters.
     ],
     ```
 
+  Some advanced filters can be used in combination with the keywords, such as `-undesiredkeyword`, `filter:links`, `-filter:media`, `-filter:retweets`, etc. See [Twitter API's documentation](https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators) for more details.
+
   Avoid using accented characters (Twitter will automatically return both tweets with and without accents, for instance searching "heros" will find both tweets with "heros" and "héros").
 
   Note that there are three possibilities to filter further:
 
   - **language**: in order to collect only tweets written in a specific language : just add `"language": "fr"` to the config (the language should be written in [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes))
-  - **geolocalisation**: there are two ways to specify a geographical filter:
-  
-      ```json
-      "geolocation": "Paris, France",
-      "geolocation_type": "city", #possible values: "country"/"admin"/"city"
-      ```
-      or using a bounding box:
-      ```json
-      "geolocation": [48.70908786918211, 2.1533203125, 49.00274483644453, 2.610626220703125],
-      ```
-  - **time_limited_keywords**: in order to filter on specific keywords during planned time period:
 
-    ```json
-    "time_limited_keywords": {
-        "#m6": [
-            ["2014-05-01 16:00", "2014-05-08 16:05"],
-            ["2014-05-08 16:00", "2014-05-08 16:05"],
-            ["2014-05-15 16:00", "2014-05-08 16:05"],
-            ["2014-05-22 16:00", "2014-05-08 16:05"]
-        ],
-        "bieber": [
-            ["2014-05-08 16:00", "2014-05-08 16:05"]
+  - **geolocation**: just add `"geolocation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box (for instance `[48.70908786918211, 2.1533203125, 49.00274483644453, 2.610626220703125]`) as shown in the config example file
+
+  - **time_limited_keywords**: in order to filter on specific keywords during planned time periods, for instance:
+
+  ```json
+  "time_limited_keywords": {
+        "#fosdem": [
+            ["2021-01-27 04:30", "2021-01-28 23:30"]
         ]
     },
     ```
+
+- Setup extra options:
+
+  - **resolve_redirected_links**: set to `true` or `false` to enable or disable automatic resolution of all links found in tweets (t.co links are always handled, but this allows resolving also all other shorteners like bit.ly).
+
+  - **grab_conversations**: set to `true` to activate automatic iterative collection of all tweets to which collected tweets are answering (warning: one should account for the presence of these when processing data, it often results in collecting tweets way out of the collection time period).
+
+  - **catchup_past_week**: Twitter's free API allows to collect tweet up to 7 days in the past only which gazouilloire does by default, set this option to `false` to disable this and only collect tweets posted after the collection was started.
+
+  - **download_medias**: set to `true` to activate automatic downloading of all medias (images and videos) posted by users within their tweets (this does not include images from social cards). Setup the `medias_directory` field in complement to setup the absolute path where Gazouilloire should store the images and videos on the machine.
+
+  - **timezone**: adjust the timezone within which tweets timestamps should be computed. Allowed values are proposed on Gazouilloire's startup when setting up an invalid one.
 
 
 - Run with:
