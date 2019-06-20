@@ -41,8 +41,9 @@ HowTo
 
   Avoid using accented characters (Twitter will automatically return both tweets with and without accents, for instance searching "heros" will find both tweets with "heros" and "héros").
 
-  Note that there are two possibilities to filter further:
-  
+  Note that there are three possibilities to filter further:
+
+  - language mode, in order to collect only tweets written in a specific language : just add `"language": "fr"` to the config (the language should be written in [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes))
   - geolocalisation mode: just add ``"geolocalisation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box as shown in the config example file
   - time limited keywords mode, in order to filter on specific keywords during planned time period:
 
