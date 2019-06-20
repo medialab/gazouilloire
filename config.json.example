@@ -34,6 +34,7 @@
     "geolocalisation_type": "admin", "possible_values": "country/admin/city",
     "resolve_redirected_links": true,
     "grab_conversations": false,
+    "catchup_past_week": true,
     "download_medias": false,
     "medias_directory": "medias",
     "timezone": "Europe/Paris",
