@@ -20,6 +20,7 @@
     "geolocation": "Paris, France",
     "resolve_redirected_links": true,
     "grab_conversations": false,
+    "catchup_past_week": true,
     "download_medias": {
         "photos": false,
         "videos": false,

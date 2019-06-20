@@ -366,7 +366,7 @@ def write_search_state(state):
 # TODO
 # - improve logs : add INFO on result of all queries on a keyword if new
 
-def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event):
+def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event, no_rollback=False):
     # Search operators reference: https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2, retry=3)
@@ -482,6 +482,8 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                         continue
                     if since < tid:
                         since = tid + 1
+                        if no_rollback and not queries_since_id[query]:
+                            break
                     if not max_id or max_id > tid:
                         max_id = tid - 1
                     if planning is not None:
@@ -568,6 +570,7 @@ def main(conf):
                 sys.exit(1)
     grab_conversations = "grab_conversations" in conf and conf["grab_conversations"]
     resolve_links = "resolve_redirected_links" in conf and conf["resolve_redirected_links"]
+    no_rollback = "catchup_past_week" not in conf or not conf["catchup_past_week"]
     dl_medias = "download_medias" in conf and conf["download_medias"] and any(conf["download_medias"].values())
     if dl_medias:
         medias_types = set([k for k in conf["download_medias"] if conf["download_medias"][k]])
@@ -601,7 +604,7 @@ def main(conf):
     stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, streamgeocode, exit_event))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event))
+    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event, no_rollback))
     search.start()
     def stopper(*args):
         exit_event.set()
