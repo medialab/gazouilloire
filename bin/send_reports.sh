@@ -24,5 +24,5 @@ SENDER=$3
 RECEIVERS=$4
 
 bin/build_weekly_report.sh report_filters.txt "$OUTDIR" "$PUBLICURL" 
-cat "$OUTDIR"/$(ls -rt "$OUTDIR" | tail -1)/report.txt | mail -s "[$CORPUS] Weekly tweets report" -S replyto="$SENDER" $RECEIVERS 
+cat "$OUTDIR"/$(ls -rt "$OUTDIR" | grep -v media | tail -1)/report.txt | mail -s "[$CORPUS] Weekly tweets report" -S replyto="$SENDER" $RECEIVERS 
 
