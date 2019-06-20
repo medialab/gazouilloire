@@ -426,8 +426,11 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                 while not left and not exit_event.is_set():
                     try:
                         next_reset, _, left = get_twitter_rates(searchco, searchco2)
-                        if debug and left:
-                            log("DEBUG", "Resuming search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
+                        if debug:
+                            if left:
+                                log("DEBUG", "Resuming search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
+                            else:
+                                log("DEBUG", "No more queries available, stalling until %s" % next_reset)
                     except Exception as e:
                         log("ERROR", "Issue while collecting twitter rates. %s: %s" % (type(e), e))
                     if not left:
@@ -485,13 +488,13 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                     tw["gazouilloire_source"] = "search"
                     pile.put(dict(tw))
                     news += 1
-                if news == 0:
-                    break
-                if debug:
+                if debug and news:
                     log("DEBUG", "[search] +%d tweets (%s)" % (news, query))
+                if news < 25:
+                    break
             queries_since_id[query] = since
             write_search_state(queries_since_id)
-        breakable_sleep(max(timegap, next_reset - time.time() - 2*left), exit_event)
+        breakable_sleep(max(timegap, next_reset - time.time() - 1.5*left), exit_event)
       except KeyboardInterrupt:
         log("INFO", "closing searcher...")
         exit_event.set()
