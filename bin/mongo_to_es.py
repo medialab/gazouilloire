@@ -33,7 +33,10 @@ ES_LINKS_MAPPINGS = DB_MAPPINGS['links_mapping']
 @click.argument('es_index_name', default='')
 @click.argument('es_host', default='localhost')
 @click.argument('es_port', default=9200)
-def migrate(mongo_host, mongo_port, mongo_db, es_host, es_port, es_index_name):
+@click.option('-a', '--after', default=None, type=int, show_default=True, help="minimum timestamp")
+@click.option('-b', '--before', default=None, type=int, show_default=True, help="maximum timestamp")
+@click.option('--links/--no-links', default=True)
+def migrate(mongo_db, mongo_host, mongo_port, es_index_name, es_host, es_port, after, before, links):
     if not es_index_name:
         es_index_name = mongo_db
     print("Initialising Mongo & ES clients...")
@@ -71,7 +74,14 @@ def migrate(mongo_host, mongo_port, mongo_db, es_host, es_port, es_index_name):
     i = 0
     bulkload = []
     print("Migrating database...")
-    for tweet in MONGO_DB.tweets.find():
+    query = {}
+    if before and after:
+        query["$and"] = [{"timestamp": {"$gte": after}}, {"timestamp": {"$lte": before}}]
+    elif after:
+        query["timestamp"] = {"$gte": after}
+    elif before:
+        query["timestamp"] = {"$lte": before}
+    for tweet in MONGO_DB.tweets.find(query):
         i += 1
         bulkload.append({
             '_id': tweet['_id'],
@@ -85,26 +95,29 @@ def migrate(mongo_host, mongo_port, mongo_db, es_host, es_port, es_index_name):
             print('  ' + str(i) + " tweets indexed.", end="\r")
     helpers.bulk(ES_CLIENT, bulkload, index=ES_TWEETS_INDEX, doc_type='tweet')
     print('  ' + str(i) + " tweets indexed.")
-    i = 0
-    links_bulkload = []
-    for link in MONGO_DB.links.find():
-        i += 1
-        links_bulkload.append({
-            '_source': {
-                "link_id": link['_id'],
-                "real": link.get('real', None)
-            }
-        })
+
+    if links:
+        i = 0
+        links_bulkload = []
+        for link in MONGO_DB.links.find():
+            i += 1
+            links_bulkload.append({
+                '_source': {
+                    "link_id": link['_id'],
+                    "real": link.get('real', None)
+                }
+            })
 
 
-        if i % 1800 == 0:
-            helpers.bulk(ES_CLIENT, links_bulkload,
-                         index=ES_LINKS_INDEX, doc_type='link')
-            links_bulkload = []
-            print('  ' + str(i) + " links indexed.", end="\r")
-    helpers.bulk(ES_CLIENT, links_bulkload,
-                 index=ES_LINKS_INDEX, doc_type='link')
-    print('  ' + str(i) + " links indexed.")
+            if i % 1800 == 0:
+                helpers.bulk(ES_CLIENT, links_bulkload,
+                             index=ES_LINKS_INDEX, doc_type='link')
+                links_bulkload = []
+                print('  ' + str(i) + " links indexed.", end="\r")
+        helpers.bulk(ES_CLIENT, links_bulkload,
+                     index=ES_LINKS_INDEX, doc_type='link')
+        print('  ' + str(i) + " links indexed.")
+
     print('Done (took', str((datetime.now() - startTime).total_seconds()) + ' seconds)')
 
 
