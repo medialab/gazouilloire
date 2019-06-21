@@ -8,9 +8,10 @@ from elasticsearch import helpers
 try:
     with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), "config.json"), "r") as confile:
         conf = json.loads(confile.read())
+        analyzer = conf.get('text_analyzer', 'standard')
 except Exception as e:
-    print('ERROR - Could not open config.json: %s %s' % (type(e), e))
-    sys.exit(1)
+    print('WARNING - Could not open config.json: %s %s' % (type(e), e))
+    analyzer = 'standard'
 
 try:
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "db_mappings.json"), "r") as db_mappings:
@@ -23,7 +24,6 @@ except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
     sys.exit(1)
 
 # updating the text analyzer according to the config.json
-analyzer = conf.get('text_analyzer', 'standard')
 DB_MAPPINGS['tweets_mapping']['mappings']['tweet']['properties']['user_description']['analyzer'] = analyzer
 DB_MAPPINGS['tweets_mapping']['mappings']['tweet']['properties']['text']['analyzer'] = analyzer
 
