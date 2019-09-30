@@ -26,14 +26,14 @@ import requests
 requests.packages.urllib3.disable_warnings()
 from multiprocessing import Process, Queue, Event
 import signal
-from url_resolver import resolve_url as resolve_redirects
 from fake_useragent import UserAgent
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
-from tweets import prepare_tweet, prepare_tweets, get_timestamp
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 
-from database import db_manager
+from gazouilloire.url_resolver import resolve_url as resolve_redirects
+from gazouilloire.tweets import prepare_tweet, prepare_tweets, get_timestamp
+from gazouilloire.database import db_manager
 
 def log(typelog, text):
     try:
