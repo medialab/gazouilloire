@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import sys
 import json
 import click
+from datetime import datetime
 from pymongo import MongoClient, ASCENDING
 from minet import multithreaded_resolve
 
@@ -20,12 +22,13 @@ def prepare_db(mongo_host, mongo_port, mongo_db):
     tweetscoll.ensure_index([('links_to_resolve', ASCENDING), ('_id', ASCENDING)], background=True)
     return linkscoll, tweetscoll
 
-def count_and_log(tweetscoll, batch_size, done=""):
-    todo = list(tweetscoll.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=batch_size, sort=[("_id", 1)]))
+def count_and_log(tweetscoll, batch_size, done=0, skip=0):
+    todo = list(tweetscoll.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=batch_size, sort=[("_id", -1)], skip=skip))
     left = tweetscoll.count({"links_to_resolve": True})
     if done:
         done = "(+%s new redirections resolved out of %s)" % (done, len(todo))
-    print("\n- RESOLVING LINKS: %s waiting %s\n" % (left, done))
+    t = datetime.now().isoformat()
+    print("\n- [%s] RESOLVING LINKS: %s waiting (done:%s skipped:%s)\n" % (t, left, done or "", skip))
     return todo, left
 
 @click.command()
@@ -37,20 +40,21 @@ def count_and_log(tweetscoll, batch_size, done=""):
 def resolve(batch_size, mongo_db, mongo_host, mongo_port, verbose):
     linkscoll, tweetscoll = prepare_db(mongo_host, mongo_port, mongo_db)
 
-    todo, left = count_and_log(tweetscoll, batch_size)
+    skip = 0
+    todo, left = count_and_log(tweetscoll, batch_size, skip=skip)
     while todo:
         done = 0
         batch_urls = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": batch_urls}})}
         urls_to_clear = [u for u in batch_urls if u not in alreadydone]
-        for res in multithreaded_resolve(urls_to_clear, threads=100, throttle=2, max_redirects=15):
+        for res in multithreaded_resolve(urls_to_clear, threads=50, throttle=0.5, max_redirects=15):
             source = res.url
             status, target = res.stack[-1]
             if res.error:
-                print("      ERROR %s on resolving %s: %s (last url: %s)" % (status, source, res.error, target))
+                print("ERROR on resolving %s: %s (last url: %s)" % (source, res.error, target), file=sys.stderr)
                 continue
             if verbose:
-                print("          ", status, ":", source, "->", target)
+                print("          ", status, ":", source, "->", target, file=sys.stderr)
             try:
                 linkscoll.save({'_id': source, 'real': target})
                 alreadydone[source] = target
@@ -74,6 +78,7 @@ def resolve(batch_size, mongo_db, mongo_host, mongo_port, verbose):
                     break
                 gdlinks.append(alreadydone[link])
             if len(gdlinks) != len(tweet.get("links", [])):
+                skip += 1
                 continue
             tweetscoll.update({'$or': [{'_id': tweetid}, {'retweet_id': tweetid}]}, {'$set': {'proper_links': gdlinks, 'links_to_resolve': False}}, upsert=False, multi=True)
             ids_done_in_batch.add(tweetid)
@@ -82,7 +87,7 @@ def resolve(batch_size, mongo_db, mongo_host, mongo_port, verbose):
         if tweets_already_done:
             tweetscoll.update({"_id": {"$in": tweets_already_done}}, {"$set": {"links_to_resolve": False}}, upsert=False, multi=True)
 
-        todo, left = count_and_log(tweetscoll, batch_size, done=done)
+        todo, left = count_and_log(tweetscoll, batch_size, done=done, skip=skip)
 
 if __name__ == '__main__':
     resolve()
