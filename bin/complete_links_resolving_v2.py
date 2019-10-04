@@ -6,6 +6,7 @@ import json
 import click
 from datetime import datetime
 from pymongo import MongoClient, ASCENDING
+from pymongo.errors import BulkWriteError
 from minet import multithreaded_resolve
 
 BATCH_SIZE = 1000
@@ -46,23 +47,42 @@ def resolve(batch_size, mongo_db, mongo_host, mongo_port, verbose):
         done = 0
         batch_urls = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
         alreadydone = {l["_id"]: l["real"] for l in linkscoll.find({"_id": {"$in": batch_urls}})}
-        urls_to_clear = [u for u in batch_urls if u not in alreadydone]
-        for res in multithreaded_resolve(urls_to_clear, threads=50, throttle=0.5, max_redirects=15):
+        urls_to_clear = []
+        for u in batch_urls:
+            if u in alreadydone:
+                continue
+            if u.startswith("https://twitter.com/") and "/status/" in u:
+                alreadydone[u] = u.replace("?s=19", "")
+                continue
+            urls_to_clear.append(u)
+        links_to_save = []
+        t = datetime.now().isoformat()
+        print("  + [%s] %s urls to resolve" % (t, len(urls_to_clear)))
+        try:
+          for res in multithreaded_resolve(urls_to_clear, threads=min(50, batch_size), throttle=0.2, max_redirects=10, follow_meta_refresh=True):
             source = res.url
-            status, target = res.stack[-1]
+            last = res.stack[-1]
             if res.error:
-                print("ERROR on resolving %s: %s (last url: %s)" % (source, res.error, target), file=sys.stderr)
+                print("ERROR on resolving %s: %s (last url: %s)" % (source, res.error, last.url), file=sys.stderr)
                 continue
             if verbose:
-                print("          ", status, ":", source, "->", target, file=sys.stderr)
-            try:
-                linkscoll.save({'_id': source, 'real': target})
-                alreadydone[source] = target
-                if source != target:
-                    done += 1
-            except Exception as e:
-                print("  - WARNING: Could not store resolved link %s -> %s because %s: %s" % (source, target, type(e), e))
+                print("          ", last.status, "(%s)" % last.type, ":", source, "->", last.url, file=sys.stderr)
+            links_to_save.append({'_id': source, 'real': last.url})
+            alreadydone[source] = last.url
+            if source != last.url:
+                done += 1
+        except Exception as e:
+            print("CRASHED while resolving %s" % urls_to_clear, file=sys.stderr)
+            raise e
+        t = datetime.now().isoformat()
+        print("  + [%s] STORING %s REDIRECTIONS IN MONGO" % (t, len(links_to_save)))
+        try:
+            result = linkscoll.insert_many(links_to_save, ordered=False)
+        except BulkWriteError as e:
+            print("  + WARNING: Could not store some resolved links in MongoDB because %s: %s" % (type(e), e.__dict__))
 
+        t = datetime.now().isoformat()
+        print("  + [%s] UPDATING TWEETS LINKS IN MONGO" % t)
         tweets_already_done = []
         ids_done_in_batch = set()
         for tweet in todo:

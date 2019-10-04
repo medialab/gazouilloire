@@ -15,5 +15,6 @@ networkx == 2.2
 future
 elasticsearch >= 6.0.0, < 7.0.0
 ural
+minet >= 0.14.1
 # commented since code piece was integrated
 #urlsresolver
