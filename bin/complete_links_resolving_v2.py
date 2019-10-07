@@ -67,19 +67,32 @@ def resolve(batch_size, mongo_db, mongo_host, mongo_port, verbose):
                 continue
             if verbose:
                 print("          ", last.status, "(%s)" % last.type, ":", source, "->", last.url, file=sys.stderr)
-            links_to_save.append({'_id': source, 'real': last.url})
+            if len(source) < 1025:
+                links_to_save.append({'_id': source, 'real': last.url})
             alreadydone[source] = last.url
             if source != last.url:
                 done += 1
         except Exception as e:
-            print("CRASHED while resolving %s" % urls_to_clear, file=sys.stderr)
-            raise e
+            print("CRASHED with %s (%s) while resolving batch, skipping it for now..." % (e, type(e)))
+            print("CRASHED with %s (%s) while resolving %s" % (e, type(e), urls_to_clear), file=sys.stderr)
+            skip += batch_size
+            print("  + [%s] STORING %s REDIRECTIONS IN MONGO" % (t, len(links_to_save)))
+            if links_to_save:
+                try:
+                    result = linkscoll.insert_many(links_to_save, ordered=False)
+                except BulkWriteError as e:
+                    print("  + WARNING: Could not store some resolved links in MongoDB because %s: %s" % (type(e), e.__dict__))
+            todo, left = count_and_log(tweetscoll, batch_size, done=done, skip=skip)
+            continue
+            #raise e
+
         t = datetime.now().isoformat()
         print("  + [%s] STORING %s REDIRECTIONS IN MONGO" % (t, len(links_to_save)))
-        try:
-            result = linkscoll.insert_many(links_to_save, ordered=False)
-        except BulkWriteError as e:
-            print("  + WARNING: Could not store some resolved links in MongoDB because %s: %s" % (type(e), e.__dict__))
+        if links_to_save:
+            try:
+                result = linkscoll.insert_many(links_to_save, ordered=False)
+            except BulkWriteError as e:
+                print("  + WARNING: Could not store some resolved links in MongoDB because %s: %s" % (type(e), e.__dict__))
 
         t = datetime.now().isoformat()
         print("  + [%s] UPDATING TWEETS LINKS IN MONGO" % t)
