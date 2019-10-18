@@ -59,7 +59,7 @@ def resolve(batch_size, mongo_db, mongo_host, mongo_port, verbose):
         t = datetime.now().isoformat()
         print("  + [%s] %s urls to resolve" % (t, len(urls_to_clear)))
         try:
-          for res in multithreaded_resolve(urls_to_clear, threads=min(50, batch_size), throttle=0.2, max_redirects=10, follow_meta_refresh=True):
+          for res in multithreaded_resolve(urls_to_clear, threads=min(50, batch_size), throttle=0.2, max_redirects=10, follow_meta_refresh=True, insecure=True):
             source = res.url
             last = res.stack[-1]
             if res.error:
@@ -67,7 +67,7 @@ def resolve(batch_size, mongo_db, mongo_host, mongo_port, verbose):
                 continue
             if verbose:
                 print("          ", last.status, "(%s)" % last.type, ":", source, "->", last.url, file=sys.stderr)
-            if len(source) < 1025:
+            if len(source) < 1024:
                 links_to_save.append({'_id': source, 'real': last.url})
             alreadydone[source] = last.url
             if source != last.url:
@@ -82,9 +82,9 @@ def resolve(batch_size, mongo_db, mongo_host, mongo_port, verbose):
                     result = linkscoll.insert_many(links_to_save, ordered=False)
                 except BulkWriteError as e:
                     print("  + WARNING: Could not store some resolved links in MongoDB because %s: %s" % (type(e), e.__dict__))
+            #raise e
             todo, left = count_and_log(tweetscoll, batch_size, done=done, skip=skip)
             continue
-            #raise e
 
         t = datetime.now().isoformat()
         print("  + [%s] STORING %s REDIRECTIONS IN MONGO" % (t, len(links_to_save)))
