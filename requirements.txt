@@ -15,4 +15,4 @@ networkx == 2.2
 future
 ural
 elasticsearch >= 6.0.0, < 7.0.0
-minet >= 0.19
+minet >= 0.20.1
