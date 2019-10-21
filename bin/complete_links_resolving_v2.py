@@ -4,10 +4,12 @@
 import sys
 import json
 import click
+from urllib3 import Timeout
 from datetime import datetime
 from pymongo import MongoClient, ASCENDING
 from pymongo.errors import BulkWriteError
 from minet import multithreaded_resolve
+from minet.exceptions import RedirectError
 
 BATCH_SIZE = 1000
 with open('config.json') as confile:
@@ -59,19 +61,27 @@ def resolve(batch_size, mongo_db, mongo_host, mongo_port, verbose):
         t = datetime.now().isoformat()
         print("  + [%s] %s urls to resolve" % (t, len(urls_to_clear)))
         try:
-          for res in multithreaded_resolve(urls_to_clear, threads=min(50, batch_size), throttle=0.2, max_redirects=10, follow_meta_refresh=True, insecure=True):
-            source = res.url
-            last = res.stack[-1]
-            if res.error:
-                print("ERROR on resolving %s: %s (last url: %s)" % (source, res.error, last.url), file=sys.stderr)
-                continue
-            if verbose:
-                print("          ", last.status, "(%s)" % last.type, ":", source, "->", last.url, file=sys.stderr)
-            if len(source) < 1024:
-                links_to_save.append({'_id': source, 'real': last.url})
-            alreadydone[source] = last.url
-            if source != last.url:
-                done += 1
+            for res in multithreaded_resolve(
+              urls_to_clear,
+              threads=min(50, batch_size),
+              throttle=0.2,
+              max_redirects=20,
+              insecure=True,
+              timeout=Timeout(connect=5, read=25),
+              follow_meta_refresh=True
+            ):
+                source = res.url
+                last = res.stack[-1]
+                if res.error and type(res.error) != RedirectError:
+                    print("ERROR on resolving %s: %s (last url: %s)" % (source, res.error, last.url), file=sys.stderr)
+                    continue
+                if verbose:
+                    print("          ", last.status, "(%s)" % last.type, ":", source, "->", last.url, file=sys.stderr)
+                if len(source) < 1024:
+                    links_to_save.append({'_id': source, 'real': last.url})
+                alreadydone[source] = last.url
+                if source != last.url:
+                    done += 1
         except Exception as e:
             print("CRASHED with %s (%s) while resolving batch, skipping it for now..." % (e, type(e)))
             print("CRASHED with %s (%s) while resolving %s" % (e, type(e), urls_to_clear), file=sys.stderr)
