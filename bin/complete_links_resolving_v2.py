@@ -26,7 +26,7 @@ def prepare_db(mongo_host, mongo_port, mongo_db):
     return linkscoll, tweetscoll
 
 def count_and_log(tweetscoll, batch_size, done=0, skip=0):
-    todo = list(tweetscoll.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=batch_size, sort=[("_id", -1)], skip=skip))
+    todo = list(tweetscoll.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=batch_size, sort=[("_id", 1)], skip=skip))
     left = tweetscoll.count({"links_to_resolve": True})
     if done:
         done = "(+%s new redirections resolved out of %s)" % (done, len(todo))
@@ -67,12 +67,12 @@ def resolve(batch_size, mongo_db, mongo_host, mongo_port, verbose):
               throttle=0.2,
               max_redirects=20,
               insecure=True,
-              timeout=Timeout(connect=5, read=25),
+              timeout=Timeout(connect=10, read=30),
               follow_meta_refresh=True
             ):
                 source = res.url
                 last = res.stack[-1]
-                if res.error and type(res.error) != RedirectError:
+                if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
                     print("ERROR on resolving %s: %s (last url: %s)" % (source, res.error, last.url), file=sys.stderr)
                     continue
                 if verbose:
