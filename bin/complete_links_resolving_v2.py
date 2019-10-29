@@ -29,7 +29,7 @@ def count_and_log(tweetscoll, batch_size, done=0, skip=0):
     todo = list(tweetscoll.find({"links_to_resolve": True}, projection={"links": 1, "proper_links": 1, "retweet_id": 1}, limit=batch_size, sort=[("_id", 1)], skip=skip))
     left = tweetscoll.count({"links_to_resolve": True})
     if done:
-        done = "(+%s new redirections resolved out of %s)" % (done, len(todo))
+        done = "(+%s actual redirections resolved out of %s)" % (done, len(todo))
     t = datetime.now().isoformat()
     print("\n- [%s] RESOLVING LINKS: %s waiting (done:%s skipped:%s)\n" % (t, left, done or "", skip))
     return todo, left
