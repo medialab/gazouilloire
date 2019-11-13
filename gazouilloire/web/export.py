@@ -28,8 +28,8 @@ TWEET_FIELDS = [
   "source_name",                    # name of the medium used to post the message
   "source_url",                     # link to the medium used to post the message
   "location",                       # location declared in the user's profile (at collection time)
-  "lat",                            # latitude of messages geolocalized
-  "lng",                            # longitude of messages geolocalized
+  "lat",                            # latitude of messages geolocalized (usually concerns less than 1% of tweets)
+  "lng",                            # longitude of messages geolocalized (usually concerns less than 1% of tweets)
   "from_user_id",                   # author's user digital ID
   "from_user_realname",             # author's detailed textual name (at collection time)
   "from_user_verified",             # whether the author's account is certified
@@ -54,9 +54,9 @@ TWEET_FIELDS = [
   "retweeted_id",                   # digital ID of the retweeted message
   "retweeted_user_name",            # text ID of the user who authored the retweeted message
   "retweeted_user_id",              # digital ID of the user who authoring the retweeted message
-  "quoted_id",                      # digital ID of the retweeted message
-  "quoted_user_name",               # text ID of the user who authored the retweeted message
-  "quoted_user_id",                 # digital ID of the user who authoring the retweeted message
+  "quoted_id",                      # digital ID of the quoted message
+  "quoted_user_name",               # text ID of the user who authored the quoted message
+  "quoted_user_id",                 # digital ID of the user who authoring the quoted message
   "links",                          # list of links included in the text content, with redirections resolved, separated by |
   "medias_urls",                    # list of links to images/videos embedded, separated by |
   "medias_files",                   # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabled
