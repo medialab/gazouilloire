@@ -212,7 +212,8 @@ def prepare_tweet(tweet, locale=None):
                         "bitrate", 0))[-1]["url"]
                 else:
                     med_url = entity["media_url_https"]
-                med_name = med_url.split('/')[-1].split("?tag=")[0]
+                med_url = med_url.split("?tag=")[0]
+                med_name = med_url.split('/')[-1]
                 if med_name not in medids:
                     medids.add(med_name)
                     media_types.append(entity["type"])
