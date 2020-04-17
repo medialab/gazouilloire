@@ -1,7 +1,7 @@
 #/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import csv
+import csv, sys
 from pymongo import MongoClient, ASCENDING
 from fake_useragent import UserAgent
 from config import CSV_SOURCE, CSV_ENCODING, CSV_TWITTER_FIELD, MONGO_DATABASE, TWITTER
@@ -23,6 +23,10 @@ for f in ['retweet_id', 'in_reply_to_status_id_str', 'timestamp',
     tweetscoll.ensure_index([(f, ASCENDING)], background=True)
 tweetscoll.ensure_index([('links_to_resolve', ASCENDING), ('_id', ASCENDING)], background=True)
 
+api_field_call = 'screen_name'
+if '--use-ids' in sys.argv:
+    api_field_call = 'user_id'
+
 for i, row in enumerate(data):
     user = {}
     for k in row.keys():
@@ -33,7 +37,7 @@ for i, row in enumerate(data):
         print "  ALREADY DONE!"
         continue
     user['done'] = False
-    api_args = {'screen_name': user['twitter']}
+    api_args = {api_field_call: user['twitter']}
     metas = api.call('users.show', api_args)
     if not metas:
         print "SKIPPING tweets for %s whose account unfortunately disappeared" % user['twitter']

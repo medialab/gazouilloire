@@ -159,7 +159,7 @@ CORRESP_FIELDS = {
     "quoted_id": "quoted_id",
     "quoted_user_name": "quoted_user",
     "quoted_user_id": "quoted_user_id",
-    "links": lambda x: x.get("proper_links", x.get("links", [])),
+    "links": lambda x: [l.replace("%0D", "") for l in x.get("proper_links", x.get("links", []))],
     "medias_urls": lambda x: [_url for _id,_url in x.get("medias", [])],
     "medias_files": lambda x: [_id for _id,_url in x.get("medias", [])],
     "mentioned_user_names": lambda x: x.get("mentions_names", process_extract(x["text"], "@")),
