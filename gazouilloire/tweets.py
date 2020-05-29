@@ -35,6 +35,9 @@ def get_timestamp(t, locale, field='created_at'):
 
 nostr_field = lambda f: f.replace('_str', '')
 
+re_query = re.compile(r'\?tag=\d+$', re.I)
+clean_query = lambda url: re_query.sub('', url)
+
 def grab_extra_meta(source, result, locale=None):
     for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "geo", "coordinates", "source", "truncated", "possibly_sensitive", "withheld_copyright", "withheld_scope", "withheld_countries", "retweet_count", "favorite_count", "reply_count"]:
         if meta in source:
@@ -145,6 +148,7 @@ def prepare_tweet(tweet, locale=None):
                     med_url = sorted(entity["video_info"]["variants"], key=lambda x: x.get("bitrate", 0))[-1]["url"]
                 else:
                     med_url = entity["media_url_https"]
+                med_url = clean_query(med_url)
                 med_name = med_url.split('/')[-1]
                 if med_name not in medids:
                     medids.add(med_name)
