@@ -22,7 +22,8 @@ PUBLICURL=$2
 CORPUS=$(echo $OUTDIR | sed -r 's|^.*/([^/]+)/?$|\1|')
 SENDER=$3
 RECEIVERS=$4
+ENDDATE=$5
 
-bin/build_weekly_report.sh report_filters.txt "$OUTDIR" "$PUBLICURL" 
+bin/build_weekly_report.sh report_filters.txt "$OUTDIR" "$PUBLICURL" $ENDDATE
 cat "$OUTDIR"/$(ls -rt "$OUTDIR" | grep -v media | tail -1)/report.txt | mail -s "[$CORPUS] Weekly tweets report" -S replyto="$SENDER" $RECEIVERS 
 
