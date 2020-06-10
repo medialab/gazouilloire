@@ -212,7 +212,7 @@ def get_coords(tw):
 
 isodate = lambda x: datetime.strptime(x, '%a %b %d %H:%M:%S +0000 %Y').isoformat()
 
-format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val or '\n' in val else val).encode('utf-8')
+format_csv = lambda val: ('"%s"' % val.replace('"', '""').strip() if "," in val or '"' in val or "\n" in val else val.strip()).encode('utf-8')
 
 def add_and_report(sett, val):
   leng = len(sett)
