@@ -12,4 +12,4 @@ flask
 Flask-Caching
 flask-compress
 networkx
-ural
+ural==0.21.0

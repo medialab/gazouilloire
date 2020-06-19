@@ -27,6 +27,18 @@ if len(sys.argv) > 1 and "--quiet" in sys.argv:
     sys.argv.remove("--quiet")
     verbose = False
 
+count = True
+if len(sys.argv) > 1 and "--no-count" in sys.argv:
+    sys.argv.remove("--no-count")
+    count = False
+
+limit = 0
+if len(sys.argv) > 2 and "--limit" in sys.argv:
+    limit = sys.argv[sys.argv.index('--limit') + 1]
+    sys.argv.remove("--limit")
+    sys.argv.remove(limit)
+    limit = int(limit)
+
 only_selected = False
 if SELECTED_FIELD and len(sys.argv) > 1 and "--selected" in sys.argv:
     sys.argv.remove("--selected")
@@ -36,13 +48,6 @@ include_threads = True
 if THREADS and len(sys.argv) > 1 and "--no-threads" in sys.argv:
     sys.argv.remove("--no-threads")
     include_threads = False
-
-limit = 0
-if len(sys.argv) > 2 and "--limit" in sys.argv:
-    limit = sys.argv[sys.argv.index('--limit') + 1]
-    sys.argv.remove("--limit")
-    sys.argv.remove(limit)
-    limit = int(limit)
 
 query = {}
 if only_selected:
@@ -69,14 +74,17 @@ elif len(sys.argv) > 2:
     for arg in sys.argv[1:]:
         query["$or"].append({"text": re.compile(arg.replace(' ', '\s+'), re.I)})
 
-if not limit:
-    count = mongodb.count(query)
+if limit:
+    total = limit
+elif count and verbose:
+    total = mongodb.count(query)
 else:
-    count = limit
-iterator = yield_csv(mongodb.find(query, sort=[("timestamp", 1)], limit=count), extra_fields=EXTRA_FIELDS)
+    total = mongodb.count()
+iterator = yield_csv(mongodb.find(query, sort=[("timestamp", 1)], limit=total), extra_fields=EXTRA_FIELDS)
+
 if verbose:
     import progressbar
-    bar = progressbar.ProgressBar(max_value=count)
+    bar = progressbar.ProgressBar(max_value=total)
     iterator = bar(iterator)
 for t in iterator:
     print t
