@@ -5,6 +5,10 @@ import csv, sys
 from pymongo import MongoClient, ASCENDING
 from fake_useragent import UserAgent
 from config import CSV_SOURCE, CSV_ENCODING, CSV_TWITTER_FIELD, MONGO_DATABASE, TWITTER
+try:
+    from config import CSV_LASTTWEET_FIELD
+except:
+    CSV_LASTTWEET_FIELD = None
 
 from gazouilloire.run import resolve_url
 from gazouilloire.tweets import prepare_tweet, clean_user_entities
@@ -33,9 +37,18 @@ for i, row in enumerate(data):
         user[k.decode(CSV_ENCODING)] = row[k].decode(CSV_ENCODING).replace(u' ', ' ').strip()
     user['twitter'] = user[CSV_TWITTER_FIELD].lstrip('@').lower()
     print "- WORKING ON %s" % user['twitter'], user
-    if db.users.find({'_id': user['twitter'], 'done': True}, limit=1).count():
-        print "  ALREADY DONE!"
-        continue
+    new_last_tweet_id = 0L
+    doneuser = db.users.find_one({'_id': user['twitter'])
+    if doneuser:
+        if CSV_LASTTWEET_FIELD:
+            last_tweet_id = long(user.pop(CSV_LASTTWEET_FIELD))
+            new_last_tweet_id = last_tweet_id
+            if doneuser.get("last_tweet_id", 0L) > last_tweet_id:
+                print "  ALREADY DONE!"
+                continue
+        elif doneuser.get("done"):
+            print "  ALREADY DONE!"
+            continue
     user['done'] = False
     api_args = {api_field_call: user['twitter']}
     metas = api.call('users.show', api_args)
@@ -53,6 +66,8 @@ for i, row in enumerate(data):
     api_args['contributor_details'] = 1
     api_args['include_rts'] = 1
     api_args['tweet_mode'] = "extended"
+    if last_tweet_id:
+        api_args["since_id"] = last_tweet_id
     tweets = api.call('statuses.user_timeline', api_args)
     while tweets:
         for tw in tweets:
@@ -64,10 +79,17 @@ for i, row in enumerate(data):
                 if po in tw:
                     tw.pop(po)
             db.tweets.update({'_id': tw['id']}, {"$set": tw}, upsert=True)
+            if tw["id"] > new_last_tweet_id:
+                new_last_tweet_id = tw["id"]
         print "...collected %s new tweets" % len(tweets)
         tweets = api.call('statuses.user_timeline', api_args)
-    db.users.update({'_id': user['twitter']}, {"$set": {"done": True}})
+    upd = {"done": True}
+    if new_last_tweet_id:
+        upd["last_tweet_id"] = new_last_tweet_id
+    db.users.update({'_id': user['twitter']}, {"$set": upd})
 
+print "Finished! You should now run links resolver on the db"
+exit()
 
 # TODO: refacto all of this with gazouilloire/run.py
 
