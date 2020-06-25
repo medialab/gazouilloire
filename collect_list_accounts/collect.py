@@ -37,18 +37,16 @@ for i, row in enumerate(data):
         user[k.decode(CSV_ENCODING)] = row[k].decode(CSV_ENCODING).replace(u' ', ' ').strip()
     user['twitter'] = user[CSV_TWITTER_FIELD].lstrip('@').lower()
     print "- WORKING ON %s" % user['twitter'], user
-    new_last_tweet_id = 0L
-    doneuser = db.users.find_one({'_id': user['twitter'])
-    if doneuser:
-        if CSV_LASTTWEET_FIELD:
-            last_tweet_id = long(user.pop(CSV_LASTTWEET_FIELD))
-            new_last_tweet_id = last_tweet_id
-            if doneuser.get("last_tweet_id", 0L) > last_tweet_id:
-                print "  ALREADY DONE!"
-                continue
-        elif doneuser.get("done"):
-            print "  ALREADY DONE!"
-            continue
+    if CSV_LASTTWEET_FIELD:
+        last_tweet_id = long(user.pop(CSV_LASTTWEET_FIELD))
+        new_last_tweet_id = last_tweet_id
+    else:
+        last_tweet_id = None
+        new_last_tweet_id = 0L
+    doneuser = db.users.find_one({'_id': user['twitter']})
+    if doneuser and ((last_tweet_id and doneuser.get("last_tweet_id", 0L) > last_tweet_id) or (not last_tweet_id and doneuser.get("done"))):
+        print "  ALREADY DONE!"
+        continue
     user['done'] = False
     api_args = {api_field_call: user['twitter']}
     metas = api.call('users.show', api_args)
