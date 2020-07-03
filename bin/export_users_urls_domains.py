@@ -11,6 +11,7 @@ from gazouilloire.web.export import format_csv, isodate
 with open('config.json') as confile:
     conf = json.loads(confile.read())
 
+print "Working on", conf['mongo']
 db = MongoClient(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]['tweets']
 
 urls = defaultdict(int)
@@ -33,10 +34,14 @@ with open("users_urls_domains.csv", "w") as f:
         media = 1 if t["medias"] else 0
         dtime = isodate(t["created_at"])
         for l in links:
-            lnk = normalize_url(l.replace("%0D", ""), strip_trailing_slash=True, strip_lang_subdomains=True)
+            try:
+                lnk = normalize_url(l.encode("utf-8").replace("%0D", ""), strip_trailing_slash=True, strip_lang_subdomains=True)
+            except Exception as e:
+                print >> sys.stderr, "ERROR normalizing url", l, type(e), e
+                lnk = l
             try:
                 domain = normalize_url(l.split("/")[2])
             except Exception as e:
                 print >> sys.stderr, "ERROR normalizing domain for url", l, type(e), e
                 domain = ""
-            print >> f, ",".join([format_csv(v) for v in [name, uid, l, lnk, domain, dtime, str(isRT), fols, str(media)]])
+            print >> f, ",".join([format_csv(v) for v in [name, uid, l, lnk, domain, dtime, str(isRT), str(fols), str(media)]])
