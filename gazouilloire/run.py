@@ -343,7 +343,7 @@ def get_twitter_rates(conn, conn2, retry=0):
     try:
         rate_limits = conn.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
         rate_limits2 = conn2.application.rate_limit_status(resources="search")['resources']['search']['/search/tweets']
-    except urllib2.URLError as e:
+    except URLError as e:
         if retry:
             time.sleep(1)
             return get_twitter_rates(conn, conn2, retry=retry-1)
@@ -519,7 +519,7 @@ def generate_geoloc_strings(x1, y1, x2, y2):
 
 if __name__=='__main__':
     try:
-        with open('config.json') as confile:
+        with open('../config.json') as confile:
             conf = json.loads(confile.read())
             for k in ['keywords', 'url_pieces', 'time_limited_keywords']:
                 if k not in conf:
