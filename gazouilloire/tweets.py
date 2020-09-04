@@ -66,6 +66,14 @@ def grab_extra_meta(source, result, locale=None):
             result[key] = source['user'][meta]
         elif 'user' in source and nostr_field(meta) in source['user']:
             result[key] = source['user'][nostr_field(meta)]
+    if "place" in source and source["place"] is not None:
+        for meta in ['country', 'full_name', 'name', 'place_type']:
+            key = "place_%s" % meta.replace('place_', '')
+            if meta in source['place']:
+                result[key] = source['place'][meta]
+        if "bounding_box" in source["place"] and "coordinates" in source["place"]["bounding_box"]:
+            result["place_coordinates"] = source["place"]["bounding_box"]["coordinates"][0]
+
     try:
         result['user_url'] = source['user']['entities']['url']['urls'][0]['expanded_url']
     except:

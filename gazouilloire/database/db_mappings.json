@@ -68,6 +68,27 @@
           "mentions_names": {
             "type": "keyword"
           },
+          "place_coordinates": {
+            "type": "float",
+            "index": false
+          },
+          "place_country": {
+            "type": "keyword"
+          },
+          "place_full_name": {
+            "type": "text"
+          },
+          "place_name": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          },
+          "place_type": {
+            "type": "keyword"
+          },
           "possibly_sensitive": {
             "type": "boolean"
           },
