@@ -123,17 +123,12 @@ class ElasticManager:
 
     def find_tweet(self, tweet_id):
         """Returns the tweet corresponding to the given id"""
-        response = self.db.search(
+        response = self.db.get(
             index=self.tweets,
-            body={
-                "query": {
-                    "match": {
-                        "_id": tweet_id
-                    }
-                }
-            }
+            doc_type="tweet",
+            id=tweet_id
         )
-        return format_response(response, single_result=True)
+        return response
 
     # resolver() methods
 
