@@ -20,7 +20,7 @@
             "type": "geo_point"
           },
           "created_at": {
-            "type": "keyword",
+            "type": "text",
             "index": false
           },
           "deleted": {
@@ -48,7 +48,13 @@
             "type": "keyword"
           },
           "links": {
-            "type": "keyword"
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 280
+              }
+            }
           },
           "links_to_resolve": {
             "type": "boolean"
@@ -66,7 +72,13 @@
             "type": "boolean"
           },
           "proper_links": {
-            "type": "keyword"
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 280
+              }
+            }
           },
           "quoted_id": {
             "type": "keyword"
@@ -101,17 +113,12 @@
             "type": "keyword"
           },
           "source": {
-            "type": "text"
+            "type": "keyword",
+            "ignore_above": 80
           },
           "text": {
             "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword"
-              }
-            },
-            "analyzer": "standard",
-            "fielddata": true
+            "analyzer": "standard"
           },
           "timestamp": {
             "type": "date",
@@ -120,11 +127,9 @@
           "truncated": {
             "type": "boolean"
           },
-          "tweet_id": {
-            "type": "long"
-          },
           "url": {
-            "type": "keyword"
+            "type": "text",
+            "index": false
           },
           "user_created_at": {
             "type": "keyword",
@@ -136,13 +141,7 @@
           },
           "user_description": {
             "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword"
-              }
-            },
-            "analyzer": "standard",
-            "fielddata": true
+            "analyzer": "standard"
           },
           "user_favourites": {
             "type": "integer"
@@ -163,7 +162,13 @@
             "type": "integer"
           },
           "user_location": {
-            "type": "keyword"
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 80
+              }
+            }
           },
           "user_name": {
             "type": "keyword"

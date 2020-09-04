@@ -50,7 +50,6 @@ def format_tweet_fields(tweet):
     elastic_tweet = {}
     for key in DB_MAPPINGS["tweets_mapping"]["mappings"]["tweet"]["properties"]:
         elastic_tweet[key] = tweet.get(key, None)
-    elastic_tweet["tweet_id"] = tweet["_id"]
     if not elastic_tweet["deleted"]:
         elastic_tweet["deleted"] = False
     if elastic_tweet["coordinates"]:
