@@ -8,7 +8,7 @@ import sys
 import re
 import csv
 import json
-from gazouilloire.database.mongomanager import MongoManager
+from gazouilloire.database import db_manager
 from gazouilloire.web.export import yield_csv, get_thread_ids_from_ids
 
 try:
@@ -22,10 +22,13 @@ SELECTED_FIELD = conf.get('export', {}).get('selected_field', None)
 EXTRA_FIELDS = conf.get('export', {}).get('extra_fields', [])
 
 try:
-    mongodb = MongoManager(conf['database']['host'], conf['database']['port'], conf['database']['db']).tweets
+    db = db_manager(**conf['database'])
+    db.prepare_indices()
 except Exception as e:
-    sys.stderr.write("ERROR: Could not initiate connection to MongoDB: %s %s" % (type(e), e))
-    exit(1)
+    sys.stderr.write(
+        "ERROR: Could not initiate connection to database: %s %s" % (type(e), e))
+    sys.exit(1)
+
 
 verbose = True
 if len(sys.argv) > 1 and "--quiet" in sys.argv:
@@ -70,6 +73,7 @@ elif len(sys.argv) > 2:
         query["$or"].append(
             {"text": re.compile(arg.replace(' ', r'\s+'), re.I)})
 
+print(query)
 count = mongodb.count(query)
 iterator = yield_csv(
     mongodb.find(query, sort=[("timestamp", 1)], limit=count), extra_fields=EXTRA_FIELDS)

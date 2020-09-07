@@ -10,19 +10,22 @@ from pymongo import MongoClient, ASCENDING
 from pymongo.errors import BulkWriteError
 from minet import multithreaded_resolve
 from minet.exceptions import RedirectError
+from gazouilloire.database import db_manager
 
 BATCH_SIZE = 1000
 with open('config.json') as confile:
     conf = json.loads(confile.read())
 
-def prepare_db(mongo_host, mongo_port, mongo_db):
-    db = MongoClient(mongo_host, mongo_port)[mongo_db]
-    linkscoll = db['links']
-    tweetscoll = db['tweets']
-    for f in ['retweet_id', 'in_reply_to_status_id_str', 'timestamp',
-              'links_to_resolve', 'lang', 'user_lang', 'langs']:
-        tweetscoll.ensure_index([(f, ASCENDING)], background=True)
-    tweetscoll.ensure_index([('links_to_resolve', ASCENDING), ('_id', ASCENDING)], background=True)
+def prepare_db(host, port, db_name, type):
+    try:
+        db = db_manager(host, port, db_name, type)
+        db.prepare_indices()
+    except Exception as e:
+        sys.stderr.write(
+            "ERROR: Could not initiate connection to database: %s %s" % (type(e), e))
+        sys.exit(1)
+    linkscoll = db.links
+    tweetscoll = db.tweets
     return linkscoll, tweetscoll
 
 def count_and_log(tweetscoll, batch_size, done=0, skip=0):
@@ -36,12 +39,13 @@ def count_and_log(tweetscoll, batch_size, done=0, skip=0):
 
 @click.command()
 @click.argument('batch_size', default=BATCH_SIZE)
-@click.argument('mongo_db', default=conf["mongo"]["db"])
-@click.argument('mongo_host', default='localhost')
-@click.argument('mongo_port', default=27017)
+@click.argument('db_name', default=conf["database"]["db_name"])
+@click.argument('host', default=conf["database"]["host"])
+@click.argument('port', default=conf["database"]["port"])
+@click.argument('type', default=conf["database"]["type"])
 @click.option('--verbose/--silent', default=False)
-def resolve(batch_size, mongo_db, mongo_host, mongo_port, verbose):
-    linkscoll, tweetscoll = prepare_db(mongo_host, mongo_port, mongo_db)
+def resolve(batch_size, db_name, host, port, verbose):
+    linkscoll, tweetscoll = prepare_db(host, port, db_name)
 
     skip = 0
     todo, left = count_and_log(tweetscoll, batch_size, skip=skip)
