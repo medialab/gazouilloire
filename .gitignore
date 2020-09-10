@@ -14,3 +14,4 @@ config.json
 exclude_filters.txt
 gazouilloire/web/apache.conf
 gazouilloire/web/web.wsgi
+.python-version
