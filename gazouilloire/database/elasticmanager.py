@@ -4,6 +4,7 @@ import json
 from copy import deepcopy
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
+from itertools import chain, islice
 
 try:
     with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), "config.json"), "r") as confile:
@@ -34,6 +35,14 @@ def reformat_elastic_document(doc):
     return res
 
 
+def chunks(iterator, n):
+    """
+    generates chunks/batches of size n from an iterator
+    """
+    for first in iterator:
+        yield chain([first], islice(iterator, n - 1))
+
+
 def format_response(response, single_result=False):
     """Formats the ES find() response into a list of dictionaries"""
     if response["hits"]["total"] == 0:
@@ -62,10 +71,10 @@ class ElasticManager:
 
     link_id = "link_id"
 
-    def __init__(self, host, port, db, links_index=None):
+    def __init__(self, host, port, db_name, links_index=None):
         self.host = host
         self.port = port
-        self.db_name = db.replace(" ", "_")
+        self.db_name = db_name.replace(" ", "_")
         self.db = Elasticsearch(host + ":" + str(port))
         self.tweets = self.db_name + "_tweets"
         if links_index:
@@ -75,12 +84,18 @@ class ElasticManager:
 
     # main() methods
 
+    def exists(self, doc_type):
+        """
+        Check if index already exists in elasticsearch
+        """
+        return self.db.indices.exists(index=doc_type)
+
     def prepare_indices(self):
         """Initializes the database"""
-        if not self.db.indices.exists(index=self.tweets):
+        if not self.exists(self.tweets):
             self.db.indices.create(
                 index=self.tweets, body=DB_MAPPINGS["tweets_mapping"])
-        if not self.db.indices.exists(index=self.links):
+        if not self.exists(self.links):
             self.db.indices.create(
                 index=self.links, body=DB_MAPPINGS["links_mapping"])
 
@@ -90,6 +105,38 @@ class ElasticManager:
         """Updates the given tweet to the content of 'new_value' argument"""
         formatted_new_value = format_tweet_fields(new_value)
         return self.db.update(index=self.tweets, doc_type="tweet", id=tweet_id, body={"doc": formatted_new_value, "doc_as_upsert": True})
+
+    def stream_links_batch(self, links):
+        """Yields an index action for every link of a list"""
+        for l in links:
+            yield {
+                '_index': self.links,
+                "_op_type": "index",
+                '_source': l,
+                "_type": "link"
+            }
+
+
+    def bulk_links(self, links):
+        """index the batch of links given in argument"""
+        streaming_bulk = helpers.bulk(
+            self.db, actions=self.stream_links_batch(links))
+
+    def prepare_update_tweets_batch(self, links):
+        """Yields an update action for every tweet of a list"""
+        for l in links:
+            l.update({
+                "_type": "tweet",
+                "_index": self.tweets,
+                "_op_type": "update"
+            })
+            yield l
+
+    def bulk_update_tweets(self, tweets):
+        """update tweets with their new links"""
+        streaming_bulk = helpers.bulk(
+            self.db, actions=self.prepare_update_tweets_batch(tweets))
+
 
     def stream_tweets_batch(self, tweets, upsert=False, common_update=None):
         """Yields an update action for every tweet of a list"""
@@ -109,7 +156,7 @@ class ElasticManager:
                 }
             }
 
-    def bulk_update(self, batch):
+    def bulk_update_tweets(self, batch):
         """Updates the batch of tweets given in argument"""
         streaming_bulk = helpers.streaming_bulk(
             self.db, actions=self.stream_tweets_batch(batch, upsert=True))
@@ -130,18 +177,29 @@ class ElasticManager:
         )
         return response
 
+    def get_urls(self, url_list):
+        """Returns the urls corresponding to the given url_list.
+            this method is designed to replace find_links_in when the url will become the _id in elasticsearch db
+        """
+        response = self.db.mget(
+            index=self.links,
+            doc_type="link",
+            body={'ids': url_list}
+        )
+        return response
+
+
     # resolver() methods
 
     def find_tweets_with_unresolved_links(self, batch_size=600):
-        """Returns a list of tweets where 'links_to_resolve' field is True"""
+        """Returns a generator of tweets where 'links_to_resolve' field is True"""
         # return index.find({"links_to_resolve": True}, projection={
-        #     "links": 1, "proper_links": 1, "retweet_id""retweet_id": 1}, limit=600, sort=[("_id", 1)])
-        response = self.db.search(
+        #     "links": 1, "proper_links": 1, "retweet_id""retweet_id": 1}, limit=batch_size, sort=[("_id", 1)])
+        response = helpers.scan(
+            client=self.db,
             index=self.tweets,
-            body={
+            query={
                 "_source": ["links", "proper_links", "retweet_id"],
-                "size": batch_size,
-                "sort": [{"_id": "asc"}],
                 "query": {
                     "match": {
                         "links_to_resolve": True
@@ -149,7 +207,7 @@ class ElasticManager:
                 }
             }
         )
-        return format_response(response)
+        return chunks(response, batch_size)
 
     def find_links_in(self, urls_list):
         """Returns a list of links which ids are in the 'urls_list' argument"""

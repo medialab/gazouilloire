@@ -33,7 +33,7 @@ from math import pi, sin, cos, acos
 
 from gazouilloire.url_resolver import resolve_url as resolve_redirects
 from gazouilloire.tweets import prepare_tweet, prepare_tweets, get_timestamp
-from gazouilloire.database import db_manager
+from gazouilloire.database.elasticmanager import ElasticManager
 
 def log(typelog, text):
     try:
@@ -47,7 +47,7 @@ def breakable_sleep(delay, exit_event):
         time.sleep(1)
 
 def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit_event, debug=False):
-    db = db_manager(**db_conf)
+    db = ElasticManager(**db_conf)
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         log("INFO", "Pile length: " + str(pile.qsize()))
         while not pile_deleted.empty():
@@ -64,7 +64,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
                 if not db.find_tweet(t["in_reply_to_status_id_str"]):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
             tweets_bulk.append(t)
-        db.bulk_update(tweets_bulk)
+        db.bulk_update_tweets(tweets_bulk)
         if debug and tweets_bulk:
             log("DEBUG", "Saved %s tweets in database" % len(tweets_bulk))
         breakable_sleep(2, exit_event)
@@ -145,46 +145,47 @@ def resolve_url(url, retries=5, user_agent=None):
 def resolver(db_conf, exit_event, debug=False):
     ua = UserAgent()
     ua.update()
-    db = db_manager(**db_conf)
+    db = ElasticManager(**db_conf)
     while not exit_event.is_set():
         done = 0
-        todo = db.find_tweets_with_unresolved_links()
-        urlstoresolve = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
-        alreadydone = {l[db.link_id]: l["real"] for l in db.find_links_in(urlstoresolve)}
-        tweetsdone = []
-        batchidsdone = set()
-        for tweet in todo:
-            if tweet.get("proper_links", []):
-                tweetsdone.append(tweet["_id"])
-                continue
-            tweetid = tweet.get('retweet_id') or tweet['_id']
-            if tweetid in batchidsdone:
-                continue
-            if exit_event.is_set():
-                continue
-            gdlinks = []
-            for link in tweet.get("links", []):
-                if link in alreadydone:
-                    gdlinks.append(alreadydone[link])
+        for batch in db.find_tweets_with_unresolved_links():
+            todo = [dict(t["_source"], _id=t["_id"]) for t in batch]
+            urlstoresolve = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
+            alreadydone = {l[db.link_id]: l["real"] for l in db.find_links_in(urlstoresolve)}
+            tweetsdone = []
+            batchidsdone = set()
+            for tweet in todo:
+                if tweet.get("proper_links", []):
+                    tweetsdone.append(tweet["_id"])
                     continue
-                good = resolve_url(link, user_agent=ua)
-                gdlinks.append(good)
-                alreadydone[link] = good
-                try:
-                    db.insert_link(link, good)
-                except Exception as e:
-                    # Possible error in Mongo when storing too long urls as _id
-                    log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
-                if link != good:
-                    done += 1
-            db.update_tweets_with_links(tweetid, gdlinks)
-            batchidsdone.add(tweetid)
-        if debug and done:
-            left = db.count_tweets("links_to_resolve", True)
-            log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
-        # clear tweets potentially rediscovered
-        if tweetsdone:
-            db.update_resolved_tweets(tweetsdone)
+                tweetid = tweet.get('retweet_id') or tweet['_id']
+                if tweetid in batchidsdone:
+                    continue
+                if exit_event.is_set():
+                    continue
+                gdlinks = []
+                for link in tweet.get("links", []):
+                    if link in alreadydone:
+                        gdlinks.append(alreadydone[link])
+                        continue
+                    good = resolve_url(link, user_agent=ua)
+                    gdlinks.append(good)
+                    alreadydone[link] = good
+                    try:
+                        db.insert_link(link, good)
+                    except Exception as e:
+                        # Possible error in Mongo when storing too long urls as _id
+                        log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
+                    if link != good:
+                        done += 1
+                db.update_tweets_with_links(tweetid, gdlinks)
+                batchidsdone.add(tweetid)
+            if debug and done:
+                left = db.count_tweets("links_to_resolve", True)
+                log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
+            # clear tweets potentially rediscovered
+            if tweetsdone:
+                db.update_resolved_tweets(tweetsdone)
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
@@ -519,7 +520,7 @@ def generate_geoloc_strings(x1, y1, x2, y2):
 
 if __name__=='__main__':
     try:
-        with open('../config.json') as confile:
+        with open('config.json') as confile:
             conf = json.loads(confile.read())
             for k in ['keywords', 'url_pieces', 'time_limited_keywords']:
                 if k not in conf:
@@ -547,7 +548,7 @@ if __name__=='__main__':
         log('ERROR', 'Unknown timezone set in config.json: %s. Please choose one among the above ones.' % conf['timezone'])
         sys.exit(1)
     try:
-        db = db_manager(**conf['database'])
+        db = ElasticManager(**conf['database'])
         db.prepare_indices()
     except Exception as e:
         log('ERROR', 'Could not initiate connection to database: %s %s' % (type(e), e))

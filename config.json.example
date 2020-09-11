@@ -6,7 +6,6 @@
         "oauth_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     },
     "database": {
-        "type": "elasticsearch",
         "host": "localhost",
         "port": 9200,
         "db_name": "gazouilloire"
