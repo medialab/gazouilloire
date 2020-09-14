@@ -7,7 +7,9 @@ from elasticsearch import helpers
 from itertools import chain, islice
 
 try:
-    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), "config.json"), "r") as confile:
+    with open(
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), "config.json"),
+            "r") as confile:
         conf = json.loads(confile.read())
         analyzer = conf.get('text_analyzer', 'standard')
 except Exception as e:
@@ -68,7 +70,6 @@ def format_tweet_fields(tweet):
 
 
 class ElasticManager:
-
     link_id = "link_id"
 
     def __init__(self, host, port, db_name, links_index=None):
@@ -104,7 +105,8 @@ class ElasticManager:
     def update(self, tweet_id, new_value):
         """Updates the given tweet to the content of 'new_value' argument"""
         formatted_new_value = format_tweet_fields(new_value)
-        return self.db.update(index=self.tweets, doc_type="tweet", id=tweet_id, body={"doc": formatted_new_value, "doc_as_upsert": True})
+        return self.db.update(index=self.tweets, doc_type="tweet", id=tweet_id,
+                              body={"doc": formatted_new_value, "doc_as_upsert": True})
 
     def stream_links_batch(self, links):
         """Yields an index action for every link of a list"""
@@ -115,7 +117,6 @@ class ElasticManager:
                 '_source': l,
                 "_type": "link"
             }
-
 
     def bulk_links(self, links):
         """index the batch of links given in argument"""
@@ -136,7 +137,6 @@ class ElasticManager:
         """update tweets with their new links"""
         streaming_bulk = helpers.bulk(
             self.db, actions=self.prepare_update_tweets_batch(tweets))
-
 
     def stream_tweets_batch(self, tweets, upsert=False, common_update=None):
         """Yields an update action for every tweet of a list"""
@@ -166,7 +166,8 @@ class ElasticManager:
 
     def set_deleted(self, tweet_id):
         """Sets the field 'deleted' of the given tweet to True"""
-        return self.db.update(index=self.tweets, doc_type="tweet", id=tweet_id, body={"doc": {"deleted": True}, "doc_as_upsert": True})
+        return self.db.update(index=self.tweets, doc_type="tweet", id=tweet_id,
+                              body={"doc": {"deleted": True}, "doc_as_upsert": True})
 
     def find_tweet(self, tweet_id):
         """Returns the tweet corresponding to the given id"""
@@ -188,7 +189,6 @@ class ElasticManager:
         )
         return response
 
-
     # resolver() methods
 
     def find_tweets_with_unresolved_links(self, batch_size=600):
@@ -209,10 +209,11 @@ class ElasticManager:
         )
         return chunks(response, batch_size)
 
-    def find_links_in(self, urls_list):
+    def find_links_in(self, urls_list, batch_size):
         """Returns a list of links which ids are in the 'urls_list' argument"""
         response = self.db.search(
             index=self.links,
+            size=batch_size,
             body={
                 "query": {
                     "terms": {self.link_id: urls_list}
@@ -277,7 +278,6 @@ class ElasticManager:
 
 
 if __name__ == "__main__":
-
     es = ElasticManager("localhost", 9200, "gazouilloire")
     es.prepare_indices()
     # todo = es.find_tweets_with_unresolved_links()

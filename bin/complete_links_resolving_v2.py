@@ -48,11 +48,11 @@ def resolve(batch_size, db_name, host, port, verbose):
 
     skip = 0
     todo_count = db.count_tweets("links_to_resolve", True)
-    for batch in db.find_tweets_with_unresolved_links():
+    for batch in db.find_tweets_with_unresolved_links(batch_size=batch_size):
         todo = [dict(t["_source"], _id=t["_id"]) for t in batch]
         done = 0
         batch_urls = list(set(l for t in todo for l in t.get('links', [])))
-        alreadydone = {l["link_id"]: l["real"] for l in db.find_links_in(batch_urls)}
+        alreadydone = {l["link_id"]: l["real"] for l in db.find_links_in(batch_urls, batch_size)}
         urls_to_clear = []
         for u in batch_urls:
             if u in alreadydone:
