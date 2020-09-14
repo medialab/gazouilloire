@@ -70,7 +70,6 @@ def format_tweet_fields(tweet):
 
 
 class ElasticManager:
-    link_id = "link_id"
 
     def __init__(self, host, port, db_name, links_index=None):
         self.host = host
@@ -215,17 +214,25 @@ class ElasticManager:
             index=self.links,
             size=batch_size,
             body={
-                "query": {
-                    "terms": {self.link_id: urls_list}
+              "query": {
+                "bool": {
+                  "filter": {
+                    "terms": {
+                      "link_id": urls_list
+
+                    }
+                  }
                 }
+              }
             }
         )
+
         return format_response(response)
 
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
         self.db.index(index=self.links, doc_type="link",
-                      body={self.link_id: link, "real": resolved_link})
+                      body={"link_id": link, "real": resolved_link})
 
     def update_tweets_with_links(self, tweet_id, good_links):
         """Adds the resolved links to the corresponding tweets"""
