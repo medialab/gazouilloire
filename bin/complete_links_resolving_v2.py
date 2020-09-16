@@ -8,6 +8,7 @@ from urllib3 import Timeout
 from datetime import datetime
 from pymongo import MongoClient, ASCENDING
 from pymongo.errors import BulkWriteError
+from elasticsearch.exceptions import ConflictError
 from minet import multithreaded_resolve
 from minet.exceptions import RedirectError
 from gazouilloire.database.elasticmanager import ElasticManager
@@ -131,7 +132,13 @@ def resolve(batch_size, db_name, host, port, verbose):
                 to_update.append(
                     {'_id': tweet["_id"], "_source": {"doc": {'proper_links': gdlinks, 'links_to_resolve': False}}})
             # Search retweets and update them.
-            db.update_links_if_retweet(tweetid, gdlinks)
+            try:
+                db.update_links_if_retweet(tweetid, gdlinks)
+            except ConflictError:
+                print("ERROR on updating %s retweets" % (tweetid), file=sys.stderr)
+                db.db.indices.refresh(index=db.tweets)
+                # try again
+                db.update_links_if_retweet(tweetid, gdlinks)
             ids_done_in_batch.add(tweetid)
 
         # # clear tweets potentially rediscovered
