@@ -33,8 +33,14 @@ def prepare_db(host, port, db_name):
         )
 
 
-def count(tweetscoll):
-    return
+def count_and_log(db, batch_size, done=0, skip=0):
+    todo = list(db.find_tweets_with_unresolved_links(batch_size=batch_size))
+    left = db.count_tweets("links_to_resolve", True)
+    if done:
+        done = "(+%s actual redirections resolved out of %s)" % (done, len(todo))
+    t = datetime.now().isoformat()
+    print("\n- [%s] RESOLVING LINKS: %s waiting (done:%s skipped:%s)\n" % (t, left, done or "", skip))
+    return todo, left
 
 
 @click.command()
@@ -47,11 +53,10 @@ def resolve(batch_size, db_name, host, port, verbose):
     db = prepare_db(host, port, db_name)
 
     skip = 0
-    todo_count = db.count_tweets("links_to_resolve", True)
-    for batch in db.find_tweets_with_unresolved_links(batch_size=batch_size):
-        todo = [dict(t["_source"], _id=t["_id"]) for t in batch]
+    todo, left = count_and_log(db, batch_size, skip=skip)
+    while todo:
         done = 0
-        batch_urls = list(set(l for t in todo for l in t.get('links', [])))
+        batch_urls = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
         alreadydone = {l["link_id"]: l["real"] for l in db.find_links_in(batch_urls, batch_size)}
         urls_to_clear = []
         for u in batch_urls:
@@ -94,8 +99,7 @@ def resolve(batch_size, db_name, host, port, verbose):
         #     print("  + [%s] STORING %s REDIRECTIONS IN MONGO" % (t, len(links_to_save)))
         #     if links_to_save:
         #         db.bulk_links(links_to_save)
-        #     #raise e
-        #     #todo, left = count_and_log(tweetscoll, batch_size, done=done, skip=skip)
+        #     todo, left = count_and_log(db, batch_size, skip=skip)
         #     continue
 
         t = datetime.now().isoformat()
@@ -112,6 +116,9 @@ def resolve(batch_size, db_name, host, port, verbose):
             if tweet.get("proper_links", []):
                 tweets_already_done.append(tweet["_id"])
                 continue
+            tweetid = tweet.get('retweet_id') or tweet['_id']
+            if tweetid in ids_done_in_batch:
+                continue
             gdlinks = []
             for link in tweet.get("links", []):
                 if link not in alreadydone:
@@ -120,15 +127,19 @@ def resolve(batch_size, db_name, host, port, verbose):
             if len(gdlinks) != len(tweet.get("links", [])):
                 skip += 1
                 continue
-            ids_done_in_batch.add(tweet["_id"])
-            to_update.append({'_id': tweet["_id"], "_source": {"doc": {'proper_links': gdlinks, 'links_to_resolve': False}}})
-        db.bulk_update_tweets(to_update)
-
-
+            if tweet["retweet_id"] is None: # The tweet is an original tweet. It won't be found by the retweet search.
+                to_update.append(
+                    {'_id': tweet["_id"], "_source": {"doc": {'proper_links': gdlinks, 'links_to_resolve': False}}})
+            # Search retweets and update them.
+            db.update_links_if_retweet(tweetid, gdlinks)
+            ids_done_in_batch.add(tweetid)
 
         # # clear tweets potentially rediscovered
         # if tweets_already_done:
-        #     tweetscoll.update({"_id": {"$in": tweets_already_done}}, {"$set": {"links_to_resolve": False}}, upsert=False, multi=True)
+        #     tweetscoll.update({"_id": {"$in": tweets_already_done}}, {"$set": {"links_to_resolve": False}},
+        #                       upsert=False, multi=True)
+        db.bulk_update_tweets(to_update)
+        todo, left = count_and_log(db, batch_size, skip=skip)
 
 
 if __name__ == '__main__':

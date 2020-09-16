@@ -4,7 +4,7 @@ import json
 from copy import deepcopy
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
-from itertools import chain, islice
+import itertools
 
 try:
     with open(
@@ -42,7 +42,7 @@ def chunks(iterator, n):
     generates chunks/batches of size n from an iterator
     """
     for first in iterator:
-        yield chain([first], islice(iterator, n - 1))
+        yield itertools.chain([first], itertools.islice(iterator, n - 1))
 
 
 def format_response(response, single_result=False):
@@ -137,6 +137,26 @@ class ElasticManager:
         streaming_bulk = helpers.bulk(
             self.db, actions=self.prepare_update_tweets_batch(tweets))
 
+    def update_links_if_retweet(self, retweet_id, gd_links):
+        """ Find all tweets that match retweet_id and update the proper_links and links_to_resolve fields"""
+        res = self.db.update_by_query(
+            index=self.tweets,
+            body= {
+              "script": {
+                "source": "ctx._source.proper_links = {} ; ctx._source.links_to_resolve = false".format(gd_links),
+                "lang": "painless"
+              },
+              "query": {
+                "term": {
+                  "retweet_id": retweet_id
+                }
+              }
+            }
+        )
+        return res
+
+
+
     def stream_tweets_batch(self, tweets, upsert=False, common_update=None):
         """Yields an update action for every tweet of a list"""
         for tweet in tweets:
@@ -154,14 +174,6 @@ class ElasticManager:
                     "doc_as_upsert": upsert
                 }
             }
-
-    def bulk_update_tweets(self, batch):
-        """Updates the batch of tweets given in argument"""
-        streaming_bulk = helpers.streaming_bulk(
-            self.db, actions=self.stream_tweets_batch(batch, upsert=True))
-        for ok, response in streaming_bulk:
-            if not ok:
-                print(response)
 
     def set_deleted(self, tweet_id):
         """Sets the field 'deleted' of the given tweet to True"""
@@ -191,14 +203,12 @@ class ElasticManager:
     # resolver() methods
 
     def find_tweets_with_unresolved_links(self, batch_size=600):
-        """Returns a generator of tweets where 'links_to_resolve' field is True"""
-        # return index.find({"links_to_resolve": True}, projection={
-        #     "links": 1, "proper_links": 1, "retweet_id""retweet_id": 1}, limit=batch_size, sort=[("_id", 1)])
-        response = helpers.scan(
-            client=self.db,
+        """Returns a list of tweets where 'links_to_resolve' field is True"""
+        response = self.db.search(
             index=self.tweets,
-            query={
+            body={
                 "_source": ["links", "proper_links", "retweet_id"],
+                "size": batch_size,
                 "query": {
                     "match": {
                         "links_to_resolve": True
@@ -206,7 +216,7 @@ class ElasticManager:
                 }
             }
         )
-        return chunks(response, batch_size)
+        return format_response(response)
 
     def find_links_in(self, urls_list, batch_size):
         """Returns a list of links which ids are in the 'urls_list' argument"""
