@@ -107,8 +107,8 @@ class ElasticManager:
         return self.db.update(index=self.tweets, doc_type="tweet", id=tweet_id,
                               body={"doc": formatted_new_value, "doc_as_upsert": True})
 
-    def stream_links_batch(self, links):
-        """Yields an index action for every link of a list"""
+    def prepare_indexing_links(self, links):
+        """Yields an indexing action for every link of a list"""
         for l in links:
             yield {
                 '_index': self.links,
@@ -117,13 +117,25 @@ class ElasticManager:
                 "_type": "link"
             }
 
-    def bulk_links(self, links):
-        """index the batch of links given in argument"""
-        streaming_bulk = helpers.bulk(
-            self.db, actions=self.stream_links_batch(links))
+    def prepare_indexing_tweets(self, tweets):
+        """Yields an indexing action for every tweet of a list. For existing tweets, only some fields are updated."""
+        for t in tweets:
+            yield {
+                '_index': self.tweets,
+                "_op_type": "update",
+                "_type": "tweet",
+                "_id": t.pop("_id"),
+                "doc": {
+                    "retweet_count": t["retweet_count"],
+                    "reply_count": t.get("reply_count", None),
+                    "favorite_count": t["favorite_count"],
 
-    def prepare_update_tweets_batch(self, links):
-        """Yields an update action for every tweet of a list"""
+                },
+                "upsert": t
+            }
+
+    def prepare_updating_links_in_tweets(self, links):
+        """Yields an update action for the links of every tweet in the list"""
         for l in links:
             l.update({
                 "_type": "tweet",
@@ -131,11 +143,6 @@ class ElasticManager:
                 "_op_type": "update"
             })
             yield l
-
-    def bulk_update_tweets(self, tweets):
-        """update tweets with their new links"""
-        streaming_bulk = helpers.bulk(
-            self.db, actions=self.prepare_update_tweets_batch(tweets))
 
     def update_links_if_retweet(self, retweet_id, gd_links):
         """ Find all tweets that match retweet_id and update the proper_links and links_to_resolve fields"""

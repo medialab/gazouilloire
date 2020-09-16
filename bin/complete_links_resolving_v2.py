@@ -9,6 +9,7 @@ from datetime import datetime
 from pymongo import MongoClient, ASCENDING
 from pymongo.errors import BulkWriteError
 from elasticsearch.exceptions import ConflictError
+from elasticsearch import helpers
 from minet import multithreaded_resolve
 from minet.exceptions import RedirectError
 from gazouilloire.database.elasticmanager import ElasticManager
@@ -106,7 +107,7 @@ def resolve(batch_size, db_name, host, port, verbose):
         t = datetime.now().isoformat()
         print("  + [%s] STORING %s REDIRECTIONS IN ELASTIC" % (t, len(links_to_save)))
         if links_to_save:
-            db.bulk_links(links_to_save)
+            helpers.bulk(db.db, actions=db.prepare_indexing_links(links_to_save))
 
         t = datetime.now().isoformat()
         print("  + [%s] UPDATING TWEETS LINKS IN ELASTIC" % t)
@@ -145,7 +146,7 @@ def resolve(batch_size, db_name, host, port, verbose):
         # if tweets_already_done:
         #     tweetscoll.update({"_id": {"$in": tweets_already_done}}, {"$set": {"links_to_resolve": False}},
         #                       upsert=False, multi=True)
-        db.bulk_update_tweets(to_update)
+        helpers.bulk(db.db, actions=db.prepare_updating_links_in_tweets(to_update))
         todo, left = count_and_log(db, batch_size, skip=skip)
 
 
