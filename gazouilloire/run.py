@@ -65,7 +65,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
                 if not db.find_tweet(t["in_reply_to_status_id_str"]):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
             tweets_bulk.append(t)
-        helpers.bulk(db.db, actions=db.prepare_indexing_tweets(tweets_bulk))
+        helpers.bulk(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
         if debug and tweets_bulk:
             log("DEBUG", "Saved %s tweets in database" % len(tweets_bulk))
         breakable_sleep(2, exit_event)

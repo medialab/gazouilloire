@@ -75,7 +75,7 @@ class ElasticManager:
         self.host = host
         self.port = port
         self.db_name = db_name.replace(" ", "_")
-        self.db = Elasticsearch(host + ":" + str(port))
+        self.client = Elasticsearch(host + ":" + str(port))
         self.tweets = self.db_name + "_tweets"
         if links_index:
             self.links = links_index
@@ -88,15 +88,15 @@ class ElasticManager:
         """
         Check if index already exists in elasticsearch
         """
-        return self.db.indices.exists(index=doc_type)
+        return self.client.indices.exists(index=doc_type)
 
     def prepare_indices(self):
         """Initializes the database"""
         if not self.exists(self.tweets):
-            self.db.indices.create(
+            self.client.indices.create(
                 index=self.tweets, body=DB_MAPPINGS["tweets_mapping"])
         if not self.exists(self.links):
-            self.db.indices.create(
+            self.client.indices.create(
                 index=self.links, body=DB_MAPPINGS["links_mapping"])
 
     # depiler() methods
@@ -104,8 +104,8 @@ class ElasticManager:
     def update(self, tweet_id, new_value):
         """Updates the given tweet to the content of 'new_value' argument"""
         formatted_new_value = format_tweet_fields(new_value)
-        return self.db.update(index=self.tweets, doc_type="tweet", id=tweet_id,
-                              body={"doc": formatted_new_value, "doc_as_upsert": True})
+        return self.client.update(index=self.tweets, doc_type="tweet", id=tweet_id,
+                                  body={"doc": formatted_new_value, "doc_as_upsert": True})
 
     def prepare_indexing_links(self, links):
         """Yields an indexing action for every link of a list"""
@@ -146,7 +146,7 @@ class ElasticManager:
 
     def update_links_if_retweet(self, retweet_id, gd_links):
         """ Find all tweets that match retweet_id and update the proper_links and links_to_resolve fields"""
-        res = self.db.update_by_query(
+        res = self.client.update_by_query(
             index=self.tweets,
             body= {
               "script": {
@@ -184,12 +184,12 @@ class ElasticManager:
 
     def set_deleted(self, tweet_id):
         """Sets the field 'deleted' of the given tweet to True"""
-        return self.db.update(index=self.tweets, doc_type="tweet", id=tweet_id,
-                              body={"doc": {"deleted": True}, "doc_as_upsert": True})
+        return self.client.update(index=self.tweets, doc_type="tweet", id=tweet_id,
+                                  body={"doc": {"deleted": True}, "doc_as_upsert": True})
 
     def find_tweet(self, tweet_id):
         """Returns the tweet corresponding to the given id"""
-        response = self.db.get(
+        response = self.client.get(
             index=self.tweets,
             doc_type="tweet",
             id=tweet_id
@@ -200,7 +200,7 @@ class ElasticManager:
         """Returns the urls corresponding to the given url_list.
             this method is designed to replace find_links_in when the url will become the _id in elasticsearch db
         """
-        response = self.db.mget(
+        response = self.client.mget(
             index=self.links,
             doc_type="link",
             body={'ids': url_list}
@@ -211,7 +211,7 @@ class ElasticManager:
 
     def find_tweets_with_unresolved_links(self, batch_size=600):
         """Returns a list of tweets where 'links_to_resolve' field is True"""
-        response = self.db.search(
+        response = self.client.search(
             index=self.tweets,
             body={
                 "_source": ["links", "proper_links", "retweet_id"],
@@ -227,7 +227,7 @@ class ElasticManager:
 
     def find_links_in(self, urls_list, batch_size):
         """Returns a list of links which ids are in the 'urls_list' argument"""
-        response = self.db.search(
+        response = self.client.search(
             index=self.links,
             size=batch_size,
             body={
@@ -248,8 +248,8 @@ class ElasticManager:
 
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
-        self.db.index(index=self.links, doc_type="link",
-                      body={"link_id": link, "real": resolved_link})
+        self.client.index(index=self.links, doc_type="link",
+                          body={"link_id": link, "real": resolved_link})
 
     def update_tweets_with_links(self, tweet_id, good_links):
         """Adds the resolved links to the corresponding tweets"""
@@ -269,7 +269,7 @@ class ElasticManager:
                 ]
             }
         }
-        search_result = self.db.search(
+        search_result = self.client.search(
             index=self.tweets,
             body={"query": query}
         )
@@ -280,11 +280,11 @@ class ElasticManager:
                 "links_to_resolve": False
             }
         )
-        helpers.bulk(self.db, actions=actions_stream)
+        helpers.bulk(self.client, actions=actions_stream)
 
     def count_tweets(self, key, value):
         """Counts the number of documents where the given key is equal to the given value"""
-        return self.db.count(index=self.tweets, doc_type='tweet', body={"query": {"term": {key: value}}})['count']
+        return self.client.count(index=self.tweets, doc_type='tweet', body={"query": {"term": {key: value}}})['count']
 
     def update_resolved_tweets(self, tweetsdone):
         """Sets the "links_to_resolve" field of the tweets in tweetsdone to False"""
@@ -297,7 +297,7 @@ class ElasticManager:
                 "terms": {"_id": tweetsdone}
             }
         }
-        self.db.update_by_query(
+        self.client.update_by_query(
             body=q, doc_type="tweet", index=self.tweets)
 
 

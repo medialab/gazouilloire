@@ -107,7 +107,7 @@ def resolve(batch_size, db_name, host, port, verbose):
         t = datetime.now().isoformat()
         print("  + [%s] STORING %s REDIRECTIONS IN ELASTIC" % (t, len(links_to_save)))
         if links_to_save:
-            helpers.bulk(db.db, actions=db.prepare_indexing_links(links_to_save))
+            helpers.bulk(db.client, actions=db.prepare_indexing_links(links_to_save))
 
         t = datetime.now().isoformat()
         print("  + [%s] UPDATING TWEETS LINKS IN ELASTIC" % t)
@@ -137,7 +137,7 @@ def resolve(batch_size, db_name, host, port, verbose):
                 db.update_links_if_retweet(tweetid, gdlinks)
             except ConflictError:
                 print("ERROR on updating %s retweets" % (tweetid), file=sys.stderr)
-                db.db.indices.refresh(index=db.tweets)
+                db.client.indices.refresh(index=db.tweets)
                 # try again
                 db.update_links_if_retweet(tweetid, gdlinks)
             ids_done_in_batch.add(tweetid)
@@ -146,7 +146,7 @@ def resolve(batch_size, db_name, host, port, verbose):
         # if tweets_already_done:
         #     tweetscoll.update({"_id": {"$in": tweets_already_done}}, {"$set": {"links_to_resolve": False}},
         #                       upsert=False, multi=True)
-        helpers.bulk(db.db, actions=db.prepare_updating_links_in_tweets(to_update))
+        helpers.bulk(db.client, actions=db.prepare_updating_links_in_tweets(to_update))
         todo, left = count_and_log(db, batch_size, skip=skip)
 
 
