@@ -4,7 +4,7 @@ import json
 from copy import deepcopy
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
-import itertools
+from elasticsearch import exceptions
 
 try:
     with open(
@@ -125,10 +125,18 @@ class ElasticManager:
                 "_op_type": "update",
                 "_type": "tweet",
                 "_id": t.pop("_id"),
-                "doc": {
-                    "retweet_count": t["retweet_count"],
-                    "reply_count": t.get("reply_count", None),
-                    "favorite_count": t["favorite_count"],
+                "script": {
+                    "source": "ctx._source.collected_via.add(params.collected_via); \
+                    ctx._source.retweet_count = params.retweet_count; \
+                    ctx._source.reply_count = params.reply_count; \
+                    ctx._source.favorite_count = params.favorite_count",
+                    "lang": "painless",
+                    "params": {
+                        "collected_via": t["collected_via"][0],
+                        "retweet_count": t["retweet_count"],
+                        "reply_count": t.get("reply_count", None),
+                        "favorite_count": t["favorite_count"],
+                    }
 
                 },
                 "upsert": t
@@ -189,11 +197,14 @@ class ElasticManager:
 
     def find_tweet(self, tweet_id):
         """Returns the tweet corresponding to the given id"""
-        response = self.client.get(
-            index=self.tweets,
-            doc_type="tweet",
-            id=tweet_id
-        )
+        try:
+            response = self.client.get(
+                index=self.tweets,
+                doc_type="tweet",
+                id=tweet_id
+            )
+        except exceptions.NotFoundError:
+            return None
         return response
 
     def get_urls(self, url_list):

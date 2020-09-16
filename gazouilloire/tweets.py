@@ -203,7 +203,11 @@ def prepare_tweet(tweet, locale=None):
         'collected_at_timestamp': time.time()
     }
     if "gazouilloire_source" in tweet:
-        tw["collected_via_%s" % tweet["gazouilloire_source"]] = True
+        tw["collected_via"] = [tweet["gazouilloire_source"]]
+        tw["collected_via_thread_only"] = tweet["gazouilloire_source"] == "thread"
+    else:
+        tw["collected_via"] = [],
+        tw["collected_via_thread_only"] = False
     if not tw["text"]:
         print("WARNING, no text for tweet %s" % tw["url"])
     tw = grab_extra_meta(tweet, tw, locale)

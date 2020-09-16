@@ -7,13 +7,10 @@
             "type": "date",
             "format": "epoch_second"
           },
-          "collected_via_search": {
-            "type": "boolean"
+          "collected_via": {
+            "type": "keyword"
           },
-          "collected_via_stream": {
-            "type": "boolean"
-          },
-          "collected_via_thread": {
+          "collected_via_thread_only": {
             "type": "boolean"
           },
           "coordinates": {
