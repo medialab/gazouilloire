@@ -1,10 +1,8 @@
 import os
 import sys
 import json
-from copy import deepcopy
-from elasticsearch import Elasticsearch
-from elasticsearch import helpers
-from elasticsearch import exceptions
+from elasticsearch import Elasticsearch, helpers, exceptions
+import itertools
 
 try:
     with open(
