@@ -127,7 +127,7 @@ class ElasticManager:
                 "_id": t.pop("_id"),
                 "script": {
                     "source": "ctx._source.collected_via.add(params.collected_via); \
-                    ctx._source.collected_via_thread_only *= params.collected_via_thread_only; \
+                    ctx._source.collected_via_thread_only &= params.collected_via_thread_only; \
                     ctx._source.retweet_count = params.retweet_count; \
                     ctx._source.reply_count = params.reply_count; \
                     ctx._source.favorite_count = params.favorite_count",
