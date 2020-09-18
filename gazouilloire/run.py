@@ -58,7 +58,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
         while not pile.empty():
             todo.append(pile.get())
         tweets_bulk = []
-        for t in prepare_tweets(todo, locale):
+        for t in prepare_tweets(todo, pile, locale):
             if pile_medias and t["medias"]:
                 pile_medias.put(t)
             if pile_catchup and t["in_reply_to_status_id_str"]:
@@ -293,7 +293,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                     continue
                 if msg.get('id_str'):
                     msg["gazouilloire_source"] = "stream"
-                    tweet = prepare_tweet(msg, locale=locale)
+                    tweet = prepare_tweet(msg, pile, locale=locale)
                     if geocode or (urlpieces and not keywords):
                         tmptext = tweet["text"].lower()
                         keep = False

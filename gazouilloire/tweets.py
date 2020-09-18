@@ -15,7 +15,6 @@ from datetime import datetime
 
 re_entities = re.compile(r'&([^;]+);')
 
-
 def decode_entities(x):
     if x.group(1).startswith('#'):
         char = x.group(1)[1:]
@@ -96,16 +95,16 @@ def grab_extra_meta(source, result, locale=None):
     return result
 
 
-def prepare_tweets(tweets, locale):
+def prepare_tweets(tweets, pile, locale):
     for tweet in tweets:
         if not isinstance(tweet, dict):
             continue
         if "_id" not in tweet:
-            tweet = prepare_tweet(tweet, locale=locale)
+            tweet = prepare_tweet(tweet, pile, locale=locale)
         yield tweet
 
 
-def prepare_tweet(tweet, locale=None):
+def prepare_tweet(tweet, pile, locale=None):
     if "extended_tweet" in tweet:
         for field in tweet["extended_tweet"]:
             tweet[field] = tweet["extended_tweet"][field]
@@ -121,7 +120,9 @@ def prepare_tweet(tweet, locale=None):
         rti = tweet['retweeted_status']['id_str']
         rtu = tweet['retweeted_status']['user']['screen_name']
         rtuid = tweet['retweeted_status']['user']['id_str']
-        rtweet = prepare_tweet(tweet['retweeted_status'], locale=locale)
+        tweet['retweeted_status']["gazouilloire_source"] = "retweet"
+        rtweet = prepare_tweet(tweet['retweeted_status'], pile, locale=locale)
+        pile.put(rtweet)
         rtime = rtweet['timestamp']
         text = "RT @%s: %s" % (rtu, rtweet['text'])
         for ent in ['entities', 'extended_entities']:
@@ -140,7 +141,9 @@ def prepare_tweet(tweet, locale=None):
         qti = tweet['quoted_status']['id_str']
         qtu = tweet['quoted_status']['user']['screen_name']
         qtuid = tweet['quoted_status']['user']['id_str']
-        qtweet = prepare_tweet(tweet['quoted_status'], locale=locale)
+        tweet['quoted_status']["gazouilloire_source"] = "quote"
+        qtweet = prepare_tweet(tweet['quoted_status'], pile, locale=locale)
+        pile.put(qtweet)
         if 'quoted_status_permalink' in tweet:
             qturl = tweet['quoted_status_permalink']['url']
         else:
@@ -210,9 +213,6 @@ def prepare_tweet(tweet, locale=None):
     if "gazouilloire_source" in tweet:
         tw["collected_via"] = [tweet["gazouilloire_source"]]
         tw["collected_via_thread_only"] = tweet["gazouilloire_source"] == "thread"
-    else:
-        tw["collected_via"] = [],
-        tw["collected_via_thread_only"] = False
     if not tw["text"]:
         print("WARNING, no text for tweet %s" % tw["url"])
     tw = grab_extra_meta(tweet, tw, locale)
