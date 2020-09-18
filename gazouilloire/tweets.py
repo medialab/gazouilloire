@@ -208,11 +208,11 @@ def prepare_tweet(tweet, pile, locale=None):
         'hashtags': sorted(hashtags),
         'mentions_ids': [mentions[m] for m in sorted(mentions.keys())],
         'mentions_names': sorted(mentions.keys()),
-        'collected_at_timestamp': time.time()
+        'collected_at_timestamp': time.time(),
+        'collected_via': [tweet["gazouilloire_source"]],
+        'collected_via_thread_only': tweet["gazouilloire_source"] == "thread"
     }
-    if "gazouilloire_source" in tweet:
-        tw["collected_via"] = [tweet["gazouilloire_source"]]
-        tw["collected_via_thread_only"] = tweet["gazouilloire_source"] == "thread"
+
     if not tw["text"]:
         print("WARNING, no text for tweet %s" % tw["url"])
     tw = grab_extra_meta(tweet, tw, locale)
