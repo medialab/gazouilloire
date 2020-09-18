@@ -35,6 +35,9 @@ from gazouilloire.url_resolver import resolve_url as resolve_redirects
 from gazouilloire.tweets import prepare_tweet, prepare_tweets, get_timestamp
 from gazouilloire.database.elasticmanager import ElasticManager
 from elasticsearch import helpers
+from bin.complete_links_resolving_v2 import resolve
+
+BATCH_SIZE = 1000
 
 def log(typelog, text):
     try:
@@ -600,7 +603,7 @@ if __name__=='__main__':
         catchup.daemon = True
         catchup.start()
     if resolve_links:
-        resolve = Process(target=resolver, args=(conf['database'], exit_event, conf['debug']))
+        resolve = Process(target=resolve, args=(BATCH_SIZE, conf['database'], exit_event, conf['debug']))
         resolve.daemon = True
         resolve.start()
     if dl_medias:

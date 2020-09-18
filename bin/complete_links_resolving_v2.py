@@ -47,13 +47,14 @@ def count_and_log(db, batch_size, done=0, skip=0):
 
 @click.command()
 @click.argument('batch_size', default=BATCH_SIZE)
-@click.argument('db_name', default=conf["database"]["db_name"])
-@click.argument('host', default=conf["database"]["host"])
-@click.argument('port', default=conf["database"]["port"])
+@click.argument('db_conf', default=conf["database"])
 @click.option('--verbose/--silent', default=False)
-def resolve(batch_size, db_name, host, port, verbose):
-    db = prepare_db(host, port, db_name)
+def main(batch_size, db_conf, verbose):
+    resolve(batch_size, db_conf, verbose=verbose)
 
+
+def resolve(batch_size, db_conf, exit_event=None, verbose=False):
+    db = prepare_db(**db_conf)
     skip = 0
     todo, left = count_and_log(db, batch_size, skip=skip)
     while todo:
@@ -129,17 +130,10 @@ def resolve(batch_size, db_name, host, port, verbose):
             if len(gdlinks) != len(tweet.get("links", [])):
                 skip += 1
                 continue
-            if tweet["retweet_id"] is None: # The tweet is an original tweet. It won't be found by the retweet search.
+            if tweet["retweet_id"] is None: # The tweet is an original tweet. No need to search for its id.
                 to_update.append(
                     {'_id': tweet["_id"], "_source": {"doc": {'proper_links': gdlinks, 'links_to_resolve': False}}})
-            # Search retweets and update them.
-            try:
-                db.update_links_if_retweet(tweetid, gdlinks)
-            except ConflictError:
-                print("ERROR on updating %s retweets" % (tweetid), file=sys.stderr)
-                db.client.indices.refresh(index=db.tweets)
-                # try again
-                db.update_links_if_retweet(tweetid, gdlinks)
+            db.update_tweets_with_links(tweetid, gdlinks)
             ids_done_in_batch.add(tweetid)
 
         # # clear tweets potentially rediscovered
@@ -147,6 +141,8 @@ def resolve(batch_size, db_name, host, port, verbose):
         #     tweetscoll.update({"_id": {"$in": tweets_already_done}}, {"$set": {"links_to_resolve": False}},
         #                       upsert=False, multi=True)
         helpers.bulk(db.client, actions=db.prepare_updating_links_in_tweets(to_update))
+        if exit_event is not None and exit_event.is_set():
+            break
         todo, left = count_and_log(db, batch_size, skip=skip)
 
 
