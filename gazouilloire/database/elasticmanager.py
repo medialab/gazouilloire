@@ -152,26 +152,6 @@ class ElasticManager:
             })
             yield l
 
-    def update_links_if_retweet(self, retweet_id, gd_links):
-        """ Find all tweets that match retweet_id and update the proper_links and links_to_resolve fields"""
-        res = self.client.update_by_query(
-            index=self.tweets,
-            body= {
-              "script": {
-                "source": "ctx._source.proper_links = {} ; ctx._source.links_to_resolve = false".format(gd_links),
-                "lang": "painless"
-              },
-              "query": {
-                "term": {
-                  "retweet_id": retweet_id
-                }
-              }
-            }
-        )
-        return res
-
-
-
     def stream_tweets_batch(self, tweets, upsert=False, common_update=None):
         """Yields an update action for every tweet of a list"""
         for tweet in tweets:
@@ -262,36 +242,32 @@ class ElasticManager:
         self.client.index(index=self.links, doc_type="link",
                           body={"link_id": link, "real": resolved_link})
 
+    def prepare_indexing_tweets_with_new_links(self, tweets, good_links):
+        for t in tweets:
+            t["_source"]["proper_links"] = good_links
+            t["_source"]["links_to_resolve"] = False
+            yield {
+                '_index': self.tweets,
+                "_op_type": "index",
+                '_source': t["_source"],
+                "_type": "tweet",
+                "_id": t["_id"]
+            }
+
     def update_tweets_with_links(self, tweet_id, good_links):
         """Adds the resolved links to the corresponding tweets"""
         query = {
-            "bool": {
-                "should": [
-                    {
-                        "term": {
-                            "_id": tweet_id
-                        }
-                    },
-                    {
-                        "term": {
-                            "retweet_id": tweet_id
-                        }
-                    }
-                ]
+            "term": {
+                "retweet_id": tweet_id
             }
         }
-        search_result = self.client.search(
+        response = helpers.scan(
+            client=self.client,
             index=self.tweets,
-            body={"query": query}
+            query={"query": query}
         )
-        actions_stream = self.stream_tweets_batch(
-            search_result["hits"]["hits"],
-            common_update={
-                "proper_links": good_links,
-                "links_to_resolve": False
-            }
-        )
-        helpers.bulk(self.client, actions=actions_stream)
+
+        helpers.bulk(self.client, actions=self.prepare_indexing_tweets_with_new_links(response, good_links))
 
     def count_tweets(self, key, value):
         """Counts the number of documents where the given key is equal to the given value"""
