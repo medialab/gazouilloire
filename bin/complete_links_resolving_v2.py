@@ -147,4 +147,4 @@ def resolve(batch_size, db_conf, exit_event=None, verbose=False):
 
 
 if __name__ == '__main__':
-    resolve()
+    main()
