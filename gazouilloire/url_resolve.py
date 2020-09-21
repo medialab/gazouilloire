@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import time
 from urllib3 import Timeout
 from datetime import datetime
 from elasticsearch import helpers
