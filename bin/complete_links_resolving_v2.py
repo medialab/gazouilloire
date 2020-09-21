@@ -22,7 +22,6 @@ def resolve_script(batch_size, db_conf, verbose=False):
     todo = count_and_log(db, batch_size, skip=skip)
     while todo:
         done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose)
-        db.client.indices.refresh(index=db.tweets)
         todo = count_and_log(db, batch_size, done=done, skip=skip)
 
 

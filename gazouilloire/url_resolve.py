@@ -28,6 +28,7 @@ def prepare_db(host, port, db_name):
 
 
 def count_and_log(db, batch_size, done=0, skip=0):
+    db.client.indices.refresh(index=db.tweets)
     todo = list(db.find_tweets_with_unresolved_links(batch_size=batch_size))
     left = db.count_tweets("links_to_resolve", True)
     if done:
