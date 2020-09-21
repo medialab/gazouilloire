@@ -35,7 +35,7 @@ from gazouilloire.url_resolver import resolve_url as resolve_redirects
 from gazouilloire.tweets import prepare_tweet, prepare_tweets, get_timestamp
 from gazouilloire.database.elasticmanager import ElasticManager
 from elasticsearch import helpers
-from bin.complete_links_resolving_v2 import resolve
+from gazouilloire.url_resolve import resolve_loop, prepare_db, count_and_log
 
 BATCH_SIZE = 1000
 
@@ -142,6 +142,15 @@ def resolve_url(url, retries=5, user_agent=None):
             return resolve_url(url, retries-1, user_agent=user_agent)
         log("ERROR", "Could not resolve redirection for url %s (%s: %s)" % (url, type(e), e))
         return url
+
+def resolve_thread(batch_size, db_conf, exit_event, verbose=False):
+    db = prepare_db(**db_conf)
+    skip = 0
+    todo = count_and_log(db, batch_size, skip=skip)
+    while not exit_event.is_set():
+        done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose)
+        time.sleep(30)
+        todo = count_and_log(db, batch_size, done=done, skip=skip)
 
 # TODO :
 # - add finalize task to run resolver on all tweets in DB with links but no proper_links
@@ -603,7 +612,7 @@ if __name__=='__main__':
         catchup.daemon = True
         catchup.start()
     if resolve_links:
-        resolve = Process(target=resolve, args=(BATCH_SIZE, conf['database'], exit_event, conf['debug']))
+        resolve = Process(target=resolve_thread, args=(BATCH_SIZE, conf['database'], exit_event, conf['debug']))
         resolve.daemon = True
         resolve.start()
     if dl_medias:
