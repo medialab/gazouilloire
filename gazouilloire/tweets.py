@@ -12,6 +12,7 @@ except ImportError:
     from htmlentitydefs import name2codepoint
 from pytz import timezone
 from datetime import datetime
+from ural import is_url, normalize_url
 
 re_entities = re.compile(r'&([^;]+);')
 
@@ -35,6 +36,12 @@ def decode_entities(x):
 
 def unescape_html(text):
     return re_entities.sub(decode_entities, text)
+
+
+def normalize(url):
+    return normalize_url(url, strip_authentication=False, strip_trailing_slash=False, strip_protocol=False,
+                         strip_irrelevant_subdomains=False, strip_fragment=False, normalize_amp=False,
+                         fix_common_mistakes=False, infer_redirection=False, quoted=True)
 
 
 def get_timestamp(t, locale, field='created_at'):
@@ -183,7 +190,13 @@ def prepare_tweet(tweet, pile, locale=None):
                     medids.add(med_name)
                     medias.append(["%s_%s" % (source_id, med_name), med_url])
             else:
-                links.add(entity["expanded_url"])
+                normalized = normalize(entity["expanded_url"])
+                if entity["expanded_url"] != normalized:
+                    print(entity["expanded_url"], "-->", normalized)
+                if is_url(normalized):
+                    links.add(normalized)
+                else:
+                    print("Not url: {}".format(normalized))
         for hashtag in tweet['entities'].get('hashtags', []):
             hashtags.add(hashtag['text'].lower())
         for mention in tweet['entities'].get('user_mentions', []):
