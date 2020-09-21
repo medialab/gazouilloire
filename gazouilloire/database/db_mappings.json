@@ -142,9 +142,6 @@
             "type": "date",
             "format": "epoch_second"
           },
-          "truncated": {
-            "type": "boolean"
-          },
           "url": {
             "type": "text",
             "index": false

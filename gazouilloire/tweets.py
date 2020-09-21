@@ -50,7 +50,7 @@ def nostr_field(f): return f.replace('_str', '')
 
 
 def grab_extra_meta(source, result, locale=None):
-    for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "coordinates", "source", "truncated", "possibly_sensitive", "withheld_copyright", "withheld_scope", "withheld_countries", "retweet_count", "favorite_count", "reply_count"]:
+    for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "coordinates", "source", "possibly_sensitive", "withheld_copyright", "withheld_scope", "withheld_countries", "retweet_count", "favorite_count", "reply_count"]:
         if meta in source:
             if not isinstance(source[meta], dict):
                 result[meta] = source[meta]
