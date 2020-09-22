@@ -8,6 +8,7 @@ from elasticsearch import helpers
 from minet import multithreaded_resolve
 from minet.exceptions import RedirectError
 from gazouilloire.database.elasticmanager import ElasticManager
+from ural import normalize_url
 
 
 def prepare_db(host, port, db_name):
@@ -35,6 +36,12 @@ def count_and_log(db, batch_size, done=0, skip=0):
     t = datetime.now().isoformat()
     print("\n- [%s] RESOLVING LINKS: %s waiting (done:%s skipped:%s)\n" % (t, left, done or "", skip))
     return todo
+
+
+def normalize(url):
+    return normalize_url(url, strip_authentication=False, strip_trailing_slash=False, strip_protocol=False,
+                         strip_irrelevant_subdomains=False, strip_fragment=False, normalize_amp=False,
+                         fix_common_mistakes=False, infer_redirection=False, quoted=True)
 
 
 def resolve_loop(batch_size, db, todo, skip, verbose):
@@ -69,9 +76,9 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
                 # TODO:
                 # Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
             if verbose:
-                print("          ", last.status, "(%s)" % last.type, ":", source, "->", last.url, file=sys.stderr)
+                print("          ", last.status, "(%s)" % last.type, ":", source, "->", normalize(last.url), file=sys.stderr)
             if len(source) < 1024:
-                links_to_save.append({'link_id': source, 'real': last.url})
+                links_to_save.append({'link_id': source, 'real': normalize(last.url)})
             alreadydone[source] = last.url
             if source != last.url:
                 done += 1
