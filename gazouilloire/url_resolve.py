@@ -60,28 +60,38 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
         links_to_save = []
         t = datetime.now().isoformat()
         print("  + [%s] %s urls to resolve" % (t, len(urls_to_clear)))
-        for res in multithreaded_resolve(
-                urls_to_clear,
-                threads=min(50, len(urls_to_clear)),
-                throttle=0.2,
-                max_redirects=20,
-                insecure=True,
-                timeout=Timeout(connect=10, read=30),
-                follow_meta_refresh=True
-        ):
-            source = res.url
-            last = res.stack[-1]
-            normalized_url = normalize(last.url)
-            if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
-                print("ERROR on resolving %s: %s (last url: %s)" % (source, res.error, last.url), file=sys.stderr)
-                # TODO:
-                #  Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
-            if verbose:
-                print("          ", last.status, "(%s)" % last.type, ":", source, "->", normalized_url, file=sys.stderr)
-            links_to_save.append({'link_id': source, 'real': normalized_url})
-            alreadydone[source] = normalized_url
-            if source != normalized_url:
-                done += 1
+        try:
+            for res in multithreaded_resolve(
+                    urls_to_clear,
+                    threads=min(50, len(urls_to_clear)),
+                    throttle=0.2,
+                    max_redirects=20,
+                    insecure=True,
+                    timeout=Timeout(connect=10, read=30),
+                    follow_meta_refresh=True
+            ):
+                source = res.url
+                last = res.stack[-1]
+                normalized_url = normalize(last.url)
+                if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
+                    print("ERROR on resolving %s: %s (last url: %s)" % (source, res.error, last.url), file=sys.stderr)
+                    # TODO:
+                    #  Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
+                if verbose:
+                    print("          ", last.status, "(%s)" % last.type, ":", source, "->", normalized_url, file=sys.stderr)
+                links_to_save.append({'link_id': source, 'real': normalized_url})
+                alreadydone[source] = normalized_url
+                if source != normalized_url:
+                    done += 1
+        except Exception as e:
+            print("CRASHED with %s (%s) while resolving batch, skipping it for now..." % (e, type(e)))
+            print("CRASHED with %s (%s) while resolving %s" % (e, type(e), urls_to_clear), file=sys.stderr)
+            skip += batch_size
+            print("  + [%s] STORING %s REDIRECTIONS IN MONGO" % (t, len(links_to_save)))
+            if links_to_save:
+                helpers.bulk(db.client, actions=db.prepare_indexing_links(links_to_save))
+            raise e
+            # return done, skip
 
         t = datetime.now().isoformat()
         print("  + [%s] STORING %s REDIRECTIONS IN ELASTIC" % (t, len(links_to_save)))
