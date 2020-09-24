@@ -71,16 +71,17 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
         ):
             source = res.url
             last = res.stack[-1]
+            normalized_url = normalize(last.url)
             if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
                 print("ERROR on resolving %s: %s (last url: %s)" % (source, res.error, last.url), file=sys.stderr)
                 # TODO:
-                # Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
+                #  Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
             if verbose:
-                print("          ", last.status, "(%s)" % last.type, ":", source, "->", normalize(last.url), file=sys.stderr)
+                print("          ", last.status, "(%s)" % last.type, ":", source, "->", normalized_url, file=sys.stderr)
             if len(source) < 1024:
-                links_to_save.append({'link_id': source, 'real': normalize(last.url)})
-            alreadydone[source] = last.url
-            if source != last.url:
+                links_to_save.append({'link_id': source, 'real': normalized_url})
+            alreadydone[source] = normalized_url
+            if source != normalized_url:
                 done += 1
 
         t = datetime.now().isoformat()
