@@ -128,7 +128,7 @@ class ElasticManager:
                     ctx._source.retweet_count = params.retweet_count; \
                     ctx._source.reply_count = params.reply_count; \
                     ctx._source.favorite_count = params.favorite_count; \
-                    if(!ctx._source.collected_via.contains(params.collected_via)){ctx._source.collected_via.add(params.collected_via)}",
+                    if (!ctx._source.collected_via.contains(params.collected_via)){ctx._source.collected_via.add(params.collected_via)}",
                     "lang": "painless",
                     "params": {
                         "collected_via": t["collected_via"][0],
