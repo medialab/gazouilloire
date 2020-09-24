@@ -59,6 +59,8 @@ def grab_extra_meta(source, result, locale=None):
             elif meta != "coordinates":
                 print("WARNING, field {} is dict. It contains the following keys: {}. The field will NOT be indexed"
                       .format(meta, " ".join(sorted(source[meta].keys()))))
+            else:
+                result["coordinates"] = source["coordinates"]["coordinates"]
         elif nostr_field(meta) in source:
             result[meta] = str(source[nostr_field(meta)])
     for meta in ['id_str', 'screen_name', 'name', 'friends_count', 'followers_count', 'statuses_count', 'favourites_count', 'listed_count', 'profile_image_url', 'location', 'verified', 'description', 'profile_image_url_https', 'utc_offset', 'time_zone', 'lang', 'withheld_scope', 'withheld_countries', 'created_at']:
@@ -78,8 +80,6 @@ def grab_extra_meta(source, result, locale=None):
                 result[key] = source['place'][meta]
         if "bounding_box" in source["place"] and "coordinates" in source["place"]["bounding_box"]:
             result["place_coordinates"] = source["place"]["bounding_box"]["coordinates"][0]
-    if "geo" in source and source["geo"] is not None and "coordinates" in source["geo"]:
-        result["coordinates"] = source["geo"]["coordinates"]
     try:
         result['user_url'] = source['user']['entities']['url']['urls'][0]['expanded_url']
     except:
