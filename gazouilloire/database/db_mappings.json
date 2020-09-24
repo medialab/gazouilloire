@@ -10,9 +10,6 @@
           "collected_via": {
             "type": "keyword"
           },
-          "collected_via_thread_only": {
-            "type": "boolean"
-          },
           "coordinates": {
             "type": "geo_point"
           },
@@ -54,6 +51,9 @@
             }
           },
           "links_to_resolve": {
+            "type": "boolean"
+          },
+          "match_query": {
             "type": "boolean"
           },
           "medias": {

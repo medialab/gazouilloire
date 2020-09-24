@@ -124,7 +124,7 @@ class ElasticManager:
                 "_type": "tweet",
                 "_id": t.pop("_id"),
                 "script": {
-                    "source": "ctx._source.collected_via_thread_only &= params.collected_via_thread_only; \
+                    "source": "ctx._source.match_query |= params.match_query; \
                     ctx._source.retweet_count = params.retweet_count; \
                     ctx._source.reply_count = params.reply_count; \
                     ctx._source.favorite_count = params.favorite_count; \
@@ -132,7 +132,7 @@ class ElasticManager:
                     "lang": "painless",
                     "params": {
                         "collected_via": t["collected_via"][0],
-                        "collected_via_thread_only": t["collected_via_thread_only"],
+                        "match_query": t["match_query"],
                         "retweet_count": t["retweet_count"],
                         "reply_count": t.get("reply_count", None),
                         "favorite_count": t["favorite_count"],

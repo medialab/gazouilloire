@@ -216,7 +216,7 @@ def prepare_tweet(tweet, pile, locale=None):
         'mentions_names': sorted(mentions.keys()),
         'collected_at_timestamp': time.time(),
         'collected_via': [tweet["gazouilloire_source"]],
-        'collected_via_thread_only': tweet["gazouilloire_source"] == "thread"
+        'match_query': tweet["gazouilloire_source"] != "thread" and tweet["gazouilloire_source"] != "quote"
     }
 
     if not tw["text"]:
