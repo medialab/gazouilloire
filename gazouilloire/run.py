@@ -191,7 +191,7 @@ def resolver(db_conf, exit_event, debug=False):
                         log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
                     if link != good:
                         done += 1
-                db.update_tweets_with_links(tweetid, gdlinks)
+                db.update_retweets_with_links(tweetid, gdlinks)
                 batchidsdone.add(tweetid)
             if debug and done:
                 left = db.count_tweets("links_to_resolve", True)

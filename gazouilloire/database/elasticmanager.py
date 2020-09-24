@@ -254,7 +254,7 @@ class ElasticManager:
                 "_id": t["_id"]
             }
 
-    def update_tweets_with_links(self, tweet_id, good_links):
+    def update_retweets_with_links(self, tweet_id, good_links):
         """Adds the resolved links to the corresponding tweets"""
         query = {
             "term": {

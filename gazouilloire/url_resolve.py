@@ -121,7 +121,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
         if tweet["retweet_id"] is None:  # The tweet is an original tweet. No need to search for its id.
             to_update.append(
                 {'_id': tweet["_id"], "_source": {"doc": {'proper_links': gdlinks, 'links_to_resolve': False}}})
-        db.update_tweets_with_links(tweetid, gdlinks)
+        db.update_retweets_with_links(tweetid, gdlinks)
         ids_done_in_batch.add(tweetid)
 
         # # clear tweets potentially rediscovered
