@@ -87,11 +87,10 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
             print("CRASHED with %s (%s) while resolving batch, skipping it for now..." % (e, type(e)))
             print("CRASHED with %s (%s) while resolving %s" % (e, type(e), urls_to_clear), file=sys.stderr)
             skip += batch_size
-            print("  + [%s] STORING %s REDIRECTIONS IN MONGO" % (t, len(links_to_save)))
+            print("  + [%s] STORING %s REDIRECTIONS IN ELASTIC" % (t, len(links_to_save)))
             if links_to_save:
                 helpers.bulk(db.client, actions=db.prepare_indexing_links(links_to_save))
-            raise e
-            # return done, skip
+            return done, skip
 
         t = datetime.now().isoformat()
         print("  + [%s] STORING %s REDIRECTIONS IN ELASTIC" % (t, len(links_to_save)))
