@@ -1,0 +1,3 @@
+include README.md
+include config.json
+recursive-include gazouilloire db_mappings.json
