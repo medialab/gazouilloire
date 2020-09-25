@@ -146,11 +146,11 @@ def resolve_url(url, retries=5, user_agent=None):
 def resolver(batch_size, db_conf, exit_event, verbose=False):
     db = prepare_db(**db_conf)
     skip = 0
-    todo = count_and_log(db, batch_size, skip=skip)
+    done = 0
     while not exit_event.is_set():
+        todo = count_and_log(db, batch_size, done=done, skip=skip)
         done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose)
         time.sleep(30)
-        todo = count_and_log(db, batch_size, done=done, skip=skip)
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
