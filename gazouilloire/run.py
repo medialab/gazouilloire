@@ -143,7 +143,7 @@ def resolve_url(url, retries=5, user_agent=None):
         log("ERROR", "Could not resolve redirection for url %s (%s: %s)" % (url, type(e), e))
         return url
 
-def resolve_thread(batch_size, db_conf, exit_event, verbose=False):
+def resolver(batch_size, db_conf, exit_event, verbose=False):
     db = prepare_db(**db_conf)
     skip = 0
     todo = count_and_log(db, batch_size, skip=skip)
@@ -151,54 +151,6 @@ def resolve_thread(batch_size, db_conf, exit_event, verbose=False):
         done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose)
         time.sleep(30)
         todo = count_and_log(db, batch_size, done=done, skip=skip)
-
-# TODO :
-# - add finalize task to run resolver on all tweets in DB with links but no proper_links
-# - modify the function not to use links_to_resolve anymore
-def resolver(db_conf, exit_event, debug=False):
-    ua = UserAgent()
-    ua.update()
-    db = ElasticManager(**db_conf)
-    while not exit_event.is_set():
-        done = 0
-        for batch in db.find_tweets_with_unresolved_links():
-            todo = [dict(t["_source"], _id=t["_id"]) for t in batch]
-            urlstoresolve = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
-            alreadydone = {l[db.link_id]: l["real"] for l in db.find_links_in(urlstoresolve)}
-            tweetsdone = []
-            batchidsdone = set()
-            for tweet in todo:
-                if tweet.get("proper_links", []):
-                    tweetsdone.append(tweet["_id"])
-                    continue
-                tweetid = tweet.get('retweet_id') or tweet['_id']
-                if tweetid in batchidsdone:
-                    continue
-                if exit_event.is_set():
-                    continue
-                gdlinks = []
-                for link in tweet.get("links", []):
-                    if link in alreadydone:
-                        gdlinks.append(alreadydone[link])
-                        continue
-                    good = resolve_url(link, user_agent=ua)
-                    gdlinks.append(good)
-                    alreadydone[link] = good
-                    try:
-                        db.insert_link(link, good)
-                    except Exception as e:
-                        # Possible error in Mongo when storing too long urls as _id
-                        log("WARNING", "Could not store resolved link %s -> %s because %s: %s" % (link, good, type(e), e))
-                    if link != good:
-                        done += 1
-                db.update_retweets_with_links(tweetid, gdlinks)
-                batchidsdone.add(tweetid)
-            if debug and done:
-                left = db.count_tweets("links_to_resolve", True)
-                log("DEBUG", "[links] +%s new redirection resolved out of %s links (%s waiting)" % (done, len(todo), left))
-            # clear tweets potentially rediscovered
-            if tweetsdone:
-                db.update_resolved_tweets(tweetsdone)
     log("INFO", "FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
@@ -612,7 +564,7 @@ if __name__=='__main__':
         catchup.daemon = True
         catchup.start()
     if resolve_links:
-        resolve = Process(target=resolve_thread, args=(BATCH_SIZE, conf['database'], exit_event, conf['debug']))
+        resolve = Process(target=resolver, args=(BATCH_SIZE, conf['database'], exit_event, conf['debug']))
         resolve.daemon = True
         resolve.start()
     if dl_medias:
