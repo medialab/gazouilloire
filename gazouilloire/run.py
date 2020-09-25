@@ -26,7 +26,6 @@ import requests
 requests.packages.urllib3.disable_warnings()
 from multiprocessing import Process, Queue, Event
 import signal
-from fake_useragent import UserAgent
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
