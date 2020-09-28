@@ -30,7 +30,7 @@ from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 
-from gazouilloire.url_resolver import resolve_url as resolve_redirects
+#from gazouilloire.url_resolver import resolve_url as resolve_redirects
 from gazouilloire.tweets import prepare_tweet, prepare_tweets, get_timestamp
 from gazouilloire.database.elasticmanager import ElasticManager
 from elasticsearch import helpers
@@ -131,16 +131,16 @@ def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
         breakable_sleep(5, exit_event)
     log("INFO", "FINISHED catchupper")
 
-re_clean_mobile_twitter = re.compile(r'^(https?://)mobile\.(twitter\.)')
-def resolve_url(url, retries=5, user_agent=None):
-    try:
-        good = resolve_redirects(url, user_agent=user_agent.random, verify=False, timeout=5)
-        return re_clean_mobile_twitter.sub(r'\1\2', good)
-    except Exception as e:
-        if retries:
-            return resolve_url(url, retries-1, user_agent=user_agent)
-        log("ERROR", "Could not resolve redirection for url %s (%s: %s)" % (url, type(e), e))
-        return url
+# re_clean_mobile_twitter = re.compile(r'^(https?://)mobile\.(twitter\.)')
+# def resolve_url(url, retries=5, user_agent=None):
+#     try:
+#         good = resolve_redirects(url, user_agent=user_agent.random, verify=False, timeout=5)
+#         return re_clean_mobile_twitter.sub(r'\1\2', good)
+#     except Exception as e:
+#         if retries:
+#             return resolve_url(url, retries-1, user_agent=user_agent)
+#         log("ERROR", "Could not resolve redirection for url %s (%s: %s)" % (url, type(e), e))
+#         return url
 
 def resolver(batch_size, db_conf, exit_event, verbose=False):
     db = prepare_db(**db_conf)
