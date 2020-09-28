@@ -35,7 +35,7 @@ from gazouilloire.database.elasticmanager import ElasticManager
 from elasticsearch import helpers
 from gazouilloire.url_resolve import resolve_loop, prepare_db, count_and_log
 
-BATCH_SIZE = 1000
+RESOLVER_BATCH_SIZE = 1000
 
 def log(typelog, text):
     try:
@@ -551,7 +551,7 @@ if __name__=='__main__':
         catchup.daemon = True
         catchup.start()
     if resolve_links:
-        resolve = Process(target=resolver, args=(BATCH_SIZE, conf['database'], exit_event, conf['debug']))
+        resolve = Process(target=resolver, args=(RESOLVER_BATCH_SIZE, conf['database'], exit_event, conf['debug']))
         resolve.daemon = True
         resolve.start()
     if dl_medias:
