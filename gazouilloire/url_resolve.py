@@ -11,22 +11,6 @@ from gazouilloire.database.elasticmanager import ElasticManager
 from ural import normalize_url
 
 
-def prepare_db(host, port, db_name):
-    try:
-        db = ElasticManager(host, port, db_name)
-        db_exists = db.exists(db.tweets)
-    except Exception as e:
-        sys.stderr.write(
-            "ERROR: Could not initiate connection to database: %s %s" % (type(e), e))
-        sys.exit(1)
-    if db_exists:
-        return db
-    else:
-        sys.stderr.write(
-            "ERROR: elasticsearch index %s does not exist" % db_name
-        )
-
-
 def count_and_log(db, batch_size, done=0, skip=0):
     db.client.indices.refresh(index=db.tweets)
     todo = list(db.find_tweets_with_unresolved_links(batch_size=batch_size))

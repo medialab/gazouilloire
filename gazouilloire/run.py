@@ -31,9 +31,9 @@ from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 
 from gazouilloire.tweets import prepare_tweet, prepare_tweets, get_timestamp
-from gazouilloire.database.elasticmanager import ElasticManager
+from gazouilloire.database.elasticmanager import ElasticManager, prepare_db
 from elasticsearch import helpers
-from gazouilloire.url_resolve import resolve_loop, prepare_db, count_and_log
+from gazouilloire.url_resolve import resolve_loop, count_and_log
 
 RESOLVER_BATCH_SIZE = 1000
 

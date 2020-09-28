@@ -3,7 +3,8 @@
 
 import json
 import click
-from gazouilloire.url_resolve import resolve_loop, prepare_db, count_and_log
+from gazouilloire.url_resolve import resolve_loop, count_and_log
+from gazouilloire.database.elasticmanager import prepare_db
 
 BATCH_SIZE = 1000
 with open('config.json') as confile:

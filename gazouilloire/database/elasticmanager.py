@@ -57,6 +57,20 @@ def format_tweet_fields(tweet):
             'coordinates', None)
     return elastic_tweet
 
+def prepare_db(host, port, db_name):
+    try:
+        db = ElasticManager(host, port, db_name)
+        db_exists = db.exists(db.tweets)
+    except Exception as e:
+        sys.stderr.write(
+            "ERROR: Could not initiate connection to database: %s %s" % (type(e), e))
+        sys.exit(1)
+    if db_exists:
+        return db
+    else:
+        sys.stderr.write(
+            "ERROR: elasticsearch index %s does not exist" % db_name
+        )
 
 class ElasticManager:
 
@@ -80,7 +94,9 @@ class ElasticManager:
         return self.client.indices.exists(index=doc_type)
 
     def prepare_indices(self):
-        """Initializes the database"""
+        """
+        Check if indices exist, if not, create them
+        """
         if not self.exists(self.tweets):
             self.client.indices.create(
                 index=self.tweets, body=DB_MAPPINGS["tweets_mapping"])
