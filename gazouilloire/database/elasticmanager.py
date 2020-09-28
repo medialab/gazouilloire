@@ -3,19 +3,10 @@ import sys
 import json
 from elasticsearch import Elasticsearch, helpers, exceptions
 import itertools
+from gazouilloire import analyzer
 
 try:
-    with open(
-            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), "config.json"),
-            "r") as confile:
-        conf = json.loads(confile.read())
-        analyzer = conf.get('text_analyzer', 'standard')
-except Exception as e:
-    print('WARNING - Could not open config.json: %s %s' % (type(e), e))
-    analyzer = 'standard'
-
-try:
-    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "db_mappings.json"), "r") as db_mappings:
+    with open(os.path.join(os.path.dirname(__file__), "db_mappings.json"), "r") as db_mappings:
         DB_MAPPINGS = json.loads(db_mappings.read())
         # ensure intended mappings are there
         for key in ["tweet", "link"]:
@@ -291,6 +282,7 @@ class ElasticManager:
 if __name__ == "__main__":
     es = ElasticManager("localhost", 9200, "gazouilloire")
     es.prepare_indices()
+    print(es.tweets)
     # todo = es.find_tweets_with_unresolved_links()
     # print(">> todo : ", todo[:10])
     # urlstoclear = list(set([l for t in todo if not t.get(
