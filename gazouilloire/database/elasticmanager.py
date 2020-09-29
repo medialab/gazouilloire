@@ -3,7 +3,10 @@ import sys
 import json
 from elasticsearch import Elasticsearch, helpers, exceptions
 import itertools
-from gazouilloire import analyzer
+from gazouilloire.config_format import load_conf
+
+conf = load_conf(os.getcwd())
+analyzer = conf.get('text_analyzer', 'standard')
 
 try:
     with open(os.path.join(os.path.dirname(__file__), "db_mappings.json"), "r") as db_mappings:
