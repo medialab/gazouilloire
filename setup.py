@@ -25,6 +25,10 @@ setup(name='gazouilloire',
           "pytz",
           "ural",
           "minet >= 0.20.2",
-          "future"
-      ]
+          "future",
+          "click"
+      ],
+      entry_points={
+        'console_scripts': ['gazouilloire=gazouilloire.cli.__main__:main']
+      }
       )
