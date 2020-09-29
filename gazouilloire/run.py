@@ -34,6 +34,7 @@ from gazouilloire.tweets import prepare_tweet, prepare_tweets, get_timestamp
 from gazouilloire.database.elasticmanager import ElasticManager, prepare_db
 from elasticsearch import helpers
 from gazouilloire.url_resolve import resolve_loop, count_and_log
+from gazouilloire.config_format import load_conf
 
 RESOLVER_BATCH_SIZE = 1000
 
@@ -470,16 +471,8 @@ def generate_geoloc_strings(x1, y1, x2, y2):
     log('INFO', 'Search Disk: %s/%s, %.2fkm' % (x, y, d))
     return streamgeocode, searchgeocode
 
-def main():
-    try:
-        with open('config.json') as confile:
-            conf = json.loads(confile.read())
-            for k in ['keywords', 'url_pieces', 'time_limited_keywords']:
-                if k not in conf:
-                    conf[k] = []
-    except Exception as e:
-        log('ERROR', 'Could not open config.json: %s %s' % (type(e), e))
-        sys.exit(1)
+def main(conf):
+
     if len(conf['keywords']) + len(conf['url_pieces']) > 400:
         log('ERROR', 'Please limit yourself to a maximum of 400 keywords total (including url_pieces): you set up %s keywords and %s url_pieces.' % (len(conf['keywords']), len(conf['url_pieces'])))
         sys.exit(1)
@@ -574,4 +567,4 @@ def main():
 
 
 if __name__=='__main__':
-    main()
+    main(load_conf("."))

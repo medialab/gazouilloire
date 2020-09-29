@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import click
-from gazouilloire.config import create_conf_example, load_conf
+from gazouilloire.config_format import create_conf_example, load_conf
+from gazouilloire import run
+
 
 @click.group()
 def main():
@@ -15,9 +17,9 @@ def init(path):
 
 @main.command()
 @click.argument('path', type=click.Path(exists=True), default=".")
-def run(path):
+def start(path):
     conf = load_conf(path)
-    raise NotImplementedError
+    run.main(conf)
 
 
 @main.command()
