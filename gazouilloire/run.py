@@ -470,7 +470,7 @@ def generate_geoloc_strings(x1, y1, x2, y2):
     log('INFO', 'Search Disk: %s/%s, %.2fkm' % (x, y, d))
     return streamgeocode, searchgeocode
 
-if __name__=='__main__':
+def main():
     try:
         with open('config.json') as confile:
             conf = json.loads(confile.read())
@@ -571,3 +571,7 @@ if __name__=='__main__':
         depile.join()
     except KeyboardInterrupt:
         exit_event.set()
+
+
+if __name__=='__main__':
+    main()
