@@ -8,15 +8,7 @@ def load_conf(dir_path):
     file_path = os.path.join(os.path.realpath(dir_path), "config.json")
     try:
         with open(file_path, "r") as confile:
-            conf = json.load(confile)
-            if required_format(conf):
-                for k in ['keywords', 'url_pieces', 'time_limited_keywords']:
-                    if k not in conf:
-                        conf[k] = []
-                return conf
-            else:
-                print('ERROR - Some required elements are missing in %s' % file_path)
-                sys.exit(1)
+            return required_format(json.load(confile))
     except Exception as e:
         print('ERROR - Could not open %s: %s %s' % (file_path, type(e), e))
         sys.exit(1)
@@ -31,7 +23,20 @@ def create_conf_example(dir_path):
 
 
 def required_format(conf):
-    """
-    Check if config has required format
-    """
-    return True
+    subfields = {
+        "twitter": ["key", "secret", "oauth_token", "oauth_secret"],
+        "database": ["host", "port", "db_name"],
+        "timezone": []
+    }
+    for field in subfields:
+        if field not in conf:
+            print('ERROR - required element %s is missing in config.json' % field)
+            sys.exit(1)
+        for subfield in subfields[field]:
+            if subfield not in conf[field]:
+                print('ERROR - required element %s is missing in config.json' % subfield)
+                sys.exit(1)
+    for k in ['keywords', 'url_pieces', 'time_limited_keywords']:
+        if k not in conf:
+            conf[k] = []
+    return conf
