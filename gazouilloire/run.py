@@ -36,7 +36,7 @@ from elasticsearch import helpers
 from gazouilloire.url_resolve import resolve_loop, count_and_log
 from gazouilloire.config_format import load_conf
 
-RESOLVER_BATCH_SIZE = 1000
+RESOLVER_BATCH_SIZE = 200
 
 def log(typelog, text):
     try:
