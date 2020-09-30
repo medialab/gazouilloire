@@ -2,6 +2,7 @@
 import click
 from gazouilloire.config_format import create_conf_example, load_conf
 from gazouilloire import run
+from gazouilloire.resolving_script import resolve_script
 
 
 @click.group()
@@ -23,6 +24,9 @@ def start(path):
 
 
 @main.command()
-def resolve():
-    click.echo("resolve")
-    raise NotImplementedError
+@click.argument('path', type=click.Path(exists=True), default=".")
+@click.argument('batch_size', default=1000)
+@click.option('--verbose/--silent', default=False)
+def resolve(path, batch_size, verbose):
+    conf = load_conf(path)
+    resolve_script(batch_size, **conf["database"], verbose=verbose)

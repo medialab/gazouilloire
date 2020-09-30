@@ -2,23 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import json
-import click
 from gazouilloire.url_resolve import resolve_loop, count_and_log
 from gazouilloire.database.elasticmanager import prepare_db
+from gazouilloire.config_format import load_conf
 
 BATCH_SIZE = 1000
-with open('config.json') as confile:
-    conf = json.loads(confile.read())
 
 
-
-
-@click.command()
-@click.argument('batch_size', default=BATCH_SIZE)
-@click.argument('host', default=conf["database"]["host"])
-@click.argument('port', default=conf["database"]["port"])
-@click.argument('db_name', default=conf["database"]["db_name"])
-@click.option('--verbose/--silent', default=False)
 def resolve_script(batch_size, host, port, db_name, verbose=False):
     db = prepare_db(host, port, db_name)
     skip = 0
@@ -29,4 +19,4 @@ def resolve_script(batch_size, host, port, db_name, verbose=False):
 
 
 if __name__ == '__main__':
-    resolve_script()
+    resolve_script(BATCH_SIZE, **load_conf(".")["database"])
