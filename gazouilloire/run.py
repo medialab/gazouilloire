@@ -60,7 +60,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
         while not pile.empty():
             todo.append(pile.get())
         tweets_bulk = []
-        for t in prepare_tweets(todo, pile, locale):
+        for t in prepare_tweets(todo, locale):
             if pile_medias and t["medias"]:
                 pile_medias.put(t)
             if pile_catchup and t["in_reply_to_status_id_str"]:
@@ -245,34 +245,34 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                     continue
                 if msg.get('id_str'):
                     msg["gazouilloire_source"] = "stream"
-                    tweet = prepare_tweet(msg, pile, locale=locale)
-                    if geocode or (urlpieces and not keywords):
-                        tmptext = tweet["text"].lower()
-                        keep = False
-                        for k in filter_keywords:
-                            if " " in k:
-                                keep2 = True
-                                for k2 in k.split(" "):
-                                    if k2 not in tmptext:
-                                        keep2 = False
+                    for tweet in prepare_tweet(msg, locale=locale):
+                        if geocode or (urlpieces and not keywords):
+                            tmptext = tweet["text"].lower()
+                            keep = False
+                            for k in filter_keywords:
+                                if " " in k:
+                                    keep2 = True
+                                    for k2 in k.split(" "):
+                                        if k2 not in tmptext:
+                                            keep2 = False
+                                            break
+                                    if keep2:
+                                        keep = True
                                         break
-                                if keep2:
+                                elif k in tmptext:
                                     keep = True
                                     break
-                            elif k in tmptext:
-                                keep = True
-                                break
-                        if not keep and keep_users:
-                            tmpauthor = tweet['user_screen_name'].lower()
-                            for u in keep_users:
-                                if "@%s" % u in tmptext or u == tmpauthor:
-                                    keep = True
-                                    break
-                        if not keep:
-                            continue
-                    pile.put(tweet)
-                    if debug:
-                        log("DEBUG", "[stream] +1 tweet")
+                            if not keep and keep_users:
+                                tmpauthor = tweet['user_screen_name'].lower()
+                                for u in keep_users:
+                                    if "@%s" % u in tmptext or u == tmpauthor:
+                                        keep = True
+                                        break
+                            if not keep:
+                                continue
+                        pile.put(tweet)
+                        if debug:
+                            log("DEBUG", "[stream] +1 tweet")
                 else:
                     if 'delete' in msg and 'status' in msg['delete'] and 'id_str' in msg['delete']['status']:
                         pile_deleted.put(msg['delete']['status']['id_str'])
