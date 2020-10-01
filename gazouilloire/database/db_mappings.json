@@ -130,7 +130,11 @@
           "retweet_user_id": {
             "type": "keyword"
           },
-          "source": {
+          "source_link": {
+            "type": "keyword",
+            "ignore_above": 80
+          },
+          "source_name": {
             "type": "keyword",
             "ignore_above": 80
           },

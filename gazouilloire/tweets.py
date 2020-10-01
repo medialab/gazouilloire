@@ -52,7 +52,7 @@ def nostr_field(f): return f.replace('_str', '')
 
 
 def grab_extra_meta(source, result, locale=None):
-    for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "coordinates", "source", "possibly_sensitive", "withheld_copyright", "withheld_scope", "withheld_countries", "retweet_count", "favorite_count", "reply_count"]:
+    for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "coordinates", "possibly_sensitive", "withheld_copyright", "withheld_scope", "withheld_countries", "retweet_count", "favorite_count", "reply_count"]:
         if meta in source:
             if not isinstance(source[meta], dict):
                 result[meta] = source[meta]
@@ -92,7 +92,10 @@ def grab_extra_meta(source, result, locale=None):
             result, locale, 'user_created_at')
     except:
         pass
-
+    if "source" in source and source["source"]:
+        split_source = source['source'].replace('<a href="', '').replace('</a>', '').split('" rel="nofollow">')
+        result['source_link'] = split_source[0]
+        result['source_name'] = split_source[1]
     result['langs'] = [result.get('lang', '').lower()]
     return result
 
