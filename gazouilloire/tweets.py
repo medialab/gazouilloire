@@ -12,8 +12,8 @@ except ImportError:
     from htmlentitydefs import name2codepoint
 from pytz import timezone
 from datetime import datetime
-from ural import is_url
 from gazouilloire.url_resolve import normalize
+from gazouilloire.config_format import log
 
 re_entities = re.compile(r'&([^;]+);')
 
@@ -57,7 +57,7 @@ def grab_extra_meta(source, result, locale=None):
             if not isinstance(source[meta], dict):
                 result[meta] = source[meta]
             elif meta != "coordinates":
-                print("WARNING, field {} is dict. It contains the following keys: {}. The field will NOT be indexed"
+                log.warning("field {} is dict. It contains the following keys: {}. The field will NOT be indexed"
                       .format(meta, " ".join(sorted(source[meta].keys()))))
             else:
                 result["coordinates"] = source["coordinates"]["coordinates"]
@@ -118,7 +118,7 @@ def prepare_tweet(tweet, locale=None):
             tweet[field] = tweet["extended_tweet"][field]
     text = tweet.get('full_text', tweet.get('text', ''))
     if not text:
-        print("WARNING, no text for tweet %s" % "https://twitter.com/%s/statuses/%s" %
+        log.warning("no text for tweet %s" % "https://twitter.com/%s/statuses/%s" %
               (tweet['user']['screen_name'], tweet['id_str']))
     rti = None
     rtu = None
@@ -194,10 +194,7 @@ def prepare_tweet(tweet, locale=None):
                     medias.append(["%s_%s" % (source_id, med_name), med_url])
             else:
                 normalized = normalize(entity["expanded_url"])
-                if is_url(normalized, tld_aware=True):
-                    links.add(normalized)
-                else:
-                    print("Not url: {}".format(normalized))
+                links.add(normalized)
         for hashtag in tweet['entities'].get('hashtags', []):
             hashtags.add(hashtag['text'].lower())
         for mention in tweet['entities'].get('user_mentions', []):
@@ -228,7 +225,7 @@ def prepare_tweet(tweet, locale=None):
     }
 
     if not tw["text"]:
-        print("WARNING, no text for tweet %s" % tw["url"])
+        log.warning("no text for tweet %s" % tw["url"])
     tw = grab_extra_meta(tweet, tw, locale)
     results.append(tw)
     return results
@@ -245,7 +242,7 @@ def clean_user_entities(user_data):
                         user_data[k] = user_data[k].replace(
                             url['url'], url['expanded_url'])
                     except:
-                        print("WARNING, couldn't process entity",
+                        log.warning("couldn't process entity",
                               url, k, user_data[k])
         user_data.pop('entities')
     if 'status' in user_data:

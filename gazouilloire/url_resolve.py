@@ -9,6 +9,7 @@ from minet import multithreaded_resolve
 from minet.exceptions import RedirectError
 from gazouilloire.database.elasticmanager import ElasticManager
 from ural import normalize_url
+from gazouilloire.config_format import log
 
 
 def count_and_log(db, batch_size, done=0, skip=0):
@@ -17,8 +18,7 @@ def count_and_log(db, batch_size, done=0, skip=0):
     left = db.count_tweets("links_to_resolve", True)
     if done:
         done = "(+%s actual redirections resolved out of %s)" % (done, len(todo))
-    t = datetime.now().isoformat()
-    print("\n- [%s] RESOLVING LINKS: %s waiting (done:%s skipped:%s)\n" % (t, left, done or "", skip))
+    log.info("RESOLVING LINKS: %s waiting (done:%s skipped:%s)\n" % (left, done or "", skip))
     return todo
 
 
@@ -42,8 +42,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
         urls_to_clear.append(u)
     if urls_to_clear:
         links_to_save = []
-        t = datetime.now().isoformat()
-        print("  + [%s] %s urls to resolve" % (t, len(urls_to_clear)))
+        log.info("%s urls to resolve" % (len(urls_to_clear)))
         try:
             for res in multithreaded_resolve(
                     urls_to_clear,
@@ -58,31 +57,29 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
                 last = res.stack[-1]
                 normalized_url = normalize(last.url)
                 if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
-                    print("ERROR on resolving %s: %s (last url: %s)" % (source, res.error, last.url), file=sys.stderr)
+                    log.warning("failed to resolve %s: %s (last url: %s)" % (source, res.error, last.url))
                     # TODO:
                     #  Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
                 if verbose:
-                    print("          ", last.status, "(%s)" % last.type, ":", source, "->", normalized_url, file=sys.stderr)
+                    log.debug("          ", last.status, "(%s)" % last.type, ":", source, "->", normalized_url)
                 links_to_save.append({'link_id': source, 'real': normalized_url})
                 alreadydone[source] = normalized_url
                 if source != normalized_url:
                     done += 1
         except Exception as e:
-            print("CRASHED with %s (%s) while resolving batch, skipping it for now..." % (e, type(e)))
-            print("CRASHED with %s (%s) while resolving %s" % (e, type(e), urls_to_clear), file=sys.stderr)
+            log.error("CRASHED with %s (%s) while resolving batch, skipping it for now..." % (e, type(e)))
+            log.error("CRASHED with %s (%s) while resolving %s" % (e, type(e), urls_to_clear))
             skip += batch_size
-            print("  + [%s] STORING %s REDIRECTIONS IN ELASTIC" % (t, len(links_to_save)))
+            log.info("STORING %s REDIRECTIONS IN ELASTIC" % (len(links_to_save)))
             if links_to_save:
                 helpers.bulk(db.client, actions=db.prepare_indexing_links(links_to_save))
             return done, skip
 
-        t = datetime.now().isoformat()
-        print("  + [%s] STORING %s REDIRECTIONS IN ELASTIC" % (t, len(links_to_save)))
+        log.info("STORING %s REDIRECTIONS IN ELASTIC" % (len(links_to_save)))
         if links_to_save:
             helpers.bulk(db.client, actions=db.prepare_indexing_links(links_to_save))
 
-        t = datetime.now().isoformat()
-        print("  + [%s] UPDATING TWEETS LINKS IN ELASTIC" % t)
+        log.info("UPDATING TWEETS LINKS IN ELASTIC")
     tweets_already_done = []
     ids_done_in_batch = set()
     to_update = []
