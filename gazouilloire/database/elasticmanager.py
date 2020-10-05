@@ -3,10 +3,7 @@ import sys
 import json
 from elasticsearch import Elasticsearch, helpers, exceptions
 import itertools
-from gazouilloire.config_format import load_conf
 
-conf = load_conf(os.getcwd())
-analyzer = conf.get('text_analyzer', 'standard')
 
 try:
     with open(os.path.join(os.path.dirname(__file__), "db_mappings.json"), "r") as db_mappings:
@@ -17,10 +14,6 @@ try:
 except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
     print("ERROR - Could not open db_mappings.json: %s %s" % (type(e), e))
     sys.exit(1)
-
-# updating the text analyzer according to the config.json
-DB_MAPPINGS['tweets_mapping']['mappings']['tweet']['properties']['user_description']['analyzer'] = analyzer
-DB_MAPPINGS['tweets_mapping']['mappings']['tweet']['properties']['text']['analyzer'] = analyzer
 
 
 def reformat_elastic_document(doc):
