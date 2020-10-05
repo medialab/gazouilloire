@@ -6,27 +6,36 @@ import logging
 
 log = logging.getLogger("gazouilloire")
 log.setLevel(logging.INFO)
-# create file handler which logs only error messages
-error_handler = logging.FileHandler('error.log')
-error_handler.setLevel(logging.ERROR)
-# create console handler with a lower log level
+
+# create console handler with the lowest log level
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.DEBUG)
-# add formatters to the handlers
 console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-error_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
-# add the handlers to logger
 log.addHandler(console_handler)
-log.addHandler(error_handler)
+
+
+def create_error_handler(path):
+    # create file handler which logs only error messages
+    error_handler = logging.FileHandler(os.path.join(os.path.realpath(path), 'error.log'))
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+    log.addHandler(error_handler)
 
 
 def load_conf(dir_path):
     file_path = os.path.join(os.path.realpath(dir_path), "config.json")
-    try:
-        with open(file_path, "r") as confile:
-            return required_format(json.load(confile))
-    except Exception as e:
-        log.error('Could not open %s: %s %s' % (file_path, type(e), e))
+    if os.path.isfile(file_path):
+        try:
+            with open(file_path, "r") as confile:
+                conf =  required_format(json.load(confile))
+        except Exception as e:
+            log.error('Could not open %s: %s %s' % (file_path, type(e), e))
+            sys.exit(1)
+        create_error_handler(dir_path)
+        return conf
+    else:
+        log.error('file {} does not exist. Try running the following command:\ngazouilloire init <your_path>'
+                  .format(file_path))
         sys.exit(1)
 
 
