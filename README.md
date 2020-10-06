@@ -2,19 +2,26 @@
 
 Twitter stream + search API grabber handling various config options such as collecting only during specific time periods, or limiting the collection to some locations.
 
-Python 2.7 & 3.x compatible.
+Python 3.x compatible.
 
 ## HowTo
 
-- Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch#ga-release) (version 6.X) and/or [MongoDB](https://www.mongodb.com/download-center/community) (version 4.0)
-
-- Install dependencies:
-
+- Install gazouilloire
 ```bash
-    pip install -r requirements.txt
+    pip install gazouilloire
 ```
 
-- Copy `config.json.example` to `config.json`
+- Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch#ga-release) (version 6.X)
+
+- Init gazouilloire collection in a specific directory
+```bash
+    gazouilloire init path/to/collection/directory'
+```
+or in the current directory
+```bash
+    gazouilloire init
+```
+a `config.json` file is created. Open it to configure the collection parameters.
 
 - Set your [Twitter API key](https://apps.twitter.com/app/) and generate the related Access Token
 
@@ -27,19 +34,6 @@ Python 2.7 & 3.x compatible.
 }
 
 ```
-
-- Choose the database you want to use:
-
-```json
-"database": {
-        "type": "elasticsearch",
-        "host": "localhost",
-        "port": 9200,
-        "db": "gazouilloire"
-    }
-```
-
-Note that `type` is either `mongo` or `elasticsearch`, and that default ports for MongoDB & Elasticsearch are respectively `27017` and `9200`.
 
 - Write down the list of desired **keywords** and **@users** and/or the list of desired **url_pieces** as json arrays:
 
@@ -84,12 +78,14 @@ Note that `type` is either `mongo` or `elasticsearch`, and that default ports fo
 - Run with:
 
 ```bash
-    ./restart.sh
-    # or
-    ./gazouilloire/run.py
+    gazouilloire start path/to/collection/directory
+```
+or, to run the script in the current directory:
+```
+    gazouilloire start
 ```
 
-- Data is stored in your MongoDB/ElasticSearch, which you can direcly query. But you can also export it easily with simple scripts such as those in the `bin` directory:
+- Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily with simple scripts such as those in the `bin` directory:
 
 ```bash
 # To export a csv with most fields (formatted similarily to [DMI's TCAT](https://github.com/digitalmethodsinitiative/dmi-tcat)):
