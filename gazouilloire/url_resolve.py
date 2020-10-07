@@ -8,7 +8,7 @@ from elasticsearch import helpers
 from minet import multithreaded_resolve
 from minet.exceptions import RedirectError
 from gazouilloire.database.elasticmanager import ElasticManager
-from ural import normalize_url
+from ural import normalize_url, get_hostname
 from gazouilloire.config_format import log
 
 
@@ -26,6 +26,14 @@ def normalize(url):
     return normalize_url(url, strip_authentication=False, strip_trailing_slash=False, strip_protocol=False,
                          strip_irrelevant_subdomains=False, strip_fragment=False, normalize_amp=False,
                          fix_common_mistakes=False, infer_redirection=False, quoted=True)
+
+
+def get_domains(url):
+    result = []
+    domain_parts = get_hostname(url).split(".")
+    for enum, part in enumerate(domain_parts):
+        result.append(".".join(domain_parts[enum:]))
+    return result
 
 
 def resolve_loop(batch_size, db, todo, skip, verbose):
@@ -56,6 +64,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
                 source = res.url
                 last = res.stack[-1]
                 normalized_url = normalize(last.url)
+                domains = get_domains(normalized_url)
                 if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
                     log.warning("failed to resolve %s: %s (last url: %s)" % (source, res.error, last.url))
                     # TODO:
