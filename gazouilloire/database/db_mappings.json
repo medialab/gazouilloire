@@ -20,6 +20,9 @@
           "deleted": {
             "type": "boolean"
           },
+          "domains": {
+            "type": "keyword"
+          },
           "favorite_count": {
             "type": "integer"
           },

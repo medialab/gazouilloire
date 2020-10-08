@@ -245,9 +245,10 @@ class ElasticManager:
         self.client.index(index=self.links, doc_type="link",
                           body={"link_id": link, "real": resolved_link})
 
-    def prepare_indexing_tweets_with_new_links(self, tweets, good_links):
+    def prepare_indexing_tweets_with_new_links(self, tweets, links, domains):
         for t in tweets:
-            t["_source"]["proper_links"] = good_links
+            t["_source"]["proper_links"] = links
+            t["_source"]["domains"] = domains
             t["_source"]["links_to_resolve"] = False
             yield {
                 '_index': self.tweets,
@@ -257,7 +258,7 @@ class ElasticManager:
                 "_id": t["_id"]
             }
 
-    def update_retweets_with_links(self, tweet_id, good_links):
+    def update_retweets_with_links(self, tweet_id, links, domains):
         """Adds the resolved links to the corresponding tweets"""
         query = {
             "term": {
@@ -270,7 +271,7 @@ class ElasticManager:
             query={"query": query}
         )
 
-        helpers.bulk(self.client, actions=self.prepare_indexing_tweets_with_new_links(response, good_links))
+        helpers.bulk(self.client, actions=self.prepare_indexing_tweets_with_new_links(response, links, domains))
 
     def count_tweets(self, key, value):
         """Counts the number of documents where the given key is equal to the given value"""
