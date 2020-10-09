@@ -29,6 +29,9 @@ setup(name='gazouilloire',
           "click"
       ],
       entry_points={
-        'console_scripts': ['gazouilloire=gazouilloire.cli.__main__:main']
+        'console_scripts': [
+            'gazouilloire=gazouilloire.cli.__main__:main',
+            'gazou=gazouilloire.cli.__main__:main'
+        ]
       }
       )
