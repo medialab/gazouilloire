@@ -4,6 +4,7 @@
 *.tmp
 *.bak
 *~
+*.log
 .vscode/
 backups
 medias
