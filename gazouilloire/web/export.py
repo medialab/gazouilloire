@@ -265,10 +265,12 @@ def yield_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
     out_fields = list_fields + extra_fields
     yield ",".join(out_fields).encode('utf-8')
     for t in queryiterator:
+        source = t["_source"]
+        source["_id"] = t["_id"]
         # ignore tweets only caught on deletion missing most fields
-        if len(t.keys()) < 10:
+        if len(source.keys()) < 10:
             continue
-        yield ",".join(format_csv(get_field(k, t)) for k in out_fields)
+        yield ",".join(format_csv(get_field(k, source)) for k in out_fields)
 
 def export_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
     return "\n".join([t for t in yield_csv(queryiterator, list_fields, extra_fields)])

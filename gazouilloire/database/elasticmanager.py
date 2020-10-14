@@ -30,6 +30,18 @@ def chunks(iterator, n):
         yield itertools.chain([first], itertools.islice(iterator, n - 1))
 
 
+def add_and_report(sett, val):
+    """
+    Add val to sett and check if val was already part of sett
+    :param sett: set of tweet ids
+    :param val: new tweet id
+    :return: bool
+    """
+    leng = len(sett)
+    sett.add(val)
+    return len(sett) != leng
+
+
 def format_response(response, single_result=False):
     """Formats the ES find() response into a list of dictionaries"""
     if response["hits"]["total"] == 0:
@@ -291,6 +303,51 @@ class ElasticManager:
         self.client.update_by_query(
             body=q, doc_type="tweet", index=self.tweets)
 
+    # export methods
+    def search_thread_elements(self, ids_list):
+        """
+        Elasticsearch query on which get_thread_ids_from_ids is based
+        """
+        body = {
+            "_source": "in_reply_to_status_id_str",
+            "query": {
+                "bool": {
+                    "filter": [{
+                        "bool": {
+                            "should": [
+                                {"terms": {"_id": ids_list}},
+                                {"terms": {"in_reply_to_status_id_str": ids_list}}
+                            ]
+                        }
+                    }]
+                }
+            }
+        }
+        response = helpers.scan(
+            client=self.client,
+            index=self.tweets,
+            query=body
+        )
+        return response
+
+    def get_thread_ids_from_ids(self, ids):
+        """
+        Find ids of all tweets that are part of the same conversations as the tweets in ids
+        :param ids: list of tweet ids
+        :return:
+        """
+        ids_list = list(set(ids))
+        all_ids = ids.copy()
+        while ids_list:
+            todo_ids = set()
+            for t in self.search_thread_elements(ids_list):
+                if add_and_report(all_ids, t["_id"]):
+                    todo_ids.add(t["_id"])
+                origin = t.get("in_reply_to_status_id_str")
+                if origin and add_and_report(all_ids, origin):
+                    todo_ids.add(origin)
+            ids_list = list(todo_ids)
+        return all_ids
 
 if __name__ == "__main__":
     es = ElasticManager("localhost", 9200, "gazouilloire")

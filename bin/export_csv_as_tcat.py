@@ -8,7 +8,7 @@ import sys
 import re
 import csv
 import json
-from gazouilloire.database import db_manager
+from gazouilloire.database.elasticmanager import ElasticManager, helpers
 from gazouilloire.web.export import yield_csv, get_thread_ids_from_ids
 
 try:
@@ -22,7 +22,7 @@ SELECTED_FIELD = conf.get('export', {}).get('selected_field', None)
 EXTRA_FIELDS = conf.get('export', {}).get('extra_fields', [])
 
 try:
-    db = db_manager(**conf['database'])
+    db = ElasticManager(**conf['database'])
     db.prepare_indices()
 except Exception as e:
     sys.stderr.write(
@@ -63,7 +63,7 @@ if len(sys.argv) == 2:
             ids = sorted([t.get("id", t.get("_id"))
                           for t in csv.DictReader(f)])
         if include_threads:
-            ids = get_thread_ids_from_ids(ids, mongodb)
+            ids = db.get_thread_ids_from_ids(ids)
         query = {"_id": {"$in": ids}}
     else:
         query["text"] = re.compile(sys.argv[1].replace(' ', '\s+'), re.I)
@@ -72,11 +72,17 @@ elif len(sys.argv) > 2:
     for arg in sys.argv[1:]:
         query["$or"].append(
             {"text": re.compile(arg.replace(' ', r'\s+'), re.I)})
-
+else:
+    query = {
+        "query": {
+            "match_all": {}
+        }
+    }
 print(query)
-count = mongodb.count(query)
+# count = db.count_tweets()
+count = db.client.count(index=db.tweets, doc_type='tweet', body={"query": {"match_all": {}}})['count']
 iterator = yield_csv(
-    mongodb.find(query, sort=[("timestamp", 1)], limit=count), extra_fields=EXTRA_FIELDS)
+    helpers.scan(client=db.client, index=db.tweets, query=query), extra_fields=EXTRA_FIELDS)
 if verbose:
     import progressbar
     bar = progressbar.ProgressBar(max_value=count)
