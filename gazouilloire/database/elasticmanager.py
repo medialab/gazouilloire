@@ -349,6 +349,12 @@ class ElasticManager:
             ids_list = list(todo_ids)
         return all_ids
 
+    def multi_get(self, ids, batch_size=1000):
+        for i in range(0, len(ids), batch_size):
+            batch = self.client.mget(body={'ids': ids[i:i+batch_size]}, index=self.tweets, doc_type="tweet")
+            for tweet in batch["docs"]:
+                yield tweet
+
 if __name__ == "__main__":
     es = ElasticManager("localhost", 9200, "gazouilloire")
     es.prepare_indices()
