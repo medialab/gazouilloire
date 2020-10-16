@@ -82,7 +82,11 @@ elif len(sys.argv) > 2:
     query = {
         "query": {
             "bool": {
-                "should": [{"term": {"text": arg}} for arg in sys.argv[1:]]
+                "filter": [{
+                    "bool": {
+                        "should": [{"term": {"text": arg}} for arg in sys.argv[1:]]
+                    }
+                }]
             }
         }
     }
@@ -99,7 +103,7 @@ if isinstance(query, list):
     iterator = yield_csv(db.multi_get(query))
 else:
     # count = db.count_tweets()
-    count = db.client.count(index=db.tweets, doc_type='tweet', body={"query": {"match_all": {}}})['count']
+    count = db.client.count(index=db.tweets, doc_type='tweet', body=query)['count']
     iterator = yield_csv(helpers.scan(client=db.client, index=db.tweets, query=query), extra_fields=EXTRA_FIELDS)
 if verbose:
     import progressbar2
