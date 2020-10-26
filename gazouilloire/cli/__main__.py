@@ -24,9 +24,10 @@ def start(path):
 
 
 @main.command()
-@click.argument('path', type=click.Path(exists=True), default=".")
-@click.argument('batch_size', default=1000)
+@click.argument('db_name', required=True, type=str)
+@click.argument('host', default="localhost")
+@click.argument('port', default=9200)
+@click.argument('batch_size', default=5000)
 @click.option('--verbose/--silent', default=False)
-def resolve(path, batch_size, verbose):
-    conf = load_conf(path)
-    resolve_script(batch_size, **conf["database"], verbose=verbose)
+def resolve(host, port, db_name, batch_size, verbose):
+    resolve_script(batch_size, host, port, db_name, verbose=verbose)
