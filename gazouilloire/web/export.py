@@ -59,7 +59,7 @@ TWEET_FIELDS = [
   "quoted_user_id",                 # digital ID of the user who authoring the retweeted message
   "links",                          # list of links included in the text content, with redirections resolved, separated by |
   "medias_urls",                    # list of links to images/videos embedded, separated by |
-  "medias_files",                   # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabled
+  "medias_files",                   # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabledmedias_files
   "mentioned_user_names",           # list of text IDs of users mentionned, separated by |
   "mentioned_user_ids",             # list of digital IDs of users mentionned, separated by |
   "hashtags"                        # list of hashtags used, lowercased, separated by |
@@ -268,7 +268,7 @@ def yield_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
         source = t["_source"]
         source["_id"] = t["_id"]
         # ignore tweets only caught on deletion missing most fields
-        if len(source.keys()) < 10:
+        if len(source) < 10:
             continue
         yield ",".join(format_csv(get_field(k, source)) for k in out_fields)
 
