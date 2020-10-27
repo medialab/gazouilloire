@@ -39,13 +39,13 @@ def unescape_html(text):
     return re_entities.sub(decode_entities, text)
 
 
-def get_timestamp(t, locale, field='created_at'):
+def get_dates(t, locale, field='created_at'):
     tim = datetime.strptime(t[field], '%a %b %d %H:%M:%S +0000 %Y')
     if locale:
         utc_date = timezone('UTC').localize(tim)
         locale_date = utc_date.astimezone(locale)
-        return time.mktime(locale_date.timetuple())
-    return tim.isoformat()
+        return time.mktime(locale_date.timetuple()), utc_date.isoformat()
+    return time.mktime(tim.timetuple()), tim.isoformat()
 
 
 def nostr_field(f): return f.replace('_str', '')
@@ -88,7 +88,7 @@ def grab_extra_meta(source, result, locale=None):
         except:
             pass
     try:
-        result['user_created_at_timestamp'] = get_timestamp(
+        result['user_timestamp_utc'], result['user_created_at_local'] = get_dates(
             result, locale, 'user_created_at')
     except:
         pass
@@ -199,10 +199,11 @@ def prepare_tweet(tweet, locale=None):
             hashtags.add(hashtag['text'].lower())
         for mention in tweet['entities'].get('user_mentions', []):
             mentions[mention['screen_name'].lower()] = mention['id_str']
+    timestamp_utc, created_at_local = get_dates(tweet, locale)
     tw = {
         '_id': tweet['id_str'],
-        'created_at': tweet['created_at'],
-        'timestamp': get_timestamp(tweet, locale),
+        'created_at_local': created_at_local,
+        'timestamp_utc': timestamp_utc,
         'text': unescape_html(text),
         'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str']),
         'quoted_id': qti,
