@@ -5,10 +5,10 @@
         "oauth_token": "xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
         "oauth_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     },
-    "database": {
-        "host": "localhost",
-        "port": 9200,
-        "db_name": "gazouilloire"
+    "csv_export": {
+        "file": "my_file_name.csv",
+        "fields": ["_id", "text", "collected_via", "collected_at_timestamp", "timestamp", "created_at", "lang", "user_screen_name",
+        "links", "mentions_ids", "mentions_names", "hashtags", "retweet_count", "favorite_count"]
     },
     "keywords": [
         "amour",

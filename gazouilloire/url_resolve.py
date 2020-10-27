@@ -5,8 +5,8 @@ import sys
 from urllib3 import Timeout
 from datetime import datetime
 from elasticsearch import helpers
-from minet import multithreaded_resolve
-from minet.exceptions import RedirectError
+#from minet import multithreaded_resolve
+#from minet.exceptions import RedirectError
 from gazouilloire.database.elasticmanager import ElasticManager
 from ural import normalize_url, get_hostname
 from gazouilloire.config_format import log

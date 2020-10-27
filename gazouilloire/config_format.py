@@ -27,7 +27,7 @@ def load_conf(dir_path):
     if os.path.isfile(file_path):
         try:
             with open(file_path, "r") as confile:
-                conf =  required_format(json.load(confile))
+                conf = required_format(json.load(confile))
         except Exception as e:
             log.error('Could not open %s: %s %s' % (file_path, type(e), e))
             sys.exit(1)
@@ -50,7 +50,7 @@ def create_conf_example(dir_path):
 def required_format(conf):
     subfields = {
         "twitter": ["key", "secret", "oauth_token", "oauth_secret"],
-        "database": ["host", "port", "db_name"],
+        "csv_export": ["file", "fields"],
         "timezone": []
     }
     for field in subfields:

@@ -31,10 +31,8 @@ from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 
 from gazouilloire.tweets import prepare_tweet, prepare_tweets, get_timestamp
-from gazouilloire.database.elasticmanager import ElasticManager, prepare_db
-from elasticsearch import helpers
-from gazouilloire.url_resolve import resolve_loop, count_and_log
 from gazouilloire.config_format import load_conf, log
+import csv
 
 RESOLVER_BATCH_SIZE = 200
 
@@ -49,13 +47,12 @@ def breakable_sleep(delay, exit_event):
     while time.time() < t and not exit_event.is_set():
         time.sleep(1)
 
-def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit_event, debug=False):
-    db = ElasticManager(**db_conf)
+def depiler(pile, pile_deleted, pile_catchup, pile_medias, export_conf, locale, exit_event, debug=False):
+    with open(export_conf["file"], "a+") as f:
+        writer = csv.DictWriter(f, fieldnames=export_conf["fields"], extrasaction="ignore")
+        writer.writeheader()
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         log.info("Pile length: " + str(pile.qsize()))
-        while not pile_deleted.empty():
-            todelete = pile_deleted.get()
-            db.set_deleted(todelete)
         todo = []
         while not pile.empty():
             todo.append(pile.get())
@@ -63,13 +60,17 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
         for t in prepare_tweets(todo, locale):
             if pile_medias and t["medias"]:
                 pile_medias.put(t)
-            if pile_catchup and t["in_reply_to_status_id_str"]:
-                if not db.find_tweet(t["in_reply_to_status_id_str"]):
-                    pile_catchup.put(t["in_reply_to_status_id_str"])
             tweets_bulk.append(t)
-        helpers.bulk(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
+        with open(export_conf["file"], "a+") as f:
+            writer = csv.DictWriter(f, fieldnames=export_conf["fields"], extrasaction="ignore")
+            for r in tweets_bulk:
+                for field in export_conf["fields"]:
+                    if field in r and isinstance(r[field], list):
+                        r[field] = "|".join(r[field])
+                writer.writerow(r)
+
         if debug and tweets_bulk:
-            log.debug("Saved %s tweets in database" % len(tweets_bulk))
+            log.debug("Saved %s tweets in file" % len(tweets_bulk))
         breakable_sleep(2, exit_event)
     log.info("FINISHED depiler")
 
@@ -130,16 +131,6 @@ def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
                 pile.put(dict(t))
         breakable_sleep(5, exit_event)
     log.info("FINISHED catchupper")
-
-def resolver(batch_size, db_conf, exit_event, verbose=False):
-    db = prepare_db(**db_conf)
-    skip = 0
-    done = 0
-    while not exit_event.is_set():
-        todo = count_and_log(db, batch_size, done=done, skip=skip)
-        done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose)
-        time.sleep(30)
-    log.info("FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
 date_to_time = lambda x: time.mktime(datetime.strptime(x[:16], "%Y-%m-%d %H:%M").timetuple())
@@ -491,12 +482,6 @@ def main(conf):
         log.error("\t".join(all_timezones)+"\n\n")
         log.error('Unknown timezone set in config.json: %s. Please choose one among the above ones.' % conf['timezone'])
         sys.exit(1)
-    try:
-        db = ElasticManager(**conf['database'])
-        db.prepare_indices()
-    except Exception as e:
-        log.error('Could not initiate connection to database: %s %s' % (type(e), e))
-        sys.exit(1)
     language = conf.get('language', None)
     streamgeocode = None
     searchgeocode = None
@@ -521,7 +506,6 @@ def main(conf):
                 log.error('Could not find a place matching geolocalisation %s: %s %s' % (conf["geolocalisation"], type(e), e))
                 sys.exit(1)
     grab_conversations = "grab_conversations" in conf and conf["grab_conversations"]
-    resolve_links = "resolve_redirected_links" in conf and conf["resolve_redirected_links"]
     dl_medias = "download_medias" in conf and conf["download_medias"]
     if dl_medias:
         medias_dir = conf.get("medias_directory", "medias")
@@ -535,17 +519,13 @@ def main(conf):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     exit_event = Event()
-    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf['database'], locale, exit_event, conf['debug']))
+    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf['csv_export'], locale, exit_event, conf['debug']))
     depile.daemon = True
     depile.start()
     if grab_conversations:
         catchup = Process(target=catchupper, args=(pile, pile_catchup, ResConn, exit_event, conf['debug']))
         catchup.daemon = True
         catchup.start()
-    if resolve_links:
-        resolve = Process(target=resolver, args=(RESOLVER_BATCH_SIZE, conf['database'], exit_event, conf['debug']))
-        resolve.daemon = True
-        resolve.start()
     if dl_medias:
         download = Process(target=downloader, args=(pile_medias, medias_dir, exit_event, conf['debug']))
         download.daemon = True
