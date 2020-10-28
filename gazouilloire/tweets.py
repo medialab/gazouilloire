@@ -44,8 +44,8 @@ def get_dates(t, locale, field='created_at'):
     if locale:
         utc_date = timezone('UTC').localize(tim)
         locale_date = utc_date.astimezone(locale)
-        return time.mktime(locale_date.timetuple()), utc_date.isoformat()
-    return time.mktime(tim.timetuple()), tim.isoformat()
+        return time.mktime(utc_date.timetuple()), datetime.strftime(locale_date, "%Y-%m-%dT%H:%M:%S")
+    return time.mktime(tim.timetuple()), datetime.strftime(tim, "%Y-%m-%dT%H:%M:%S")
 
 
 def nostr_field(f): return f.replace('_str', '')
@@ -88,7 +88,7 @@ def grab_extra_meta(source, result, locale=None):
         except:
             pass
     try:
-        result['user_timestamp_utc'], result['user_created_at_local'] = get_dates(
+        result['user_timestamp_utc'], result['user_created_at'] = get_dates(
             result, locale, 'user_created_at')
     except:
         pass
@@ -132,7 +132,7 @@ def prepare_tweet(tweet, locale=None):
         nested = prepare_tweet(tweet['retweeted_status'], locale=locale)
         rtweet = nested[-1]
         results.extend(nested)
-        rtime = rtweet['timestamp']
+        rtime = rtweet['timestamp_utc']
         text = "RT @%s: %s" % (rtu, rtweet['text'])
         for ent in ['entities', 'extended_entities']:
             if ent not in tweet['retweeted_status']:
@@ -158,7 +158,7 @@ def prepare_tweet(tweet, locale=None):
             qturl = tweet['quoted_status_permalink']['url']
         else:
             qturl = qtweet['url']
-        qtime = qtweet['timestamp']
+        qtime = qtweet['timestamp_utc']
         text = text.replace(qturl, u"« %s: %s — %s »" %
                             (qtu, qtweet['text'], qturl))
         for ent in ['entities', 'extended_entities']:
@@ -199,28 +199,28 @@ def prepare_tweet(tweet, locale=None):
             hashtags.add(hashtag['text'].lower())
         for mention in tweet['entities'].get('user_mentions', []):
             mentions[mention['screen_name'].lower()] = mention['id_str']
-    timestamp_utc, created_at_local = get_dates(tweet, locale)
+    timestamp_utc, local_time = get_dates(tweet, locale)
     tw = {
         '_id': tweet['id_str'],
-        'created_at_local': created_at_local,
+        'local_time': local_time,
         'timestamp_utc': timestamp_utc,
         'text': unescape_html(text),
         'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str']),
         'quoted_id': qti,
         'quoted_user': qtu,
         'quoted_user_id': qtuid,
-        'quoted_timestamp': qtime,
+        'quoted_timestamp_utc': qtime,
         'retweet_id': rti,
         'retweet_user': rtu,
         'retweet_user_id': rtuid,
-        'retweet_timestamp': rtime,
+        'retweet_timestamp_utc': rtime,
         'medias': medias,
         'links': sorted(links),
         'links_to_resolve': len(links) > 0,
         'hashtags': sorted(hashtags),
         'mentions_ids': [mentions[m] for m in sorted(mentions.keys())],
         'mentions_names': sorted(mentions.keys()),
-        'collected_at_timestamp': time.time(),
+        'collection_time': datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f'),
         'collected_via': [tweet["gazouilloire_source"]],
         'match_query': tweet["gazouilloire_source"] != "thread" and tweet["gazouilloire_source"] != "quote"
     }

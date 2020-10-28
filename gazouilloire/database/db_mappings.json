@@ -3,19 +3,15 @@
     "mappings": {
       "tweet": {
         "properties": {
-          "collected_at_timestamp": {
-            "type": "date",
-            "format": "epoch_second"
-          },
           "collected_via": {
             "type": "keyword"
           },
+          "collection_time": {
+            "type": "keyword",
+            "index": false
+          },
           "coordinates": {
             "type": "geo_point"
-          },
-          "created_at": {
-            "type": "text",
-            "index": false
           },
           "deleted": {
             "type": "boolean"
@@ -55,6 +51,10 @@
           },
           "links_to_resolve": {
             "type": "boolean"
+          },
+          "local_time": {
+            "type": "keyword",
+            "index": false
           },
           "match_query": {
             "type": "boolean"
@@ -104,7 +104,7 @@
           "quoted_id": {
             "type": "keyword"
           },
-          "quoted_timestamp": {
+          "quoted_timestamp_utc": {
             "type": "date",
             "format": "epoch_second"
           },
@@ -123,7 +123,7 @@
           "retweet_id": {
             "type": "keyword"
           },
-          "retweet_timestamp": {
+          "retweet_timestamp_utc": {
             "type": "date",
             "format": "epoch_second"
           },
@@ -145,7 +145,7 @@
             "type": "text",
             "analyzer": "standard"
           },
-          "timestamp": {
+          "timestamp_utc": {
             "type": "date",
             "format": "epoch_second"
           },
@@ -157,7 +157,7 @@
             "type": "keyword",
             "index": false
           },
-          "user_created_at_timestamp": {
+          "user_timestamp_utc": {
             "type": "date",
             "format": "epoch_second"
           },

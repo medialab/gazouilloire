@@ -30,7 +30,7 @@ from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 
-from gazouilloire.tweets import prepare_tweet, prepare_tweets, get_timestamp
+from gazouilloire.tweets import prepare_tweet, prepare_tweets
 from gazouilloire.database.elasticmanager import ElasticManager, prepare_db
 from elasticsearch import helpers
 from gazouilloire.url_resolve import resolve_loop, count_and_log
@@ -43,6 +43,16 @@ RESOLVER_BATCH_SIZE = 200
 #         sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
 #     except UnicodeEncodeError:
 #         sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text.encode('ascii', 'ignore')))
+
+
+def get_timestamp(t, locale, field='created_at'):
+    tim = datetime.strptime(t[field], '%a %b %d %H:%M:%S +0000 %Y')
+    if locale:
+        utc_date = timezone('UTC').localize(tim)
+        locale_date = utc_date.astimezone(locale)
+        return time.mktime(locale_date.timetuple())
+    return tim.isoformat()
+
 
 def breakable_sleep(delay, exit_event):
     t = time.time() + delay
@@ -67,6 +77,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
                 if not db.find_tweet(t["in_reply_to_status_id_str"]):
                     pile_catchup.put(t["in_reply_to_status_id_str"])
             tweets_bulk.append(t)
+
         helpers.bulk(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
         if debug and tweets_bulk:
             log.debug("Saved %s tweets in database" % len(tweets_bulk))
