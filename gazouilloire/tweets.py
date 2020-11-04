@@ -52,7 +52,7 @@ def nostr_field(f): return f.replace('_str', '')
 
 
 def grab_extra_meta(source, result, locale=None):
-    for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "coordinates", "possibly_sensitive", "withheld_copyright", "withheld_scope", "withheld_countries", "retweet_count", "favorite_count", "reply_count"]:
+    for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "coordinates", "possibly_sensitive", "retweet_count", "favorite_count", "reply_count"]:
         if meta in source:
             if not isinstance(source[meta], dict):
                 result[meta] = source[meta]
@@ -63,7 +63,7 @@ def grab_extra_meta(source, result, locale=None):
                 result["coordinates"] = source["coordinates"]["coordinates"]
         elif nostr_field(meta) in source:
             result[meta] = str(source[nostr_field(meta)])
-    for meta in ['id_str', 'screen_name', 'name', 'friends_count', 'followers_count', 'statuses_count', 'favourites_count', 'listed_count', 'profile_image_url', 'location', 'verified', 'description', 'profile_image_url_https', 'utc_offset', 'time_zone', 'lang', 'withheld_scope', 'withheld_countries', 'created_at']:
+    for meta in ['id_str', 'screen_name', 'name', 'friends_count', 'followers_count', 'statuses_count', 'favourites_count', 'listed_count', 'profile_image_url', 'location', 'verified', 'description', 'profile_image_url_https', 'utc_offset', 'time_zone', 'lang', 'created_at']:
         key = "user_%s" % meta.replace('_count', '')
         if key in source:
             result[key] = source[key]

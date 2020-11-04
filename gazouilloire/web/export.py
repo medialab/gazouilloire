@@ -16,9 +16,6 @@ TWEET_FIELDS = [
   "text",                           # message's text content
   "filter_level",                   # internal TCAT field, ignorable
   "possibly_sensitive",             # whether a link present in the message might contain sensitive content according to Twitter
-  "withheld_copyright",             # whether the tweet might be censored by Twitter following copyright requests, ignorable
-  "withheld_scope",                 # whether the content withheld is the "status" or a "user", ignorable
-  "withheld_countries",             # list of ISO country codes in which the message is withheld, separated by |, ignorable
   "truncated",                      # whether the tweet is bigger than 140 characters, obsolete
   "retweet_count",                  # number of retweets of the message (at collection time)
   "favorite_count",                 # number of likes of the message (at collection time)
@@ -47,8 +44,6 @@ TWEET_FIELDS = [
   "from_user_friendcount",          # number of users the author is following (at collection time)
   "from_user_favourites_count",     # number of likes the author has expressed (at collection time)
   "from_user_listed",               # number of users lists the author has been included in (at collection time)
-  "from_user_withheld_scope",       # whether the user content is withheld, ignorable
-  "from_user_withheld_countries",   # list of ISO country codes in which the user content is withheld, separated by |, ignorable
   "from_user_created_at",           # ISO datetime of creation of the author's account
   "collected_via_thread",           # whether the tweet was retrieved only as part of a thread including a tweet matching the desired query
   "retweeted_id",                   # digital ID of the retweeted message
@@ -114,9 +109,6 @@ CORRESP_FIELDS = {
     "text": str,
     "filter_level": None,   # WTF is this?
     "possibly_sensitive": "possibly_sensitive",
-    "withheld_copyright": str,
-    "withheld_scope": str,
-    "withheld_countries": lambda x: x.get("withheld_countries", []),      # Added since this is the most interesting info from withheld fields
     "truncated": bool,      # unnecessary since we rebuild text from RTs
     "retweet_count": int,
     "favorite_count": int,
@@ -145,8 +137,6 @@ CORRESP_FIELDS = {
     "from_user_friendcount": "user_friends",
     "from_user_favourites_count": "user_favourites",
     "from_user_listed": "user_listed",
-    "from_user_withheld_scope": "user_withheld_scope",
-    "from_user_withheld_countries": lambda x: x.get("user_withheld_countries", []),      # Added since this is the most interesting info from withheld fields
     "from_user_created_at": lambda x: isodate(x.get("user_created_at", "")),
     # More added fields:
     "collected_via_thread": lambda x: bool(x.get("collected_via_thread") and not (x.get("collected_via_search") or x.get("collected_via_stream"))),
