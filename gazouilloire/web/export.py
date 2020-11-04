@@ -101,11 +101,11 @@ USER_FIELDS = [
 # Based and enriched from TCAT fields
 CORRESP_FIELDS = {
     "id": "_id",
-    "timestamp_utc": "timestamp_utc",
-    "local_time": "local_time",
-    "user_name": lambda x: x.get("user_screen_name", x.get("user_name", "")),
+    "timestamp_utc": str,
+    "local_time": str,
+    "user_name": "user_screen_name",
     "text": str,
-    "possibly_sensitive": "possibly_sensitive",
+    "possibly_sensitive": bool,
     "retweet_count": int,
     "favorite_count": int,
     "reply_count": int,     # Recently appeared in Twitter data, and quickly dropped as it became paid (~Oct 2017) : equals to None or 0 https://twittercommunity.com/t/reply-count-quote-count-not-available-in-statuses-lookup-answer/95241
@@ -113,9 +113,8 @@ CORRESP_FIELDS = {
     "to_user_name": "in_reply_to_screen_name",
     "to_user_id": "in_reply_to_user_id_str",    # Added for better user interaction analysis
     "in_reply_to_status_id": "in_reply_to_status_id_str",
-    "source": str,
-    "source_name": lambda x: re.split(r"[<>]", (x.get("source", "<>") or "<>"))[2],   # Added for simplier postprocess
-    "source_url": lambda x: (x.get("source", '"') or '"').split('"')[1],             # Added for simplier postprocess
+    "source_name": str,
+    "source_url": str,
     "location": "user_location",
     "lat": lambda x: get_coords(x)[1],
     "lng": lambda x: get_coords(x)[0],

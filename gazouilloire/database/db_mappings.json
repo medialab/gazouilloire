@@ -40,6 +40,9 @@
           "langs": {
             "type": "keyword"
           },
+          "lat": {
+            "type": "float"
+          },
           "links": {
             "type": "text",
             "fields": {
@@ -51,6 +54,9 @@
           },
           "links_to_resolve": {
             "type": "boolean"
+          },
+          "lng": {
+            "type": "float"
           },
           "local_time": {
             "type": "keyword",
@@ -133,11 +139,11 @@
           "retweet_user_id": {
             "type": "keyword"
           },
-          "source_link": {
+          "source_name": {
             "type": "keyword",
             "ignore_above": 80
           },
-          "source_name": {
+          "source_url": {
             "type": "keyword",
             "ignore_above": 80
           },

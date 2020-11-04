@@ -60,7 +60,8 @@ def grab_extra_meta(source, result, locale=None):
                 log.warning("field {} is dict. It contains the following keys: {}. The field will NOT be indexed"
                       .format(meta, " ".join(sorted(source[meta].keys()))))
             else:
-                result["coordinates"] = source["coordinates"]["coordinates"]
+                result["lat"] = source["coordinates"]["coordinates"][1]
+                result["lng"] = source["coordinates"]["coordinates"][0]
         elif nostr_field(meta) in source:
             result[meta] = str(source[nostr_field(meta)])
     for meta in ['id_str', 'screen_name', 'name', 'friends_count', 'followers_count', 'statuses_count', 'favourites_count', 'listed_count', 'profile_image_url', 'location', 'verified', 'description', 'profile_image_url_https', 'utc_offset', 'time_zone', 'lang', 'created_at']:
@@ -94,7 +95,7 @@ def grab_extra_meta(source, result, locale=None):
         pass
     if "source" in source and source["source"]:
         split_source = source['source'].replace('<a href="', '').replace('</a>', '').split('" rel="nofollow">')
-        result['source_link'] = split_source[0]
+        result['source_url'] = split_source[0]
         result['source_name'] = split_source[1]
     result['langs'] = [result.get('lang', '').lower()]
     return result
