@@ -5,7 +5,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 import sys
-import re
 import csv
 import json
 from gazouilloire.database.elasticmanager import ElasticManager, helpers
@@ -18,8 +17,6 @@ except Exception as e:
     sys.stderr.write("ERROR: Impossible to read config.json: %s %s" % (type(e), e))
     exit(1)
 THREADS = conf.get('grab_conversations', False)
-# TODO: Ask Benjamin what are these selected fields
-# SELECTED_FIELD = conf.get('export', {}).get('selected_field', None)
 EXTRA_FIELDS = conf.get('export', {}).get('extra_fields', [])
 
 try:
@@ -35,10 +32,6 @@ if len(sys.argv) > 1 and "--quiet" in sys.argv:
     sys.argv.remove("--quiet")
     verbose = False
 
-# only_selected = False
-# if SELECTED_FIELD and len(sys.argv) > 1 and "--selected" in sys.argv:
-#     sys.argv.remove("--selected")
-#     only_selected = True
 
 include_threads = True
 if THREADS and len(sys.argv) > 1 and "--no-threads" in sys.argv:
@@ -46,8 +39,6 @@ if THREADS and len(sys.argv) > 1 and "--no-threads" in sys.argv:
     include_threads = False
 
 query = {}
-# if only_selected:
-#     query = {SELECTED_FIELD: True}
 if len(sys.argv) == 2:
     if '{' in sys.argv[1]:
         try:
@@ -56,8 +47,6 @@ if len(sys.argv) == 2:
                     "match": sys.argv[1]
                 }
             }
-            # if only_selected:
-            #     query = {"$and": [query, {SELECTED_FIELD: True}]}
         except Exception as e:
             sys.stderr.write(
                 "WARNING: query wrongly formatted: %s\n" % sys.argv[1])
