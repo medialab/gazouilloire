@@ -12,11 +12,9 @@ TWEET_FIELDS = [
   "id",                             # digital ID
   "timestamp_utc",                  # UNIX timestamp of creation
   "local_time",                     # ISO datetime of creation
-  "from_user_name",                 # author's user text ID (@user)
+  "user_name",                 # author's user text ID (@user)
   "text",                           # message's text content
-  "filter_level",                   # internal TCAT field, ignorable
   "possibly_sensitive",             # whether a link present in the message might contain sensitive content according to Twitter
-  "truncated",                      # whether the tweet is bigger than 140 characters, obsolete
   "retweet_count",                  # number of retweets of the message (at collection time)
   "favorite_count",                 # number of likes of the message (at collection time)
   "reply_count",                    # number of answers to the message, dropped by Twitter (since Oct 17, now charged), unreliable and ignorable
@@ -30,20 +28,20 @@ TWEET_FIELDS = [
   "location",                       # location declared in the user's profile (at collection time)
   "lat",                            # latitude of messages geolocalized
   "lng",                            # longitude of messages geolocalized
-  "from_user_id",                   # author's user digital ID
-  "from_user_realname",             # author's detailed textual name (at collection time)
-  "from_user_verified",             # whether the author's account is certified
-  "from_user_description",          # description given in the author's profile (at collection time)
-  "from_user_url",                  # link to a website given in the author's profile (at collection time)
-  "from_user_profile_image_url",    # link to the image avatar of the author's profile (at collection time)
-  "from_user_utcoffset",            # time offset due to the user's timezone, dropped by Twitter (since May 18), ignorable
-  "from_user_timezone",             # timezone declared in the user's profile, dropped by Twitter (since May 18), ignorable
-  "from_user_lang",                 # language declared in the user's profile (at collection time), dropped by Twitter (since May 19), ignorable
-  "from_user_tweetcount",           # number of tweets sent by the user (at collection time)
-  "from_user_followercount",        # number of users following the author (at collection time)
-  "from_user_friendcount",          # number of users the author is following (at collection time)
-  "from_user_favourites_count",     # number of likes the author has expressed (at collection time)
-  "from_user_listed",               # number of users lists the author has been included in (at collection time)
+  "user_id",                   # author's user digital ID
+  "user_realname",             # author's detailed textual name (at collection time)
+  "user_verified",             # whether the author's account is certified
+  "user_description",          # description given in the author's profile (at collection time)
+  "user_url",                  # link to a website given in the author's profile (at collection time)
+  "user_profile_image_url",    # link to the image avatar of the author's profile (at collection time)
+  "user_utcoffset",            # time offset due to the user's timezone, dropped by Twitter (since May 18), ignorable
+  "user_timezone",             # timezone declared in the user's profile, dropped by Twitter (since May 18), ignorable
+  "user_lang",                 # language declared in the user's profile (at collection time), dropped by Twitter (since May 19), ignorable
+  "user_tweetcount",           # number of tweets sent by the user (at collection time)
+  "user_followercount",        # number of users following the author (at collection time)
+  "user_friendcount",          # number of users the author is following (at collection time)
+  "user_favourites_count",     # number of likes the author has expressed (at collection time)
+  "user_listed",               # number of users lists the author has been included in (at collection time)
   "user_created_at",           # ISO datetime of creation of the author's account
   "collected_via_thread",           # whether the tweet was retrieved only as part of a thread including a tweet matching the desired query
   "retweeted_id",                   # digital ID of the retweeted message
@@ -105,11 +103,9 @@ CORRESP_FIELDS = {
     "id": "_id",
     "timestamp_utc": "timestamp_utc",
     "local_time": "local_time",
-    "from_user_name": lambda x: x.get("user_screen_name", x.get("user_name", "")),
+    "user_name": lambda x: x.get("user_screen_name", x.get("user_name", "")),
     "text": str,
-    "filter_level": None,   # WTF is this?
     "possibly_sensitive": "possibly_sensitive",
-    "truncated": bool,      # unnecessary since we rebuild text from RTs
     "retweet_count": int,
     "favorite_count": int,
     "reply_count": int,     # Recently appeared in Twitter data, and quickly dropped as it became paid (~Oct 2017) : equals to None or 0 https://twittercommunity.com/t/reply-count-quote-count-not-available-in-statuses-lookup-answer/95241
@@ -123,20 +119,20 @@ CORRESP_FIELDS = {
     "location": "user_location",
     "lat": lambda x: get_coords(x)[1],
     "lng": lambda x: get_coords(x)[0],
-    "from_user_id": "user_id_str",
-    "from_user_realname": "user_name",
-    "from_user_verified": "user_verified",
-    "from_user_description": "user_description",
-    "from_user_url": "user_url",
-    "from_user_profile_image_url": "user_profile_image_url_https",
-    "from_user_utcoffset": "user_utc_offset",   # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
-    "from_user_timezone": "user_time_zone",     # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
-    "from_user_lang": "user_lang",
-    "from_user_tweetcount": "user_statuses",
-    "from_user_followercount": "user_followers",
-    "from_user_friendcount": "user_friends",
-    "from_user_favourites_count": "user_favourites",
-    "from_user_listed": "user_listed",
+    "user_id": "user_id_str",
+    "user_realname": "user_name",
+    "user_verified": "user_verified",
+    "user_description": "user_description",
+    "user_url": "user_url",
+    "user_profile_image_url": "user_profile_image_url_https",
+    "user_utcoffset": "user_utc_offset",   # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
+    "user_timezone": "user_time_zone",     # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
+    "user_lang": "user_lang",
+    "user_tweetcount": "user_statuses",
+    "user_followercount": "user_followers",
+    "user_friendcount": "user_friends",
+    "user_favourites_count": "user_favourites",
+    "user_listed": "user_listed",
     "user_created_at": "user_created_at",
     # More added fields:
     "collected_via_thread": lambda x: bool(x.get("collected_via_thread") and not (x.get("collected_via_search") or x.get("collected_via_stream"))),
@@ -149,8 +145,8 @@ CORRESP_FIELDS = {
     "links": lambda x: x.get("proper_links", x.get("links", [])),
     "medias_urls": lambda x: [_url for _id,_url in x.get("medias", [])],
     "medias_files": lambda x: [_id for _id,_url in x.get("medias", [])],
-    "mentioned_user_names": lambda x: x.get("mentions_names", process_extract(x["text"], "@")),
-    "mentioned_user_ids": "mentions_ids",
+    "mentioned_users": lambda x: x.get("mentions_names", process_extract(x["text"], "@")),
+    "mentioned_users_ids": "mentions_ids",
     "hashtags": lambda x: x.get("hashtags", process_extract(x["text"], "#"))
 }
 
