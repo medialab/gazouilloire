@@ -51,8 +51,8 @@ TWEET_FIELDS = [
   "quoted_user_name",               # text ID of the user who authored the retweeted message
   "quoted_user_id",                 # digital ID of the user who authoring the retweeted message
   "links",                          # list of links included in the text content, with redirections resolved, separated by |
-  "medias_urls",                    # list of links to images/videos embedded, separated by |
-  "medias_files",                   # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabledmedias_files
+  "media_urls",                    # list of links to images/videos embedded, separated by |
+  "media_files",                   # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabledmedias_files
   "mentioned_user_names",           # list of text IDs of users mentionned, separated by |
   "mentioned_user_ids",             # list of digital IDs of users mentionned, separated by |
   "hashtags"                        # list of hashtags used, lowercased, separated by |
@@ -134,7 +134,7 @@ CORRESP_FIELDS = {
     "user_listed": "user_listed",
     "user_created_at": "user_created_at",
     # More added fields:
-    "collected_via_thread": lambda x: bool(x.get("collected_via_thread") and not (x.get("collected_via_search") or x.get("collected_via_stream"))),
+    "collected_via": "collected_via",
     "retweeted_id": "retweet_id",
     "retweeted_user_name": "retweet_user",
     "retweeted_user_id": "retweet_user_id",
@@ -142,8 +142,8 @@ CORRESP_FIELDS = {
     "quoted_user_name": "quoted_user",
     "quoted_user_id": "quoted_user_id",
     "links": lambda x: x.get("proper_links", x.get("links", [])),
-    "medias_urls": lambda x: [_url for _id,_url in x.get("medias", [])],
-    "medias_files": lambda x: [_id for _id,_url in x.get("medias", [])],
+    "media_urls": "media_urls",
+    "media_files": "media_files",
     "mentioned_users": lambda x: x.get("mentions_names", process_extract(x["text"], "@")),
     "mentioned_users_ids": "mentions_ids",
     "hashtags": lambda x: x.get("hashtags", process_extract(x["text"], "#"))

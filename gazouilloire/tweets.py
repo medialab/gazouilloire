@@ -172,7 +172,8 @@ def prepare_tweet(tweet, locale=None):
                 if field in tweet['quoted_status'][ent]:
                     tweet[ent][field] += tweet['quoted_status'][ent][field]
     medids = set([])
-    medias = []
+    media_urls = []
+    media_files = []
     links = set([])
     hashtags = set([])
     mentions = {}
@@ -193,7 +194,8 @@ def prepare_tweet(tweet, locale=None):
                 med_name = med_url.split('/')[-1]
                 if med_name not in medids:
                     medids.add(med_name)
-                    medias.append(["%s_%s" % (source_id, med_name), med_url])
+                    media_urls.append(med_url)
+                    media_files.append("%s_%s" % (source_id, med_name))
             else:
                 normalized = normalize(entity["expanded_url"])
                 links.add(normalized)
@@ -216,7 +218,8 @@ def prepare_tweet(tweet, locale=None):
         'retweet_user': rtu,
         'retweet_user_id': rtuid,
         'retweet_timestamp_utc': rtime,
-        'medias': medias,
+        "media_files": media_files,
+        'media_urls': media_urls,
         'links': sorted(links),
         'links_to_resolve': len(links) > 0,
         'hashtags': sorted(hashtags),

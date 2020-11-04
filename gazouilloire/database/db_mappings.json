@@ -65,8 +65,13 @@
           "match_query": {
             "type": "boolean"
           },
-          "medias": {
-            "type": "keyword"
+          "media_files": {
+            "type": "keyword",
+            "index": false
+          },
+          "media_urls": {
+            "type": "keyword",
+            "index": false
           },
           "mentions_ids": {
             "type": "keyword"
