@@ -10,8 +10,8 @@ from datetime import datetime
 # More details on Twitter's tweets metadata can be read here: https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object
 TWEET_FIELDS = [
   "id",                             # digital ID
-  "time",                           # UNIX timestamp of creation
-  "created_at",                     # ISO datetime of creation
+  "timestamp_utc",                  # UNIX timestamp of creation
+  "local_time",                     # ISO datetime of creation
   "from_user_name",                 # author's user text ID (@user)
   "text",                           # message's text content
   "filter_level",                   # internal TCAT field, ignorable
@@ -44,7 +44,7 @@ TWEET_FIELDS = [
   "from_user_friendcount",          # number of users the author is following (at collection time)
   "from_user_favourites_count",     # number of likes the author has expressed (at collection time)
   "from_user_listed",               # number of users lists the author has been included in (at collection time)
-  "from_user_created_at",           # ISO datetime of creation of the author's account
+  "user_created_at",           # ISO datetime of creation of the author's account
   "collected_via_thread",           # whether the tweet was retrieved only as part of a thread including a tweet matching the desired query
   "retweeted_id",                   # digital ID of the retweeted message
   "retweeted_user_name",            # text ID of the user who authored the retweeted message
@@ -103,8 +103,8 @@ USER_FIELDS = [
 # Based and enriched from TCAT fields
 CORRESP_FIELDS = {
     "id": "_id",
-    "time": "timestamp",
-    "created_at": lambda x: isodate(x.get("created_at", "")),
+    "timestamp_utc": "timestamp_utc",
+    "local_time": "local_time",
     "from_user_name": lambda x: x.get("user_screen_name", x.get("user_name", "")),
     "text": str,
     "filter_level": None,   # WTF is this?
@@ -137,7 +137,7 @@ CORRESP_FIELDS = {
     "from_user_friendcount": "user_friends",
     "from_user_favourites_count": "user_favourites",
     "from_user_listed": "user_listed",
-    "from_user_created_at": lambda x: isodate(x.get("user_created_at", "")),
+    "user_created_at": "user_created_at",
     # More added fields:
     "collected_via_thread": lambda x: bool(x.get("collected_via_thread") and not (x.get("collected_via_search") or x.get("collected_via_stream"))),
     "retweeted_id": "retweet_id",
