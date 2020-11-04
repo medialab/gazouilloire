@@ -144,9 +144,9 @@ CORRESP_FIELDS = {
     "links": lambda x: x.get("proper_links", x.get("links", [])),
     "media_urls": "media_urls",
     "media_files": "media_files",
-    "mentioned_users": lambda x: x.get("mentions_names", process_extract(x["text"], "@")),
+    "mentioned_users": "mentioned_users",
     "mentioned_users_ids": "mentions_ids",
-    "hashtags": lambda x: x.get("hashtags", process_extract(x["text"], "#"))
+    "hashtags": "hashtags"
 }
 
 def search_field(field, tweet):
@@ -183,10 +183,6 @@ def format_field(val):
 
 def get_field(field, tweet):
     return format_field(search_field(field, tweet)).replace('\n', ' ').replace('\r', ' ')
-
-re_clean_rt = re.compile(r"^RT @\w+: ")
-def process_extract(text, car):
-    return sorted([r.lstrip(car).lower() for r in re.split(r'[^\w%s]+' % car, re_clean_rt.sub('', text)) if r.startswith(car)])
 
 def get_coords(tw):
     if 'coordinates' not in tw or not tw['coordinates']:

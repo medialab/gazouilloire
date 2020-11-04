@@ -38,6 +38,11 @@ def decode_entities(x):
 def unescape_html(text):
     return re_entities.sub(decode_entities, text)
 
+re_clean_rt = re.compile(r"^RT @\w+: ")
+# TODO: Ask Benjamin where this comes from
+def process_extract(text, car):
+    return sorted(set([r.lstrip(car).lower() for r in re.split(r'[^\w%s]+' % car, re_clean_rt.sub('', text)) if r.startswith(car)]))
+
 
 def get_dates(t, locale, field='created_at'):
     tim = datetime.strptime(t[field], '%a %b %d %H:%M:%S +0000 %Y')
@@ -204,11 +209,12 @@ def prepare_tweet(tweet, locale=None):
         for mention in tweet['entities'].get('user_mentions', []):
             mentions[mention['screen_name'].lower()] = mention['id_str']
     timestamp_utc, local_time = get_dates(tweet, locale)
+    text = unescape_html(text)
     tw = {
         '_id': tweet['id_str'],
         'local_time': local_time,
         'timestamp_utc': timestamp_utc,
-        'text': unescape_html(text),
+        'text': text,
         'url': "https://twitter.com/%s/statuses/%s" % (tweet['user']['screen_name'], tweet['id_str']),
         'quoted_id': qti,
         'quoted_user': qtu,
@@ -222,9 +228,9 @@ def prepare_tweet(tweet, locale=None):
         'media_urls': media_urls,
         'links': sorted(links),
         'links_to_resolve': len(links) > 0,
-        'hashtags': sorted(hashtags),
+        'hashtags': sorted(hashtags) if hashtags else process_extract(text, "#"),
         'mentions_ids': [mentions[m] for m in sorted(mentions.keys())],
-        'mentions_names': sorted(mentions.keys()),
+        'mentions_names': sorted(mentions.keys()) if mentions else process_extract(text, "@"),
         'collection_time': datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f'),
         'collected_via': [tweet["gazouilloire_source"]],
         'match_query': tweet["gazouilloire_source"] != "thread" and tweet["gazouilloire_source"] != "quote"
