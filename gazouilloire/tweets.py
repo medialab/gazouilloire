@@ -60,6 +60,7 @@ def grab_extra_meta(source, result, locale=None):
                 log.warning("field {} is dict. It contains the following keys: {}. The field will NOT be indexed"
                       .format(meta, " ".join(sorted(source[meta].keys()))))
             else:
+                result["coordinates"] = source["coordinates"]["coordinates"]
                 result["lat"] = source["coordinates"]["coordinates"][1]
                 result["lng"] = source["coordinates"]["coordinates"][0]
         elif nostr_field(meta) in source:
