@@ -92,7 +92,8 @@ if isinstance(query, list):
     iterator = yield_csv(db.multi_get(query))
 else:
     count = db.client.count(index=db.tweets, doc_type='tweet', body=query)['count']
-    iterator = yield_csv(helpers.scan(client=db.client, index=db.tweets, query=query), extra_fields=EXTRA_FIELDS)
+    query["sort"] = ["_id"]
+    iterator = yield_csv(helpers.scan(client=db.client, index=db.tweets, query=query, preserve_order=True), extra_fields=EXTRA_FIELDS)
 if verbose:
     import progressbar
     bar = progressbar.ProgressBar(max_value=count)
