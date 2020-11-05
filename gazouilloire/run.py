@@ -373,7 +373,10 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
             fmtkeywords.append(format_keyword(k))
     for q in urlpieces:
         fmtkeywords.append('url:"%s"' % format_url_query(q))
-    queries += [" OR ".join(a) for a in chunkize(fmtkeywords, 3)]
+    if len(fmtkeywords) > 50:
+        queries += [" OR ".join(a) for a in chunkize(fmtkeywords, 3)]
+    else:
+        queries += fmtkeywords
     timed_queries = {}
     state = {q: 0 for q in queries + [format_keyword(k) for k in timed_keywords.keys()]}
     try:
