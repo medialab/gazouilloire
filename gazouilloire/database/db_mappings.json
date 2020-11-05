@@ -25,15 +25,6 @@
           "hashtags": {
             "type": "keyword"
           },
-          "in_reply_to_screen_name": {
-            "type": "keyword"
-          },
-          "in_reply_to_status_id_str": {
-            "type": "keyword"
-          },
-          "in_reply_to_user_id_str": {
-            "type": "keyword"
-          },
           "lang": {
             "type": "keyword"
           },
@@ -159,6 +150,15 @@
           "timestamp_utc": {
             "type": "date",
             "format": "epoch_second"
+          },
+          "to_tweetid": {
+            "type": "keyword"
+          },
+          "to_userid": {
+            "type": "keyword"
+          },
+          "to_username": {
+            "type": "keyword"
           },
           "url": {
             "type": "text",

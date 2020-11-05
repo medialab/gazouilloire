@@ -73,9 +73,9 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
         for t in prepare_tweets(todo, locale):
             if pile_medias and t["medias"]:
                 pile_medias.put(t)
-            if pile_catchup and t["in_reply_to_status_id_str"]:
-                if not db.find_tweet(t["in_reply_to_status_id_str"]):
-                    pile_catchup.put(t["in_reply_to_status_id_str"])
+            if pile_catchup and t["to_tweetid"]:
+                if not db.find_tweet(t["to_tweetid"]):
+                    pile_catchup.put(t["to_tweetid"])
             tweets_bulk.append(t)
 
         helpers.bulk(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))

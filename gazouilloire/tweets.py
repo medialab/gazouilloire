@@ -17,6 +17,18 @@ from gazouilloire.config_format import log
 
 re_entities = re.compile(r'&([^;]+);')
 
+CORRESP_FIELDNAMES = {
+    "in_reply_to_status_id_str": "to_tweetid",
+    "in_reply_to_screen_name": "to_username",
+    "in_reply_to_user_id_str": "to_userid",
+    "lang": "lang",
+    "coordinates": "coordinates",
+    "possibly_sensitive": "possibly_sensitive",
+    "retweet_count": "retweet_count",
+    "favorite_count": "favorite_count",
+    "reply_count": "reply_count"
+}
+
 def decode_entities(x):
     if x.group(1).startswith('#'):
         char = x.group(1)[1:]
@@ -60,7 +72,7 @@ def grab_extra_meta(source, result, locale=None):
     for meta in ["in_reply_to_status_id_str", "in_reply_to_screen_name", "in_reply_to_user_id_str", "lang", "coordinates", "possibly_sensitive", "retweet_count", "favorite_count", "reply_count"]:
         if meta in source:
             if not isinstance(source[meta], dict):
-                result[meta] = source[meta]
+                result[CORRESP_FIELDNAMES[meta]] = source[meta]
             elif meta != "coordinates":
                 log.warning("field {} is dict. It contains the following keys: {}. The field will NOT be indexed"
                       .format(meta, " ".join(sorted(source[meta].keys()))))

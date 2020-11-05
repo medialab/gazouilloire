@@ -12,7 +12,7 @@ TWEET_FIELDS = [
   "id",                             # digital ID
   "timestamp_utc",                  # UNIX timestamp of creation - UTC time
   "local_time",                     # ISO datetime of creation - local time
-  "user_name",                      # author's user text ID (@user)
+  "user_screen_name",               # author's user text ID (@user) (at collection time)
   "text",                           # message's text content
   # "filter_level",                   # maximum value of the filter_level parameter which may be used and still stream this Tweet
   "possibly_sensitive",             # whether a link present in the message might contain sensitive content according to Twitter
@@ -24,9 +24,9 @@ TWEET_FIELDS = [
   "favorite_count",                 # number of likes of the message (at collection time)
   "reply_count",                    # number of answers to the message, dropped by Twitter (since Oct 17, now charged), unreliable and ignorable
   "lang",                           # language of the message automatically identified by Twitter's algorithms (equals "und" when no language could be detected)
-  "to_user_name",                   # text ID of the user the message is answering to
-  "to_user_id",                     # digital ID of the user the message is answering to
-  "in_reply_to_status_id",          # digital ID of the tweet the message is answering to
+  "to_username",                    # text ID of the user the message is answering to
+  "to_userid",                      # digital ID of the user the message is answering to
+  "to_tweetid",                     # digital ID of the tweet the message is answering to
   # "source",                         # medium used by the user to post the message, now exported in source_name and source_url fields
   "source_name",                    # name of the medium used to post the message
   "source_url",                     # link to the medium used to post the message
@@ -34,7 +34,7 @@ TWEET_FIELDS = [
   "lat",                            # latitude of messages geolocalized
   "lng",                            # longitude of messages geolocalized
   "user_id",                        # author's user digital ID
-  "user_realname",                  # author's detailed textual name (at collection time)
+  "user_name",                      # author's detailed textual name (at collection time)
   "user_verified",                  # whether the author's account is certified
   "user_description",               # description given in the author's profile (at collection time)
   "user_url",                       # link to a website given in the author's profile (at collection time)
@@ -58,8 +58,8 @@ TWEET_FIELDS = [
   "links",                          # list of links included in the text content, with redirections resolved, separated by |
   "media_urls",                     # list of links to images/videos embedded, separated by |
   "media_files",                    # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabledmedias_files
-  "mentioned_user_names",           # list of text IDs of users mentionned, separated by |
-  "mentioned_user_ids",             # list of digital IDs of users mentionned, separated by |
+  "mentioned_users",                # list of text IDs of users mentionned, separated by |
+  "mentioned_users_ids",            # list of digital IDs of users mentionned, separated by |
   "hashtags"                        # list of hashtags used, lowercased, separated by |
 ]
 
@@ -108,23 +108,23 @@ CORRESP_FIELDS = {
     "id": "_id",
     "timestamp_utc": str,
     "local_time": str,
-    "user_name": "user_screen_name",
+    "user_screen_name": str,
     "text": str,
     "possibly_sensitive": bool,
     "retweet_count": int,
     "favorite_count": int,
     "reply_count": int,     # Recently appeared in Twitter data, and quickly dropped as it became paid (~Oct 2017) : equals to None or 0 https://twittercommunity.com/t/reply-count-quote-count-not-available-in-statuses-lookup-answer/95241
     "lang": str,
-    "to_user_name": "in_reply_to_screen_name",
-    "to_user_id": "in_reply_to_user_id_str",    # Added for better user interaction analysis
-    "in_reply_to_status_id": "in_reply_to_status_id_str",
+    "to_username": str,
+    "to_userid": str,    # Added for better user interaction analysis
+    "to_tweetid": str,
     "source_name": str,
     "source_url": str,
     "location": "user_location",
     "lat": "lat",
     "lng": "lng",
     "user_id": "user_id_str",
-    "user_realname": "user_name",
+    "user_name": str,
     "user_verified": "user_verified",
     "user_description": "user_description",
     "user_url": "user_url",
