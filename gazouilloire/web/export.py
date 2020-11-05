@@ -10,11 +10,16 @@ from datetime import datetime
 # More details on Twitter's tweets metadata can be read here: https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object
 TWEET_FIELDS = [
   "id",                             # digital ID
-  "timestamp_utc",                  # UNIX timestamp of creation
-  "local_time",                     # ISO datetime of creation
-  "user_name",                 # author's user text ID (@user)
+  "timestamp_utc",                  # UNIX timestamp of creation - UTC time
+  "local_time",                     # ISO datetime of creation - local time
+  "user_name",                      # author's user text ID (@user)
   "text",                           # message's text content
+  # "filter_level",                   # maximum value of the filter_level parameter which may be used and still stream this Tweet
   "possibly_sensitive",             # whether a link present in the message might contain sensitive content according to Twitter
+  # "withheld_copyright",             # whether the tweet might be censored by Twitter following copyright requests, ignorable
+  # "withheld_scope",                 # whether the content withheld is the "status" or a "user", ignorable
+  # "withheld_countries",             # list of ISO country codes in which the message is withheld, separated by |, ignorable
+  # "truncated",                      # whether the tweet is bigger than 140 characters, obsolete
   "retweet_count",                  # number of retweets of the message (at collection time)
   "favorite_count",                 # number of likes of the message (at collection time)
   "reply_count",                    # number of answers to the message, dropped by Twitter (since Oct 17, now charged), unreliable and ignorable
@@ -22,27 +27,27 @@ TWEET_FIELDS = [
   "to_user_name",                   # text ID of the user the message is answering to
   "to_user_id",                     # digital ID of the user the message is answering to
   "in_reply_to_status_id",          # digital ID of the tweet the message is answering to
-  "source",                         # medium used by the user to post the message
+  # "source",                         # medium used by the user to post the message, now exported in source_name and source_url fields
   "source_name",                    # name of the medium used to post the message
   "source_url",                     # link to the medium used to post the message
   "location",                       # location declared in the user's profile (at collection time)
   "lat",                            # latitude of messages geolocalized
   "lng",                            # longitude of messages geolocalized
-  "user_id",                   # author's user digital ID
-  "user_realname",             # author's detailed textual name (at collection time)
-  "user_verified",             # whether the author's account is certified
-  "user_description",          # description given in the author's profile (at collection time)
-  "user_url",                  # link to a website given in the author's profile (at collection time)
-  "user_profile_image_url",    # link to the image avatar of the author's profile (at collection time)
-  "user_utcoffset",            # time offset due to the user's timezone, dropped by Twitter (since May 18), ignorable
-  "user_timezone",             # timezone declared in the user's profile, dropped by Twitter (since May 18), ignorable
-  "user_lang",                 # language declared in the user's profile (at collection time), dropped by Twitter (since May 19), ignorable
-  "user_tweetcount",           # number of tweets sent by the user (at collection time)
-  "user_followercount",        # number of users following the author (at collection time)
-  "user_friendcount",          # number of users the author is following (at collection time)
-  "user_favourites_count",     # number of likes the author has expressed (at collection time)
-  "user_listed",               # number of users lists the author has been included in (at collection time)
-  "user_created_at",           # ISO datetime of creation of the author's account
+  "user_id",                        # author's user digital ID
+  "user_realname",                  # author's detailed textual name (at collection time)
+  "user_verified",                  # whether the author's account is certified
+  "user_description",               # description given in the author's profile (at collection time)
+  "user_url",                       # link to a website given in the author's profile (at collection time)
+  "user_profile_image_url",         # link to the image avatar of the author's profile (at collection time)
+  # "user_utcoffset",                 # time offset due to the user's timezone, dropped by Twitter (since May 18), ignorable
+  # "user_timezone",                  # timezone declared in the user's profile, dropped by Twitter (since May 18), ignorable
+  # "user_lang",                      # language declared in the user's profile (at collection time), dropped by Twitter (since May 19), ignorable
+  "user_tweetcount",                # number of tweets sent by the user (at collection time)
+  "user_followercount",             # number of users following the author (at collection time)
+  "user_friendcount",               # number of users the author is following (at collection time)
+  "user_favourites_count",          # number of likes the author has expressed (at collection time)
+  "user_listed",                    # number of users lists the author has been included in (at collection time)
+  "user_created_at",                # ISO datetime of creation of the author's account
   "collected_via_thread",           # whether the tweet was retrieved only as part of a thread including a tweet matching the desired query
   "retweeted_id",                   # digital ID of the retweeted message
   "retweeted_user_name",            # text ID of the user who authored the retweeted message
@@ -51,8 +56,8 @@ TWEET_FIELDS = [
   "quoted_user_name",               # text ID of the user who authored the retweeted message
   "quoted_user_id",                 # digital ID of the user who authoring the retweeted message
   "links",                          # list of links included in the text content, with redirections resolved, separated by |
-  "media_urls",                    # list of links to images/videos embedded, separated by |
-  "media_files",                   # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabledmedias_files
+  "media_urls",                     # list of links to images/videos embedded, separated by |
+  "media_files",                    # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabledmedias_files
   "mentioned_user_names",           # list of text IDs of users mentionned, separated by |
   "mentioned_user_ids",             # list of digital IDs of users mentionned, separated by |
   "hashtags"                        # list of hashtags used, lowercased, separated by |
@@ -65,12 +70,12 @@ USER_FIELDS = [
   'name',
   'description',
   'url',
-  'lang',                               # dropped from tweet objects only by Twitter (since May 19)
+  # 'lang',                               # dropped from tweet objects only by Twitter (since May 19)
   'created_at',
-  'utc_offset',                         # dropped by Twitter (since May 18), ignorable
-  'time_zone',                          # dropped by Twitter (since May 18), ignorable
+  # 'utc_offset',                         # dropped by Twitter (since May 18), ignorable
+  # 'time_zone',                          # dropped by Twitter (since May 18), ignorable
   'location',
-  'geo_enabled',                        # dropped by Twitter (since May 19), ignorable
+  # 'geo_enabled',                        # dropped by Twitter (since May 19), ignorable
   'verified',
   'protected',
   'statuses_count',
@@ -78,24 +83,24 @@ USER_FIELDS = [
   'friends_count',
   'favourites_count',
   'listed_count',
-  'is_translator',                      # dropped by Twitter (since May 19), ignorable
-  'translator_type',                    # dropped by Twitter (since May 19), ignorable
-  'is_translation_enabled',             # dropped by Twitter (since May 19), ignorable
+  # 'is_translator',                      # dropped by Twitter (since May 19), ignorable
+  # 'translator_type',                    # dropped by Twitter (since May 19), ignorable
+  # 'is_translation_enabled',             # dropped by Twitter (since May 19), ignorable
   'default_profile',
   'default_profile_image',
-  'has_extended_profile',               # dropped by Twitter (since May 19), ignorable
-  'profile_image_url',                  # dropped by Twitter (since May 19), ignorable
+  # 'has_extended_profile',               # dropped by Twitter (since May 19), ignorable
+  # 'profile_image_url',                  # dropped by Twitter (since May 19), ignorable
   'profile_image_url_https',
   'profile_banner_url',
-  'profile_use_background_image',       # dropped by Twitter (since May 19), ignorable
-  'profile_background_image_url',       # dropped by Twitter (since May 19), ignorable
-  'profile_background_image_url_https', # dropped by Twitter (since May 19), ignorable
-  'profile_background_tile',            # dropped by Twitter (since May 19), ignorable
-  'profile_background_color',           # dropped by Twitter (since May 19), ignorable
-  'profile_link_color',                 # dropped by Twitter (since May 19), ignorable
-  'profile_text_color',                 # dropped by Twitter (since May 19), ignorable
-  'profile_sidebar_fill_color',         # dropped by Twitter (since May 19), ignorable
-  'profile_sidebar_border_color'        # dropped by Twitter (since May 19), ignorable
+  # 'profile_use_background_image',       # dropped by Twitter (since May 19), ignorable
+  # 'profile_background_image_url',       # dropped by Twitter (since May 19), ignorable
+  # 'profile_background_image_url_https', # dropped by Twitter (since May 19), ignorable
+  # 'profile_background_tile',            # dropped by Twitter (since May 19), ignorable
+  # 'profile_background_color',           # dropped by Twitter (since May 19), ignorable
+  # 'profile_link_color',                 # dropped by Twitter (since May 19), ignorable
+  # 'profile_text_color',                 # dropped by Twitter (since May 19), ignorable
+  # 'profile_sidebar_fill_color',         # dropped by Twitter (since May 19), ignorable
+  # 'profile_sidebar_border_color'        # dropped by Twitter (since May 19), ignorable
 ]
 
 # Based and enriched from TCAT fields
@@ -172,6 +177,7 @@ def search_field(field, tweet):
                 field, type(CORRESP_FIELDS[field]), tweet, type(e), e), file=sys.stderr)
             return ""
 
+
 def format_field(val):
     if type(val) == bool:
         return "1" if val else "0"
@@ -181,8 +187,10 @@ def format_field(val):
         return ''
     return val if type(val) == str else str(val)
 
+
 def get_field(field, tweet):
     return format_field(search_field(field, tweet)).replace('\n', ' ').replace('\r', ' ')
+
 
 def get_coords(tw):
     if 'coordinates' not in tw or not tw['coordinates']:
@@ -191,14 +199,17 @@ def get_coords(tw):
         tw['coordinates']['coordinates'] = ['', '']
     return tw['coordinates']['coordinates']
 
+
 isodate = lambda x: datetime.strptime(x, '%a %b %d %H:%M:%S +0000 %Y').isoformat()
 
 format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' in val else val)
+
 
 def add_and_report(sett, val):
   leng = len(sett)
   sett.add(val)
   return len(sett) != leng
+
 
 def get_thread_idset_from_idset(ids, mongocoll):
     ids_list = list(ids)
@@ -216,6 +227,7 @@ def get_thread_idset_from_idset(ids, mongocoll):
                 todo_ids.add(origin)
         ids_list = list(todo_ids)
     return all_ids
+
 
 # Recursive version kept for archive but crashing for excessive recursion in some cases
 def recursive_get_thread_idset_from_idset(ids, mongocoll, known_ids=set()):
@@ -235,12 +247,15 @@ def recursive_get_thread_idset_from_idset(ids, mongocoll, known_ids=set()):
         return all_ids | get_thread_idset_from_idset(new_ids, mongocoll, all_ids)
     return all_ids
 
+
 def get_thread_ids_from_ids(ids_list, mongocoll):
     return list(get_thread_idset_from_idset(set(ids_list), mongocoll))
+
 
 def get_thread_ids_from_query(query, mongocoll):
     ids = [t["_id"] for t in mongocoll.find(query, projection={})]
     return get_thread_ids_from_ids(ids, mongocoll)
+
 
 def yield_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
     out_fields = list_fields + extra_fields
@@ -252,6 +267,7 @@ def yield_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
         if len(source) < 10:
             continue
         yield ",".join(format_csv(get_field(k, source)) for k in out_fields)
+
 
 def export_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
     return "\n".join([t for t in yield_csv(queryiterator, list_fields, extra_fields)])
