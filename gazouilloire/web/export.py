@@ -48,7 +48,13 @@ TWEET_FIELDS = [
   "user_favourites_count",          # number of likes the author has expressed (at collection time)
   "user_listed",                    # number of users lists the author has been included in (at collection time)
   "user_created_at",                # ISO datetime of creation of the author's account
-  "collected_via_thread",           # whether the tweet was retrieved only as part of a thread including a tweet matching the desired query
+  "user_timestamp_utc",             # UNIX timestamp of creation of the author's account - UTC time
+  "collected_via",                  # API used to collect the message: "stream", "search", "retweet" (the original tweet
+                                    # contained in the retweet metadata), "quote" (the original tweet contained in the
+                                    # quote metadata), "thread" (the tweet is part of the same conversation as a tweet
+                                    # collected via search or stream)
+  "match_query",                    # whether the tweet was retrieved because it matches the query, or whether it was
+                                    # collected via "quote" or "thread"
   "retweeted_id",                   # digital ID of the retweeted message
   "retweeted_user_name",            # text ID of the user who authored the retweeted message
   "retweeted_user_id",              # digital ID of the user who authoring the retweeted message
@@ -129,8 +135,8 @@ CORRESP_FIELDS = {
     "user_description": "user_description",
     "user_url": "user_url",
     "user_profile_image_url": "user_profile_image_url_https",
-    "user_utcoffset": "user_utc_offset",   # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
-    "user_timezone": "user_time_zone",     # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
+    # "user_utcoffset": "user_utc_offset",   # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
+    # "user_timezone": "user_time_zone",     # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
     "user_lang": "user_lang",
     "user_tweetcount": "user_statuses",
     "user_followercount": "user_followers",
@@ -139,7 +145,8 @@ CORRESP_FIELDS = {
     "user_listed": "user_listed",
     "user_created_at": "user_created_at",
     # More added fields:
-    "collected_via": "collected_via",
+    "collected_via": str,
+    "math_query": bool,
     "retweeted_id": "retweet_id",
     "retweeted_user_name": "retweet_user",
     "retweeted_user_id": "retweet_user_id",
