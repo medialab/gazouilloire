@@ -66,8 +66,8 @@ TWEET_FIELDS = [
   "links",                          # list of links included in the text content, with redirections resolved, separated by |
   "media_urls",                     # list of links to images/videos embedded, separated by |
   "media_files",                    # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabledmedias_files
-  "mentioned_users",                # list of text IDs of users mentionned, separated by |
-  "mentioned_users_ids",            # list of digital IDs of users mentionned, separated by |
+  "mentioned_names",                # list of text IDs of users mentionned, separated by |
+  "mentioned_ids",                  # list of digital IDs of users mentionned, separated by |
   "hashtags"                        # list of hashtags used, lowercased, separated by |
 ]
 
@@ -157,10 +157,10 @@ CORRESP_FIELDS = {
     "quoted_user_id": str,
     "quoted_timestamp_utc": str,
     "links": lambda x: x.get("proper_links", x.get("links", [])),
-    "media_urls": "media_urls",
-    "media_files": "media_files",
-    "mentioned_users": "mentioned_users",
-    "mentioned_users_ids": "mentions_ids",
+    "media_urls": str,
+    "media_files": str,
+    "mentioned_names": str,
+    "mentioned_ids": str,
     "hashtags": "hashtags"
 }
 

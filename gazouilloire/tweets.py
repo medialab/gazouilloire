@@ -246,8 +246,8 @@ def prepare_tweet(tweet, locale=None):
         'links': sorted(links),
         'links_to_resolve': len(links) > 0,
         'hashtags': sorted(hashtags) if hashtags else process_extract(text, "#"),
-        'mentions_ids': [mentions[m] for m in sorted(mentions.keys())],
-        'mentions_names': sorted(mentions.keys()) if mentions else process_extract(text, "@"),
+        'mentioned_ids': [mentions[m] for m in sorted(mentions.keys())],
+        'mentioned_names': sorted(mentions.keys()) if mentions else process_extract(text, "@"),
         'collection_time': datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f'),
         'collected_via': [tweet["gazouilloire_source"]],
         'match_query': tweet["gazouilloire_source"] != "thread" and tweet["gazouilloire_source"] != "quote"

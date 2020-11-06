@@ -64,10 +64,10 @@
             "type": "keyword",
             "index": false
           },
-          "mentions_ids": {
+          "mentioned_ids": {
             "type": "keyword"
           },
-          "mentions_names": {
+          "mentioned_names": {
             "type": "keyword"
           },
           "place_coordinates": {
