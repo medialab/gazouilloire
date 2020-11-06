@@ -185,7 +185,7 @@
           "user_likes": {
             "type": "integer"
           },
-          "user_id_str": {
+          "user_id": {
             "type": "keyword"
           },
           "user_lang": {

@@ -30,7 +30,7 @@ TWEET_FIELDS = [
   # "source",                         # medium used by the user to post the message, now exported in source_name and source_url fields
   "source_name",                    # name of the medium used to post the message
   "source_url",                     # link to the medium used to post the message
-  "location",                       # location declared in the user's profile (at collection time)
+  "user_location",                  # location declared in the user's profile (at collection time)
   "lat",                            # latitude of messages geolocalized
   "lng",                            # longitude of messages geolocalized
   "user_id",                        # author's user digital ID
@@ -42,10 +42,10 @@ TWEET_FIELDS = [
   # "user_utcoffset",                 # time offset due to the user's timezone, dropped by Twitter (since May 18), ignorable
   # "user_timezone",                  # timezone declared in the user's profile, dropped by Twitter (since May 18), ignorable
   # "user_lang",                      # language declared in the user's profile (at collection time), dropped by Twitter (since May 19), ignorable
-  "user_tweets",                # number of tweets sent by the user (at collection time)
-  "user_followers",             # number of users following the author (at collection time)
-  "user_friends",               # number of users the author is following (at collection time)
-  "user_likes",          # number of likes the author has expressed (at collection time)
+  "user_tweets",                    # number of tweets sent by the user (at collection time)
+  "user_followers",                 # number of users following the author (at collection time)
+  "user_friends",                   # number of users the author is following (at collection time)
+  "user_likes",                     # number of likes the author has expressed (at collection time)
   "user_listed",                    # number of users lists the author has been included in (at collection time)
   "user_created_at",                # ISO datetime of creation of the author's account
   "user_timestamp_utc",             # UNIX timestamp of creation of the author's account - UTC time
@@ -126,18 +126,17 @@ CORRESP_FIELDS = {
     "to_tweetid": str,
     "source_name": str,
     "source_url": str,
-    "location": "user_location",
-    "lat": "lat",
-    "lng": "lng",
-    "user_id": "user_id_str",
+    "user_location": str,
+    "lat": str,
+    "lng": str,
+    "user_id": str,
     "user_name": str,
-    "user_verified": "user_verified",
-    "user_description": "user_description",
-    "user_url": "user_url",
+    "user_verified": bool,
+    "user_description": str,
+    "user_url": str,
     "user_profile_image_url": "user_profile_image_url_https",
     # "user_utcoffset": "user_utc_offset",   # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
     # "user_timezone": "user_time_zone",     # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
-    "user_lang": "user_lang",
     "user_tweets": int,
     "user_followers": int,
     "user_friends": int,

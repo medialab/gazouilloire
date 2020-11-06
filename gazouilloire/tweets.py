@@ -85,13 +85,13 @@ def grab_extra_meta(source, result, locale=None):
     for meta in ['id_str', 'screen_name', 'name', 'friends_count', 'followers_count', 'listed_count', 'profile_image_url', 'location', 'verified', 'description', 'profile_image_url_https', 'created_at']:
         key = "user_%s" % meta.replace('_count', '')
         if key in source:
-            result[key] = source[key]
+            result[nostr_field(key)] = source[key]
         elif nostr_field(key) in source:
-            result[key] = str(source[nostr_field(key)])
+            result[nostr_field(key)] = str(source[nostr_field(key)])
         elif 'user' in source and meta in source['user']:
-            result[key] = source['user'][meta]
+            result[nostr_field(key)] = source['user'][meta]
         elif 'user' in source and nostr_field(meta) in source['user']:
-            result[key] = source['user'][nostr_field(meta)]
+            result[nostr_field(key)] = source['user'][nostr_field(meta)]
     if "user" in source:
         result["user_tweets"] = source["user"]["statuses_count"]
         result["user_likes"] = source["user"]["favourites_count"]
