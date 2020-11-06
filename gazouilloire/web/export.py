@@ -42,10 +42,10 @@ TWEET_FIELDS = [
   # "user_utcoffset",                 # time offset due to the user's timezone, dropped by Twitter (since May 18), ignorable
   # "user_timezone",                  # timezone declared in the user's profile, dropped by Twitter (since May 18), ignorable
   # "user_lang",                      # language declared in the user's profile (at collection time), dropped by Twitter (since May 19), ignorable
-  "user_tweetcount",                # number of tweets sent by the user (at collection time)
-  "user_followercount",             # number of users following the author (at collection time)
-  "user_friendcount",               # number of users the author is following (at collection time)
-  "user_favourites_count",          # number of likes the author has expressed (at collection time)
+  "user_tweets",                # number of tweets sent by the user (at collection time)
+  "user_followers",             # number of users following the author (at collection time)
+  "user_friends",               # number of users the author is following (at collection time)
+  "user_likes",          # number of likes the author has expressed (at collection time)
   "user_listed",                    # number of users lists the author has been included in (at collection time)
   "user_created_at",                # ISO datetime of creation of the author's account
   "user_timestamp_utc",             # UNIX timestamp of creation of the author's account - UTC time
@@ -138,15 +138,15 @@ CORRESP_FIELDS = {
     # "user_utcoffset": "user_utc_offset",   # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
     # "user_timezone": "user_time_zone",     # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
     "user_lang": "user_lang",
-    "user_tweetcount": "user_statuses",
-    "user_followercount": "user_followers",
-    "user_friendcount": "user_friends",
-    "user_favourites_count": "user_favourites",
+    "user_tweets": int,
+    "user_followers": int,
+    "user_friends": int,
+    "user_likes": int,
     "user_listed": "user_listed",
     "user_created_at": "user_created_at",
     # More added fields:
     "collected_via": str,
-    "math_query": bool,
+    "match_query": bool,
     "retweeted_id": "retweet_id",
     "retweeted_user_name": "retweet_user",
     "retweeted_user_id": "retweet_user_id",

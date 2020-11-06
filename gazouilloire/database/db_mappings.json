@@ -176,13 +176,13 @@
             "type": "text",
             "analyzer": "standard"
           },
-          "user_favourites": {
-            "type": "integer"
-          },
           "user_followers": {
             "type": "integer"
           },
           "user_friends": {
+            "type": "integer"
+          },
+          "user_likes": {
             "type": "integer"
           },
           "user_id_str": {
@@ -212,7 +212,7 @@
           "user_screen_name": {
             "type": "keyword"
           },
-          "user_statuses": {
+          "user_tweets": {
             "type": "integer"
           },
           "user_url": {
