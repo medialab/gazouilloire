@@ -113,7 +113,7 @@ USER_FIELDS = [
 
 # Based and enriched from TCAT fields
 CORRESP_FIELDS = {
-    "id": "_id",
+    "id": str,
     "timestamp_utc": str,
     "local_time": str,
     "user_screen_name": str,
@@ -272,7 +272,7 @@ def yield_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
     yield ",".join(out_fields)
     for t in queryiterator:
         source = t["_source"]
-        source["_id"] = t["_id"]
+        source["id"] = t["_id"]
         # ignore tweets only caught on deletion missing most fields
         if len(source) < 10:
             continue
