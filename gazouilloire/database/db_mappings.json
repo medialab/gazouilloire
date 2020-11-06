@@ -19,9 +19,6 @@
           "domains": {
             "type": "keyword"
           },
-          "favorite_count": {
-            "type": "integer"
-          },
           "hashtags": {
             "type": "keyword"
           },
@@ -33,6 +30,9 @@
           },
           "lat": {
             "type": "float"
+          },
+          "like_count": {
+            "type": "integer"
           },
           "links": {
             "type": "text",
@@ -122,17 +122,17 @@
           "retweet_count": {
             "type": "integer"
           },
-          "retweet_id": {
+          "retweeted_id": {
             "type": "keyword"
           },
-          "retweet_timestamp_utc": {
+          "retweeted_timestamp_utc": {
             "type": "date",
             "format": "epoch_second"
           },
-          "retweet_user": {
+          "retweeted_user": {
             "type": "keyword"
           },
-          "retweet_user_id": {
+          "retweeted_user_id": {
             "type": "keyword"
           },
           "source_name": {

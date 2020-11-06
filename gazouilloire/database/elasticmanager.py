@@ -150,7 +150,7 @@ class ElasticManager:
                         "match_query": t["match_query"],
                         "retweet_count": t["retweet_count"],
                         "reply_count": t.get("reply_count", None),
-                        "favorite_count": t["favorite_count"],
+                        "like_count": t["like_count"],
                     }
 
                 },

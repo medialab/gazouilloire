@@ -21,7 +21,7 @@ TWEET_FIELDS = [
   # "withheld_countries",             # list of ISO country codes in which the message is withheld, separated by |, ignorable
   # "truncated",                      # whether the tweet is bigger than 140 characters, obsolete
   "retweet_count",                  # number of retweets of the message (at collection time)
-  "favorite_count",                 # number of likes of the message (at collection time)
+  "like_count",                     # number of likes of the message (at collection time)
   "reply_count",                    # number of answers to the message, dropped by Twitter (since Oct 17, now charged), unreliable and ignorable
   "lang",                           # language of the message automatically identified by Twitter's algorithms (equals "und" when no language could be detected)
   "to_username",                    # text ID of the user the message is answering to
@@ -56,11 +56,13 @@ TWEET_FIELDS = [
   "match_query",                    # whether the tweet was retrieved because it matches the query, or whether it was
                                     # collected via "quote" or "thread"
   "retweeted_id",                   # digital ID of the retweeted message
-  "retweeted_user_name",            # text ID of the user who authored the retweeted message
+  "retweeted_user",                 # text ID of the user who authored the retweeted message
   "retweeted_user_id",              # digital ID of the user who authoring the retweeted message
+  "retweeted_timestamp_utc",        # UNIX timestamp of creation of the retweeted message - UTC time
   "quoted_id",                      # digital ID of the retweeted message
-  "quoted_user_name",               # text ID of the user who authored the retweeted message
-  "quoted_user_id",                 # digital ID of the user who authoring the retweeted message
+  "quoted_user",                    # text ID of the user who authored the quoted message
+  "quoted_user_id",                 # digital ID of the user who authoring the quoted message
+  "quoted_timestamp_utc",           # UNIX timestamp of creation of the quoted message - UTC time
   "links",                          # list of links included in the text content, with redirections resolved, separated by |
   "media_urls",                     # list of links to images/videos embedded, separated by |
   "media_files",                    # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabledmedias_files
@@ -118,7 +120,7 @@ CORRESP_FIELDS = {
     "text": str,
     "possibly_sensitive": bool,
     "retweet_count": int,
-    "favorite_count": int,
+    "like_count": int,
     "reply_count": int,     # Recently appeared in Twitter data, and quickly dropped as it became paid (~Oct 2017) : equals to None or 0 https://twittercommunity.com/t/reply-count-quote-count-not-available-in-statuses-lookup-answer/95241
     "lang": str,
     "to_username": str,
@@ -146,12 +148,14 @@ CORRESP_FIELDS = {
     # More added fields:
     "collected_via": str,
     "match_query": bool,
-    "retweeted_id": "retweet_id",
-    "retweeted_user_name": "retweet_user",
-    "retweeted_user_id": "retweet_user_id",
-    "quoted_id": "quoted_id",
-    "quoted_user_name": "quoted_user",
-    "quoted_user_id": "quoted_user_id",
+    "retweeted_id": str,
+    "retweeted_user_name": str,
+    "retweeted_user_id": str,
+    "retweeted_timestamp_utc": str,
+    "quoted_id": str,
+    "quoted_user": str,
+    "quoted_user_id": str,
+    "quoted_timestamp_utc": str,
     "links": lambda x: x.get("proper_links", x.get("links", [])),
     "media_urls": "media_urls",
     "media_files": "media_files",

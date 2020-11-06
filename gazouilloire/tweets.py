@@ -25,7 +25,7 @@ CORRESP_FIELDNAMES = {
     "coordinates": "coordinates",
     "possibly_sensitive": "possibly_sensitive",
     "retweet_count": "retweet_count",
-    "favorite_count": "favorite_count",
+    "favorite_count": "like_count",
     "reply_count": "reply_count"
 }
 
@@ -237,10 +237,10 @@ def prepare_tweet(tweet, locale=None):
         'quoted_user': qtu,
         'quoted_user_id': qtuid,
         'quoted_timestamp_utc': qtime,
-        'retweet_id': rti,
-        'retweet_user': rtu,
-        'retweet_user_id': rtuid,
-        'retweet_timestamp_utc': rtime,
+        'retweeted_id': rti,
+        'retweeted_user': rtu,
+        'retweeted_user_id': rtuid,
+        'retweeted_timestamp_utc': rtime,
         "media_files": media_files,
         'media_urls': media_urls,
         'links': sorted(links),
