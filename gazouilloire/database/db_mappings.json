@@ -182,16 +182,20 @@
           "user_friends": {
             "type": "integer"
           },
-          "user_likes": {
-            "type": "integer"
-          },
           "user_id": {
             "type": "keyword"
+          },
+          "user_image": {
+            "type": "text",
+            "index": false
           },
           "user_lang": {
             "type": "keyword"
           },
-          "user_listed": {
+          "user_likes": {
+            "type": "integer"
+          },
+          "user_lists": {
             "type": "integer"
           },
           "user_location": {
@@ -205,9 +209,6 @@
           },
           "user_name": {
             "type": "keyword"
-          },
-          "user_profile_image_url_https": {
-            "type": "text"
           },
           "user_screen_name": {
             "type": "keyword"

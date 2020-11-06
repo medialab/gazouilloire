@@ -82,7 +82,7 @@ def grab_extra_meta(source, result, locale=None):
                 result["lng"] = source["coordinates"]["coordinates"][0]
         elif nostr_field(meta) in source:
             result[meta] = str(source[nostr_field(meta)])
-    for meta in ['id_str', 'screen_name', 'name', 'friends_count', 'followers_count', 'listed_count', 'profile_image_url', 'location', 'verified', 'description', 'profile_image_url_https', 'created_at']:
+    for meta in ['id_str', 'screen_name', 'name', 'friends_count', 'followers_count', 'location', 'verified', 'description', 'created_at']:
         key = "user_%s" % meta.replace('_count', '')
         if key in source:
             result[nostr_field(key)] = source[key]
@@ -95,6 +95,8 @@ def grab_extra_meta(source, result, locale=None):
     if "user" in source:
         result["user_tweets"] = source["user"]["statuses_count"]
         result["user_likes"] = source["user"]["favourites_count"]
+        result["user_lists"] = source["user"]["listed_count"]
+        result["user_image"] = source["user"]["profile_image_url_https"]
     if "place" in source and source["place"] is not None:
         for meta in ['country', 'full_name', 'name', 'place_type']:
             key = "place_%s" % meta.replace('place_', '')

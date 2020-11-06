@@ -38,7 +38,7 @@ TWEET_FIELDS = [
   "user_verified",                  # whether the author's account is certified
   "user_description",               # description given in the author's profile (at collection time)
   "user_url",                       # link to a website given in the author's profile (at collection time)
-  "user_profile_image_url",         # link to the image avatar of the author's profile (at collection time)
+  "user_image",                     # link to the image avatar of the author's profile (at collection time)
   # "user_utcoffset",                 # time offset due to the user's timezone, dropped by Twitter (since May 18), ignorable
   # "user_timezone",                  # timezone declared in the user's profile, dropped by Twitter (since May 18), ignorable
   # "user_lang",                      # language declared in the user's profile (at collection time), dropped by Twitter (since May 19), ignorable
@@ -46,7 +46,7 @@ TWEET_FIELDS = [
   "user_followers",                 # number of users following the author (at collection time)
   "user_friends",                   # number of users the author is following (at collection time)
   "user_likes",                     # number of likes the author has expressed (at collection time)
-  "user_listed",                    # number of users lists the author has been included in (at collection time)
+  "user_lists",                    # number of users lists the author has been included in (at collection time)
   "user_created_at",                # ISO datetime of creation of the author's account
   "user_timestamp_utc",             # UNIX timestamp of creation of the author's account - UTC time
   "collected_via",                  # API used to collect the message: "stream", "search", "retweet" (the original tweet
@@ -84,20 +84,20 @@ USER_FIELDS = [
   # 'geo_enabled',                        # dropped by Twitter (since May 19), ignorable
   'verified',
   'protected',
-  'statuses_count',
-  'followers_count',
-  'friends_count',
-  'favourites_count',
-  'listed_count',
+  'tweets',
+  'followers',
+  'friends',
+  'likes',
+  'lists',
   # 'is_translator',                      # dropped by Twitter (since May 19), ignorable
   # 'translator_type',                    # dropped by Twitter (since May 19), ignorable
   # 'is_translation_enabled',             # dropped by Twitter (since May 19), ignorable
-  'default_profile',
-  'default_profile_image',
+  # 'default_profile',
+  # 'default_profile_image',
   # 'has_extended_profile',               # dropped by Twitter (since May 19), ignorable
   # 'profile_image_url',                  # dropped by Twitter (since May 19), ignorable
-  'profile_image_url_https',
-  'profile_banner_url',
+  'image',
+  # 'profile_banner_url',
   # 'profile_use_background_image',       # dropped by Twitter (since May 19), ignorable
   # 'profile_background_image_url',       # dropped by Twitter (since May 19), ignorable
   # 'profile_background_image_url_https', # dropped by Twitter (since May 19), ignorable
@@ -134,15 +134,15 @@ CORRESP_FIELDS = {
     "user_verified": bool,
     "user_description": str,
     "user_url": str,
-    "user_profile_image_url": "user_profile_image_url_https",
+    "user_image": str,
     # "user_utcoffset": "user_utc_offset",   # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
     # "user_timezone": "user_time_zone",     # Not available anymore after 2018-05-23 #RGPD https://twittercommunity.com/t/upcoming-changes-to-the-developer-platform/104603
     "user_tweets": int,
     "user_followers": int,
     "user_friends": int,
     "user_likes": int,
-    "user_listed": "user_listed",
-    "user_created_at": "user_created_at",
+    "user_lists": int,
+    "user_created_at": str,
     # More added fields:
     "collected_via": str,
     "match_query": bool,
