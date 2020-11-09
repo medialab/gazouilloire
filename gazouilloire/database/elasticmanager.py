@@ -309,14 +309,14 @@ class ElasticManager:
         Elasticsearch query on which get_thread_ids_from_ids is based
         """
         body = {
-            "_source": "in_reply_to_status_id_str",
+            "_source": "to_tweetid",
             "query": {
                 "bool": {
                     "filter": [{
                         "bool": {
                             "should": [
                                 {"terms": {"_id": ids_list}},
-                                {"terms": {"in_reply_to_status_id_str": ids_list}}
+                                {"terms": {"to_tweetid": ids_list}}
                             ]
                         }
                     }]
@@ -337,17 +337,17 @@ class ElasticManager:
         :return:
         """
         ids_list = list(set(ids))
-        all_ids = ids.copy()
+        all_ids = set(ids)
         while ids_list:
             todo_ids = set()
             for t in self.search_thread_elements(ids_list):
                 if add_and_report(all_ids, t["_id"]):
                     todo_ids.add(t["_id"])
-                origin = t.get("in_reply_to_status_id_str")
+                origin = t.get("to_tweetid")
                 if origin and add_and_report(all_ids, origin):
                     todo_ids.add(origin)
             ids_list = list(todo_ids)
-        return all_ids
+        return list(all_ids)
 
     def multi_get(self, ids, batch_size=1000):
         for i in range(0, len(ids), batch_size):
