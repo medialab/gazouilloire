@@ -3,6 +3,7 @@ import click
 from gazouilloire.config_format import create_conf_example, load_conf
 from gazouilloire import run
 from gazouilloire.resolving_script import resolve_script
+from gazouilloire.exports.export_csv import export_csv
 
 
 @click.group()
@@ -31,3 +32,13 @@ def start(path):
 @click.option('--verbose/--silent', default=False)
 def resolve(host, port, db_name, batch_size, verbose):
     resolve_script(batch_size, host, port, db_name, verbose=verbose)
+
+
+@main.command()
+@click.argument('query', nargs=-1)
+@click.option('--path', '-p', type=click.Path(exists=True), default=".")
+@click.option('--verbose/--quiet', default=True)
+@click.option('--export_threads_from_file', '-f', type=click.Path(exists=True))
+def export(path, query, verbose, export_threads_from_file):
+    conf = load_conf(path)
+    export_csv(conf, query, verbose, export_threads_from_file)
