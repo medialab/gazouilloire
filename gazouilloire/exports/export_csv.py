@@ -1,13 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
 import sys
 import csv
-import json
 from gazouilloire.database.elasticmanager import ElasticManager, helpers
-from gazouilloire.web.export import yield_csv
+from gazouilloire.web.export import TWEET_FIELDS
 
+
+def yield_csv(queryiterator):
+    for t in queryiterator:
+        source = t["_source"]
+        # ignore tweets only caught on deletion missing most fields
+        if len(source) < 10:
+            continue
+        source["id"] = t["_id"]
+        source["links"] = source.get("proper_links", source.get("links", []))
+        for multiple in ["links", "hashtags", "collected_via", "media_urls", "media_files", "mentioned_names", "mentioned_ids"]:
+            source[multiple] = "|".join(source[multiple])
+        for boolean in ["possibly_sensitive", "user_verified", "match_query"]:
+            source[boolean] = int(source[boolean]) if boolean in source else ''
+
+        yield source
 
 def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file):
     THREADS = conf.get('grab_conversations', False)
@@ -78,10 +91,13 @@ def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file):
     else:
         count = db.client.count(index=db.tweets, doc_type='tweet', body=body)['count']
         body["sort"] = ["_id"]
-        iterator = yield_csv(helpers.scan(client=db.client, index=db.tweets, query=body, preserve_order=True), extra_fields=EXTRA_FIELDS)
+        iterator = yield_csv(helpers.scan(client=db.client, index=db.tweets, query=body, preserve_order=True))
     if verbose:
         import progressbar
         bar = progressbar.ProgressBar(max_value=count)
         iterator = bar(iterator)
+    writer = csv.DictWriter(sys.stdout, fieldnames=TWEET_FIELDS+EXTRA_FIELDS, restval='', quoting=csv.QUOTE_MINIMAL,
+                            extrasaction='ignore')
+    writer.writeheader()
     for t in iterator:
-        print(t)
+        writer.writerow(t)

@@ -49,10 +49,11 @@ TWEET_FIELDS = [
   "user_lists",                    # number of users lists the author has been included in (at collection time)
   "user_created_at",                # ISO datetime of creation of the author's account
   "user_timestamp_utc",             # UNIX timestamp of creation of the author's account - UTC time
-  "collected_via",                  # API used to collect the message: "stream", "search", "retweet" (the original tweet
-                                    # contained in the retweet metadata), "quote" (the original tweet contained in the
-                                    # quote metadata), "thread" (the tweet is part of the same conversation as a tweet
-                                    # collected via search or stream)
+  "collected_via",                  # How we received the message: "stream", "search", "retweet" (the original tweet was
+                                    # contained in the retweet metadata), "quote" (the original tweet was contained in
+                                    # the quote metadata), "thread" (the tweet is part of the same conversation as a
+                                    # tweet collected via search or stream). If the message was collected via multiple
+                                    # ways, they are separated by |
   "match_query",                    # whether the tweet was retrieved because it matches the query, or whether it was
                                     # collected via "quote" or "thread"
   "retweeted_id",                   # digital ID of the retweeted message
@@ -63,6 +64,8 @@ TWEET_FIELDS = [
   "quoted_user",                    # text ID of the user who authored the quoted message
   "quoted_user_id",                 # digital ID of the user who authoring the quoted message
   "quoted_timestamp_utc",           # UNIX timestamp of creation of the quoted message - UTC time
+  "collection_time",                # ISO datetime of message collection - local time
+  "url",                            # url of the tweet (to get a view of the message directly on Twitter)
   "links",                          # list of links included in the text content, with redirections resolved, separated by |
   "media_urls",                     # list of links to images/videos embedded, separated by |
   "media_files",                    # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabledmedias_files
@@ -268,15 +271,21 @@ def get_thread_ids_from_query(query, mongocoll):
 
 
 def yield_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
-    out_fields = list_fields + extra_fields
-    yield ",".join(out_fields)
+    # out_fields = list_fields + extra_fields
+    # yield ",".join(out_fields)
     for t in queryiterator:
         source = t["_source"]
-        source["id"] = t["_id"]
         # ignore tweets only caught on deletion missing most fields
         if len(source) < 10:
             continue
-        yield ",".join(format_csv(get_field(k, source)) for k in out_fields)
+        source["id"] = t["_id"]
+        source["links"] = source.get("proper_links", source.get("links", []))
+        for multiple in ["links", "hashtags", "collected_via", "media_urls", "media_files", "mentioned_names", "mentioned_ids"]:
+            source[multiple] = "|".join(source[multiple])
+        for boolean in ["possibly_sensitive", "user_verified", "match_query"]:
+            source[boolean] = int(source[boolean]) if boolean in source else ''
+
+        yield source
 
 
 def export_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
