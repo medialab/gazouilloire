@@ -98,8 +98,8 @@ def grab_extra_meta(source, result, locale=None):
         result["user_lists"] = source["user"]["listed_count"]
         result["user_image"] = source["user"]["profile_image_url_https"]
     if "place" in source and source["place"] is not None:
-        for meta in ['country', 'full_name', 'name', 'place_type']:
-            key = "place_%s" % meta.replace('place_', '')
+        for meta in ['country_code', 'full_name', 'place_type']:
+            key = "place_%s" % meta.replace('place_', '').replace('full_', '')
             if meta in source['place']:
                 result[key] = source['place'][meta]
         if "bounding_box" in source["place"] and "coordinates" in source["place"]["bounding_box"]:

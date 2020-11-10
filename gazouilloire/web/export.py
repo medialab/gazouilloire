@@ -66,6 +66,10 @@ TWEET_FIELDS = [
   "quoted_timestamp_utc",           # UNIX timestamp of creation of the quoted message - UTC time
   "collection_time",                # ISO datetime of message collection - local time
   "url",                            # url of the tweet (to get a view of the message directly on Twitter)
+  "place_country_code",             # if the tweet has an associated 'place', country code of that place
+  "place_name",                     # if the tweet has an associated 'place', name of that place
+  "place_type",                     # if the tweet has an associated 'place', type of that place ('city', 'admin', etc.)
+  "place_coordinates",              # if the tweet has an associated 'place', coordinates of that place, separated by |
   "links",                          # list of links included in the text content, with redirections resolved, separated by |
   "media_urls",                     # list of links to images/videos embedded, separated by |
   "media_files",                    # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabledmedias_files
@@ -164,7 +168,11 @@ CORRESP_FIELDS = {
     "media_files": str,
     "mentioned_names": str,
     "mentioned_ids": str,
-    "hashtags": "hashtags"
+    "hashtags": "hashtags",
+    "place_coordinates": "place_coordinates",
+    "place_country_code": str,
+    "place_name": str,
+    "place_type": str,
 }
 
 def search_field(field, tweet):
@@ -280,8 +288,9 @@ def yield_csv(queryiterator, list_fields=TWEET_FIELDS, extra_fields=[]):
             continue
         source["id"] = t["_id"]
         source["links"] = source.get("proper_links", source.get("links", []))
-        for multiple in ["links", "hashtags", "collected_via", "media_urls", "media_files", "mentioned_names", "mentioned_ids"]:
-            source[multiple] = "|".join(source[multiple])
+        for multiple in ["links", "hashtags", "collected_via", "media_urls", "media_files", "mentioned_names",
+                         "mentioned_ids", "place_coordinates"]:
+            source[multiple] = "|".join(str(i) for i in source[multiple]) if multiple in source else ''
         for boolean in ["possibly_sensitive", "user_verified", "match_query"]:
             source[boolean] = int(source[boolean]) if boolean in source else ''
 

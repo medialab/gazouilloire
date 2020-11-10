@@ -71,11 +71,8 @@
             "type": "float",
             "index": false
           },
-          "place_country": {
+          "place_country_code": {
             "type": "keyword"
-          },
-          "place_full_name": {
-            "type": "text"
           },
           "place_name": {
             "type": "text",
