@@ -25,9 +25,6 @@
           "lang": {
             "type": "keyword"
           },
-          "langs": {
-            "type": "keyword"
-          },
           "lat": {
             "type": "float"
           },

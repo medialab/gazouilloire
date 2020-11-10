@@ -120,7 +120,6 @@ def grab_extra_meta(source, result, locale=None):
         split_source = source['source'].replace('<a href="', '').replace('</a>', '').split('" rel="nofollow">')
         result['source_url'] = split_source[0]
         result['source_name'] = split_source[1]
-    result['langs'] = [result.get('lang', '').lower()]
     return result
 
 
