@@ -96,7 +96,17 @@ a `config.json` file is created. Open it to configure the collection parameters.
     gazouilloire export
     # or
     gazou export
-      
+    ```
+
+- By default, the `export` command writes in stdout. You can also use the -o option to write into a file
+    ```bash
+    gazouilloire export -o my_tweets_file.csv
+    # or
+    gazou export
+    ```
+
+- Other available options:
+    ```bash      
     # Export a csv of all tweets having a specific word in their text:
     gazou export medialab
     
@@ -104,9 +114,9 @@ a `config.json` file is created. Open it to configure the collection parameters.
     gazou export medialab digitalhumanities datajournalism '#python'
   
     # Export only a selection of columns:
-    gazouilloire export --columns id,user_screen_name,local_time,links
+    gazouilloire export --columns/-c id,user_screen_name,local_time,links
     # or
-    gazou export -c id,user_screen_name,local_time,links
+    gazou export --select/-s id,user_screen_name,local_time,links
     
     # Exclude tweets from conversations or from quotes (i.e. that do not match the keywords defined in config.json)
     gazou export --exclude_threads

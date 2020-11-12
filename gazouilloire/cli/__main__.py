@@ -36,7 +36,7 @@ def resolve(host, port, db_name, batch_size, verbose):
 
 @main.command()
 @click.argument('query', nargs=-1)
-@click.option('--columns', '-c')
+@click.option('--columns', '--select', '-c', '-s')
 @click.option('--path', '-p', type=click.Path(exists=True), default=".")
 @click.option('--exclude_threads/--include_threads', default=False)
 @click.option('--verbose/--quiet', default=True)
