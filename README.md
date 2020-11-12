@@ -88,29 +88,23 @@ or, to run the script in the current directory:
     gazouilloire start
 ```
 
-- Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily with simple scripts such as those in the `bin` directory:
+- Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in csv format:
 
 ```bash
-# To export a csv with most fields (formatted similarily to [DMI's TCAT](https://github.com/digitalmethodsinitiative/dmi-tcat)):
-PYTHONPATH=. bin/export_csv_as_tcat.py
+# Export all tweets:
+gazouilloire export
 
-# To export a csv of all tweets having a specific word in their text:
-PYTHONPATH=. bin/export_csv_as_tcat.py medialab
+# Export all tweets except those collected from conversations or from quotes (i.e. that do not match the search query)
+gazouilloire export --exclude_threads
+
+# Export a csv of all tweets having a specific word in their text:
+gazouilloire export medialab
 
 # To export a csv of all tweets having one of many specific words in their text:
-PYTHONPATH=. bin/export_csv_as_tcat.py medialab digitalhumanities datajournalism '#python'
+gazouilloire export medialab digitalhumanities datajournalism '#python'
 
-# To export a csv of all tweets matching a specific MongoDB query, for instance by user_name:
-PYTHONPATH=. bin/export_csv_as_tcat.py "{'user_screen_name': 'medialab_ScPo'}"
-
-# To export a csv with the most useful fields:
-PYTHONPATH=. bin/export_csv.py
-
-# To export the whole text content of the tweets:
-PYTHONPATH=. bin/export_all_text.py
-
-# To compute the top shared web domains in the collected tweets:
-PYTHONPATH=. bin/export_shared_domains.py
+# To export a csv of all tweets matching a specific Elasticsearch term query, for instance by user_name:
+gazouilloire export "{'user_screen_name': 'medialab_ScPo'}"
 ```
 
 ## Troubleshooting
