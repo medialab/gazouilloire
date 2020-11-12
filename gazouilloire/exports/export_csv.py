@@ -30,7 +30,7 @@ def yield_csv(queryiterator):
         yield source
 
 
-def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, selection):
+def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, selection, outputfile):
     THREADS = conf.get('grab_conversations', False)
     if selection:
         SELECTION = selection.split(",")
@@ -112,8 +112,10 @@ def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, 
         import progressbar
         bar = progressbar.ProgressBar(max_value=count)
         iterator = bar(iterator)
-    writer = csv.DictWriter(sys.stdout, fieldnames=SELECTION, restval='', quoting=csv.QUOTE_MINIMAL,
-                            extrasaction='ignore')
+
+    file = open(outputfile, 'w') if outputfile else sys.stdout
+    writer = csv.DictWriter(file, fieldnames=SELECTION, restval='', quoting=csv.QUOTE_MINIMAL, extrasaction='ignore')
     writer.writeheader()
     for t in iterator:
         writer.writerow(t)
+    file.close()

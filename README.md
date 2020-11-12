@@ -98,11 +98,11 @@ a `config.json` file is created. Open it to configure the collection parameters.
     gazou export
     ```
 
-- By default, the `export` command writes in stdout. You can also use the -o option to write into a file
+- By default, the `export` command writes in stdout. You can also use the -o option to write into a file:
     ```bash
-    gazouilloire export -o my_tweets_file.csv
-    # or
-    gazou export
+    gazou export > my_tweets_file.csv
+    # is equivalent to
+    gazou export -o my_tweets_file.csv
     ```
 
 - Other available options:
