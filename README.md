@@ -96,23 +96,23 @@ a `config.json` file is created. Open it to configure the collection parameters.
     gazouilloire export
     # or
     gazou export
-  
-    # Export all tweets, but only a selection of fields (that you can configure in the "export" part of config.json):
-    gazouilloire export --selection
-    # or
-    gazou export -s
-    
-    # Exclude tweets from conversations or from quotes (i.e. that do not match the keywords defined in config.json)
-    gazouilloire export --exclude_threads
-    
+      
     # Export a csv of all tweets having a specific word in their text:
-    gazouilloire export medialab
+    gazou export medialab
     
     # Export a csv of all tweets having one of many specific words in their text:
-    gazouilloire export medialab digitalhumanities datajournalism '#python'
+    gazou export medialab digitalhumanities datajournalism '#python'
+  
+    # Export only a selection of columns:
+    gazouilloire export --columns id,user_screen_name,local_time,links
+    # or
+    gazou export -c id,user_screen_name,local_time,links
     
-    # Export all tweets matching a specific Elasticsearch term query, for instance by user_name:
-    gazouilloire export "{'user_screen_name': 'medialab_ScPo'}"
+    # Exclude tweets from conversations or from quotes (i.e. that do not match the keywords defined in config.json)
+    gazou export --exclude_threads
+    
+    # Export all tweets matching a specific Elasticsearch term query, for instance by user name:
+    gazou export "{'user_screen_name': 'medialab_ScPo'}"
     ```
 
 ## Troubleshooting

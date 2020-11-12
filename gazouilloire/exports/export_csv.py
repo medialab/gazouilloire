@@ -3,7 +3,7 @@
 
 import sys
 import csv
-from gazouilloire.database.elasticmanager import ElasticManager, helpers
+from gazouilloire.database.elasticmanager import ElasticManager, helpers, DB_MAPPINGS
 from gazouilloire.web.export import TWEET_FIELDS
 from gazouilloire.config_format import log
 
@@ -21,17 +21,26 @@ def yield_csv(queryiterator):
             continue
         source["id"] = t["_id"]
         source["links"] = source.get("proper_links", source.get("links", []))
-        for multiple in ["links", "hashtags", "collected_via", "media_urls", "media_files", "mentioned_names", "mentioned_ids"]:
+        for multiple in ["links", "hashtags", "collected_via", "media_urls", "media_files", "mentioned_names",
+                         "mentioned_ids"]:
             source[multiple] = "|".join(source[multiple])
         for boolean in ["possibly_sensitive", "user_verified", "match_query"]:
             source[boolean] = int(source[boolean]) if boolean in source else ''
 
         yield source
 
+
 def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, selection):
     THREADS = conf.get('grab_conversations', False)
-    EXTRA_FIELDS = conf.get('export', {}).get('extra_fields', [])
-    SELECTION = conf.get('export', {}).get('fields', [])+EXTRA_FIELDS if selection else TWEET_FIELDS+EXTRA_FIELDS
+    if selection:
+        SELECTION = selection.split(",")
+        mapping = DB_MAPPINGS["tweets_mapping"]["mappings"]["tweet"]["properties"]
+        for field in SELECTION:
+            if field not in mapping and field != "id":
+                log.warning("Field '{}' not in elasticsearch mapping, are you sure that you spelled it correctly?"
+                            .format(field))
+    else:
+        SELECTION = TWEET_FIELDS
 
     try:
         db = ElasticManager(**conf['database'])
@@ -45,13 +54,13 @@ def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, 
         exclude_threads = False
 
     body = {
-            "query": {
-                "bool": {
-                    "filter": [
-                    ]
-                }
+        "query": {
+            "bool": {
+                "filter": [
+                ]
             }
         }
+    }
     filter = body["query"]["bool"]["filter"]
     exclude_clause = {"term": {"match_query": True}}
 

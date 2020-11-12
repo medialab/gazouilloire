@@ -38,9 +38,5 @@
     "medias_directory": "medias",
     "timezone": "Europe/Paris",
     "text_analyzer": "french",
-    "export": {
-        "fields": ["id", "user_screen_name", "local_time", "links"],
-        "extra_fields": []
-    },
     "debug": false
 }
