@@ -21,6 +21,7 @@ Python 3.x compatible.
     gazouilloire init path/to/collection/directory'
     ```
 or in the current directory
+
     ```bash
     gazouilloire init
     ```
@@ -91,8 +92,15 @@ a `config.json` file is created. Open it to configure the collection parameters.
 - Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in csv format:
 
     ```bash
-    # Export all tweets:
+    # Export all fields from all tweets:
     gazouilloire export
+    # or
+    gazou export
+  
+    # Export all tweets, but only a selection of fields (that you can configure in the "export" part of config.json):
+    gazouilloire export --selection
+    # or
+    gazou export -s
     
     # Exclude tweets from conversations or from quotes (i.e. that do not match the keywords defined in config.json)
     gazouilloire export --exclude_threads

@@ -40,6 +40,7 @@ def resolve(host, port, db_name, batch_size, verbose):
 @click.option('--exclude_threads/--include_threads', default=False)
 @click.option('--verbose/--quiet', default=True)
 @click.option('--export_threads_from_file', '-f', type=click.Path(exists=True))
-def export(path, query, exclude_threads, verbose, export_threads_from_file):
+@click.option('--selection/--all', '-s', default=False)
+def export(path, query, exclude_threads, verbose, export_threads_from_file, selection):
     conf = load_conf(path)
-    export_csv(conf, query, exclude_threads, verbose, export_threads_from_file)
+    export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, selection)

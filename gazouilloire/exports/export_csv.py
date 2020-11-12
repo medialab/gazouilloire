@@ -5,11 +5,17 @@ import sys
 import csv
 from gazouilloire.database.elasticmanager import ElasticManager, helpers
 from gazouilloire.web.export import TWEET_FIELDS
+from gazouilloire.config_format import log
 
 
 def yield_csv(queryiterator):
     for t in queryiterator:
-        source = t["_source"]
+        try:
+            source = t["_source"]
+        except KeyError:
+            if not t["found"]:
+                log.error(t["_id"] + " not found in database")
+                continue
         # ignore tweets only caught on deletion missing most fields
         if len(source) < 10:
             continue
@@ -22,9 +28,10 @@ def yield_csv(queryiterator):
 
         yield source
 
-def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file):
+def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, selection):
     THREADS = conf.get('grab_conversations', False)
     EXTRA_FIELDS = conf.get('export', {}).get('extra_fields', [])
+    SELECTION = conf.get('export', {}).get('fields', [])+EXTRA_FIELDS if selection else TWEET_FIELDS+EXTRA_FIELDS
 
     try:
         db = ElasticManager(**conf['database'])
@@ -96,7 +103,7 @@ def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file):
         import progressbar
         bar = progressbar.ProgressBar(max_value=count)
         iterator = bar(iterator)
-    writer = csv.DictWriter(sys.stdout, fieldnames=TWEET_FIELDS+EXTRA_FIELDS, restval='', quoting=csv.QUOTE_MINIMAL,
+    writer = csv.DictWriter(sys.stdout, fieldnames=SELECTION, restval='', quoting=csv.QUOTE_MINIMAL,
                             extrasaction='ignore')
     writer.writeheader()
     for t in iterator:

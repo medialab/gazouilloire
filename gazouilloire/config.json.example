@@ -39,8 +39,8 @@
     "timezone": "Europe/Paris",
     "text_analyzer": "french",
     "export": {
-        "selected_field": "selected",
-        "extra_fields": ["selected"]
+        "fields": ["id", "user_screen_name", "local_time", "links"],
+        "extra_fields": []
     },
     "debug": false
 }
