@@ -75,12 +75,12 @@ def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, 
                 sys.exit("%s: %s\n" % (type(e), e))
             filter.append({"term": query})
         else:
-            filter.append({"term": {"text": query}})
+            filter.append({"term": {"text": query.lower()}})
         if exclude_threads:
             filter.append(exclude_clause)
 
     elif len(query) > 1:
-        filter.append({"bool": {"should": [{"term": {"text": arg}} for arg in query]}})
+        filter.append({"bool": {"should": [{"term": {"text": arg.lower()}} for arg in query]}})
         if exclude_threads:
             filter.append(exclude_clause)
 
