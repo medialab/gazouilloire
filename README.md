@@ -80,32 +80,32 @@ a `config.json` file is created. Open it to configure the collection parameters.
 
 - Run with:
 
-```bash
-    gazouilloire start path/to/collection/directory
-```
-or, to run the script in the current directory:
-```
-    gazouilloire start
-```
+    ```bash
+        gazouilloire start path/to/collection/directory
+    ```
+    or, to run the script in the current directory:
+    ```
+        gazouilloire start
+    ```
 
 - Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in csv format:
 
-```bash
-# Export all tweets:
-gazouilloire export
-
-# Export all tweets except those collected from conversations or from quotes (i.e. that do not match the search query)
-gazouilloire export --exclude_threads
-
-# Export a csv of all tweets having a specific word in their text:
-gazouilloire export medialab
-
-# To export a csv of all tweets having one of many specific words in their text:
-gazouilloire export medialab digitalhumanities datajournalism '#python'
-
-# To export a csv of all tweets matching a specific Elasticsearch term query, for instance by user_name:
-gazouilloire export "{'user_screen_name': 'medialab_ScPo'}"
-```
+    ```bash
+    # Export all tweets:
+    gazouilloire export
+    
+    # Exclude tweets from conversations or from quotes (i.e. that do not match the keywords defined in config.json)
+    gazouilloire export --exclude_threads
+    
+    # Export a csv of all tweets having a specific word in their text:
+    gazouilloire export medialab
+    
+    # To export a csv of all tweets having one of many specific words in their text:
+    gazouilloire export medialab digitalhumanities datajournalism '#python'
+    
+    # To export a csv of all tweets matching a specific Elasticsearch term query, for instance by user_name:
+    gazouilloire export "{'user_screen_name': 'medialab_ScPo'}"
+    ```
 
 ## Troubleshooting
 
