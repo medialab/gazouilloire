@@ -8,7 +8,10 @@ Python 3.x compatible.
 
 - Install gazouilloire
 ```bash
-    pip install gazouilloire
+    git clone https://github.com/medialab/gazouilloire.git
+    cd gazouilloire
+    git checkout elasticPy3-merge
+    python setup.py install
 ```
 
 - Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch#ga-release) (version 6.X)
