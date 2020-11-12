@@ -7,40 +7,40 @@ Python 3.x compatible.
 ## HowTo
 
 - Install gazouilloire
-```bash
+    ```bash
     git clone https://github.com/medialab/gazouilloire.git
     cd gazouilloire
     git checkout elasticPy3-merge
     python setup.py install
-```
+    ```
 
 - Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch#ga-release) (version 6.X)
 
 - Init gazouilloire collection in a specific directory
-```bash
+    ```bash
     gazouilloire init path/to/collection/directory'
-```
+    ```
 or in the current directory
-```bash
+    ```bash
     gazouilloire init
-```
+    ```
 a `config.json` file is created. Open it to configure the collection parameters.
 
 - Set your [Twitter API key](https://apps.twitter.com/app/) and generate the related Access Token
 
-```json
-"twitter": {
-   "key": "<Consumer Key (API Key)>xxxxxxxxxxxxxxxxxxxxx",
-   "secret": "<Consumer Secret (API Secret)>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-   "oauth_token": "<Access Token>xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-   "oauth_secret": "<Access Token Secret>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-}
-
-```
+    ```json
+    "twitter": {
+       "key": "<Consumer Key (API Key)>xxxxxxxxxxxxxxxxxxxxx",
+       "secret": "<Consumer Secret (API Secret)>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "oauth_token": "<Access Token>xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "oauth_secret": "<Access Token Secret>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+    
+    ```
 
 - Write down the list of desired **keywords** and **@users** and/or the list of desired **url_pieces** as json arrays:
 
-  ```json
+    ```json
     "keywords": [
         "amour",
         "@medialab_scpo"
@@ -48,7 +48,7 @@ a `config.json` file is created. Open it to configure the collection parameters.
     "url_pieces": [
         "medialab.sciencespo.fr/fr"
     ],
-  ```
+    ```
 
   Avoid using accented characters (Twitter will automatically return both tweets with and without accents, for instance searching "heros" will find both tweets with "heros" and "héros").
 
@@ -58,8 +58,8 @@ a `config.json` file is created. Open it to configure the collection parameters.
   - **geolocalisation**: just add `"geolocalisation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box as shown in the config example file
   - **time_limited_keywords**: in order to filter on specific keywords during planned time period:
 
-  ```json
-  "time_limited_keywords": {
+    ```json
+    "time_limited_keywords": {
         "#m6": [
             ["2014-05-01 16:00", "2014-05-08 16:05"],
             ["2014-05-08 16:00", "2014-05-08 16:05"],
@@ -70,22 +70,22 @@ a `config.json` file is created. Open it to configure the collection parameters.
             ["2014-05-08 16:00", "2014-05-08 16:05"]
         ]
     },
-  ```
+    ```
   One can also choose the analyzer used by Elasticsearch to tokenize text:
-  ```json
-  "text_analyzer": "french",
-  ```
+    ```json
+    "text_analyzer": "french",
+    ```
   The complete list of analyzers is [here](https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-analyzers.html).
 
 
 - Run with:
 
     ```bash
-        gazouilloire start path/to/collection/directory
+    gazouilloire start path/to/collection/directory
     ```
     or, to run the script in the current directory:
     ```
-        gazouilloire start
+    gazouilloire start
     ```
 
 - Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in csv format:
@@ -100,10 +100,10 @@ a `config.json` file is created. Open it to configure the collection parameters.
     # Export a csv of all tweets having a specific word in their text:
     gazouilloire export medialab
     
-    # To export a csv of all tweets having one of many specific words in their text:
+    # Export a csv of all tweets having one of many specific words in their text:
     gazouilloire export medialab digitalhumanities datajournalism '#python'
     
-    # To export a csv of all tweets matching a specific Elasticsearch term query, for instance by user_name:
+    # Export all tweets matching a specific Elasticsearch term query, for instance by user_name:
     gazouilloire export "{'user_screen_name': 'medialab_ScPo'}"
     ```
 
