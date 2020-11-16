@@ -96,7 +96,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
         if tweet.get("proper_links", []):
             tweets_already_done.append(tweet["_id"])
             continue
-        tweetid = tweet.get('retweet_id') or tweet['_id']
+        tweetid = tweet.get('retweeted_id') or tweet['_id']
         if tweetid in ids_done_in_batch:
             continue
         gdlinks = []
@@ -111,7 +111,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
             skip += 1
             continue
         gddomains = list(gddomains)
-        if tweet["retweet_id"] is None:  # The tweet is an original tweet. No need to search for its id.
+        if tweet.get("retweeted_id") is None:  # The tweet is an original tweet. No need to search for its id.
             to_update.append(
                 {'_id': tweet["_id"], "_source": {"doc": {
                     'proper_links': gdlinks,
