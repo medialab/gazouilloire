@@ -58,7 +58,7 @@ echo "TOTAL tweets collected this week:
   $total
 " >> $report
 
-cat $list_queries | grep . | while read query; do
+cat $list_queries | grep "\S" | while read query; do
   query_name=$(echo $query | sed 's/[\\^].//g' | sed 's/|/-/g' | sed 's/[^a-z\-]//gi')
   bin/export_csv_as_tcat.py --quiet '{"$and": ['"$time_args""$filters"', {"text": re.compile(r"'"$query"'", re.I)}]}' > $outdir/$query_name.csv
   total=$((`cat $outdir/$query_name.csv | wc -l` - 1))
