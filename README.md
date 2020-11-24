@@ -72,11 +72,6 @@ a `config.json` file is created. Open it to configure the collection parameters.
         ]
     },
     ```
-  One can also choose the analyzer used by Elasticsearch to tokenize text:
-    ```json
-    "text_analyzer": "french",
-    ```
-  The complete list of analyzers is [here](https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-analyzers.html).
 
 
 - Run with:

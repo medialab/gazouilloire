@@ -37,6 +37,5 @@
     "download_medias": false,
     "medias_directory": "medias",
     "timezone": "Europe/Paris",
-    "text_analyzer": "french",
     "debug": false
 }
