@@ -112,6 +112,8 @@ a `config.json` file is created. Open it to configure the collection parameters.
     gazouilloire export --columns/-c id,user_screen_name,local_time,links
     # or
     gazou export --select/-s id,user_screen_name,local_time,links
+    # Other example: export only the text of the tweets:
+    gazou export -s text
     
     # Exclude tweets from conversations or from quotes (i.e. that do not match the keywords defined in config.json)
     gazou export --exclude_threads
