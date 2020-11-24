@@ -10,7 +10,7 @@ from minet.exceptions import RedirectError
 from gazouilloire.database.elasticmanager import ElasticManager
 from ural import normalize_url, get_hostname
 from gazouilloire.config_format import log
-
+import logging
 
 def count_and_log(db, batch_size, done=0, skip=0):
     db.client.indices.refresh(index=db.tweets)
@@ -37,6 +37,8 @@ def get_domains(url):
 
 
 def resolve_loop(batch_size, db, todo, skip, verbose):
+    if verbose:
+        log.setLevel(logging.DEBUG)
     done = 0
     batch_urls = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
     alreadydone = {l["link_id"]: (l["real"], get_domains(l["real"])) for l in db.find_links_in(batch_urls, batch_size)}
@@ -69,8 +71,8 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
                     log.warning("failed to resolve %s: %s (last url: %s)" % (source, res.error, last.url))
                     # TODO:
                     #  Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
-                if verbose:
-                    log.debug("{} {}: {} --> {}".format(last.status, last.type,  source, normalized_url))
+
+                log.debug("{} {}: {} --> {}".format(last.status, last.type,  source, normalized_url))
                 links_to_save.append({'link_id': source, 'real': normalized_url, 'domains': domains})
                 alreadydone[source] = (normalized_url, domains)
                 if source != normalized_url:
