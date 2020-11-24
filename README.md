@@ -8,9 +8,8 @@ Python 3.x compatible.
 
 - Install gazouilloire
     ```bash
-    git clone https://github.com/medialab/gazouilloire.git
+    git clone -b elasticPy3-merge https://github.com/medialab/gazouilloire.git 
     cd gazouilloire
-    git checkout elasticPy3-merge
     python setup.py install
     ```
 
