@@ -69,6 +69,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
                 domains = get_domains(normalized_url)
                 if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
                     log.warning("failed to resolve %s: %s (last url: %s)" % (source, res.error, last.url))
+                    continue
                     # TODO:
                     #  Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
 
