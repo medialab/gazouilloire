@@ -45,13 +45,13 @@ RESOLVER_BATCH_SIZE = 200
 #         sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text.encode('ascii', 'ignore')))
 
 
-def get_timestamp(t, locale, field='created_at'):
-    tim = datetime.strptime(t[field], '%a %b %d %H:%M:%S +0000 %Y')
+def get_timestamp(time, locale):
+    tim = datetime.strptime(time, '%a %b %d %H:%M:%S +0000 %Y')
     if locale:
         utc_date = timezone('UTC').localize(tim)
         locale_date = utc_date.astimezone(locale)
-        return time.mktime(locale_date.timetuple())
-    return tim.isoformat()
+        return locale_date.timestamp()
+    return tim.timestamp()
 
 
 def breakable_sleep(delay, exit_event):
@@ -452,7 +452,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                     if not max_id or max_id > tid:
                         max_id = tid - 1
                     if planning is not None:
-                        ts = get_timestamp(tw, locale)
+                        ts = get_timestamp(tw["created_at"])
                         skip = True
                         for trang in planning:
                             if trang[0] < ts < trang[1]:
