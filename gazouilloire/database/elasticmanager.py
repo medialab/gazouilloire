@@ -133,23 +133,31 @@ class ElasticManager:
     def prepare_indexing_tweets(self, tweets):
         """Yields an indexing action for every tweet of a list. For existing tweets, only some fields are updated."""
         for t in tweets:
+            reply_count = t.get("reply_count", None)
+            if reply_count is not None:
+                source = "ctx._source.match_query |= params.match_query; \
+                    ctx._source.retweet_count = params.retweet_count; \
+                    ctx._source.reply_count = params.reply_count; \
+                    ctx._source.favorite_count = params.favorite_count; \
+                    if (!ctx._source.collected_via.contains(params.collected_via)){ctx._source.collected_via.add(params.collected_via)}"
+            else:
+                source = "ctx._source.match_query |= params.match_query; \
+                    ctx._source.retweet_count = params.retweet_count; \
+                    ctx._source.favorite_count = params.favorite_count; \
+                    if (!ctx._source.collected_via.contains(params.collected_via)){ctx._source.collected_via.add(params.collected_via)}"
             yield {
                 '_index': self.tweets,
                 "_op_type": "update",
                 "_type": "tweet",
                 "_id": t.pop("_id"),
                 "script": {
-                    "source": "ctx._source.match_query |= params.match_query; \
-                    ctx._source.retweet_count = params.retweet_count; \
-                    ctx._source.reply_count = params.reply_count; \
-                    ctx._source.favorite_count = params.favorite_count; \
-                    if (!ctx._source.collected_via.contains(params.collected_via)){ctx._source.collected_via.add(params.collected_via)}",
+                    "source": source,
                     "lang": "painless",
                     "params": {
                         "collected_via": t["collected_via"][0],
                         "match_query": t["match_query"],
                         "retweet_count": t["retweet_count"],
-                        "reply_count": t.get("reply_count", None),
+                        "reply_count": reply_count,
                         "like_count": t["like_count"],
                     }
 
