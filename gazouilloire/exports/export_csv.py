@@ -30,29 +30,7 @@ def yield_csv(queryiterator):
         yield source
 
 
-def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, selection, outputfile):
-    THREADS = conf.get('grab_conversations', False)
-    if selection:
-        SELECTION = selection.split(",")
-        mapping = DB_MAPPINGS["tweets_mapping"]["mappings"]["tweet"]["properties"]
-        for field in SELECTION:
-            if field not in mapping and field != "id":
-                log.warning("Field '{}' not in elasticsearch mapping, are you sure that you spelled it correctly?"
-                            .format(field))
-    else:
-        SELECTION = TWEET_FIELDS
-
-    try:
-        db = ElasticManager(**conf['database'])
-        db.prepare_indices()
-    except Exception as e:
-        sys.stderr.write(
-            "ERROR: Could not initiate connection to database: %s %s" % (type(e), e))
-        sys.exit(1)
-
-    if not THREADS:
-        exclude_threads = False
-
+def build_body(query, exclude_threads):
     body = {
         "query": {
             "bool": {
@@ -85,21 +63,50 @@ def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, 
             filter.append(exclude_clause)
 
     elif len(query) == 0:
-        if export_threads_from_file:
-            with open(export_threads_from_file) as f:
-                ids = sorted([t.get("id", t.get("_id"))
-                              for t in csv.DictReader(f)])
-                ids = db.get_thread_ids_from_ids(ids)
-            body = ids
+        if exclude_threads:
+            filter.append(exclude_clause)
         else:
-            if exclude_threads:
-                filter.append(exclude_clause)
-            else:
-                body = {
-                    "query": {
-                        "match_all": {}
-                    }
+            body = {
+                "query": {
+                    "match_all": {}
                 }
+            }
+    return body
+
+
+def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, selection, outputfile):
+    threads = conf.get('grab_conversations', False)
+    if selection:
+        SELECTION = selection.split(",")
+        mapping = DB_MAPPINGS["tweets_mapping"]["mappings"]["tweet"]["properties"]
+        for field in SELECTION:
+            if field not in mapping and field != "id":
+                log.warning("Field '{}' not in elasticsearch mapping, are you sure that you spelled it correctly?"
+                            .format(field))
+    else:
+        SELECTION = TWEET_FIELDS
+
+    try:
+        db = ElasticManager(**conf['database'])
+        db.prepare_indices()
+    except Exception as e:
+        log.error("Could not initiate connection to database: %s %s" % (type(e), e))
+        sys.exit(1)
+
+    if not threads:
+        exclude_threads = False
+
+    if export_threads_from_file:
+        if len(query) > 0:
+            log.error("--export_threads_from_file option is not compatible with a keyword query")
+            sys.exit(1)
+        with open(export_threads_from_file) as f:
+            ids = sorted([t.get("id", t.get("_id"))
+                          for t in csv.DictReader(f)])
+            ids = db.get_thread_ids_from_ids(ids)
+        body = ids
+    else:
+        body = build_body(query, exclude_threads)
 
     if isinstance(body, list):
         count = len(body)
