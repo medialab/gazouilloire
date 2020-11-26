@@ -121,8 +121,8 @@ def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, 
         iterator = bar(iterator)
 
     file = open(outputfile, 'w') if outputfile else sys.stdout
-    writer = csv.writer(file, quoting=csv.QUOTE_MINIMAL)
-    writer.writerow(SELECTION)
+    writer = csv.DictWriter(file, fieldnames=SELECTION, restval='', quoting=csv.QUOTE_MINIMAL, extrasaction='ignore')
+    writer.writeheader()
     for t in iterator:
-        writer.writerow([t.get(field, '') for field in SELECTION])
+        writer.writerow(t)
     file.close()
