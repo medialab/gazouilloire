@@ -51,7 +51,6 @@ def unescape_html(text):
     return re_entities.sub(decode_entities, text)
 
 re_clean_rt = re.compile(r"^RT @\w+: ")
-# TODO: Ask Benjamin where this comes from
 def process_extract(text, car):
     return sorted(set([r.lstrip(car).lower() for r in re.split(r'[^\w%s]+' % car, re_clean_rt.sub('', text)) if r.startswith(car)]))
 
