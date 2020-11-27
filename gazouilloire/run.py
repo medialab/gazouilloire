@@ -38,12 +38,6 @@ from gazouilloire.config_format import load_conf, log
 
 RESOLVER_BATCH_SIZE = 200
 
-# def log(typelog, text):
-#     try:
-#         sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text))
-#     except UnicodeEncodeError:
-#         sys.stderr.write("[%s] %s: %s\n" % (datetime.now(), typelog, text.encode('ascii', 'ignore')))
-
 
 def get_timestamp(time, locale):
     tim = datetime.strptime(time, '%a %b %d %H:%M:%S +0000 %Y')
