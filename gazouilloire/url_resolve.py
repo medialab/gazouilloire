@@ -30,9 +30,11 @@ def normalize(url):
 
 def get_domains(url):
     result = []
-    domain_parts = get_hostname(url).split(".")
-    for enum, part in enumerate(domain_parts):
-        result.append(".".join(domain_parts[enum:]))
+    domain = get_hostname(url)
+    if domain:
+        domain_parts = domain.split(".")
+        for enum, part in enumerate(domain_parts):
+            result.append(".".join(domain_parts[enum:]))
     return result
 
 
