@@ -58,3 +58,25 @@ def resolve(host, port, db_name, batch_size, verbose):
 def export(path, query, exclude_threads, verbose, export_threads_from_file, columns, output):
     conf = load_conf(path)
     export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, columns, output)
+
+
+@main.command(help="Delete collection: es_indices and current search state will be deleted")
+@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
+                                                                              "be found. By default, looks in the"
+                                                                              "current directory. Usage: gazou reset "
+                                                                              "-p /path/to/directory/")
+@click.option('--es_index', '-i', type=click.Choice(['none', 'tweets', 'links', 'all'], case_sensitive=False),
+              default = "all", help="Delete only tweet index / link index")
+def reset(path, es_index):
+    conf = load_conf(path)
+    db_name = conf["database"]["db_name"]
+    click.confirm("Are you sure you want to reset {}?".format(db_name), abort=True)
+    es_index = es_index.lower()
+    delete_tweets = False
+    delete_links = False
+    if es_index == "tweets" or es_index == "all":
+        delete_tweets = click.confirm("Elasticsearch index '{}_tweets' will be erased, do you want to "
+                                      "continue?".format(db_name))
+    if es_index == "links" or es_index == "all":
+        delete_links = click.confirm("Elasticsearch index '{}_links' will be erased, do you want to "
+                                     "continue?".format(db_name))
