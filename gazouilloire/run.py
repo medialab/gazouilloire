@@ -65,7 +65,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
             todo.append(pile.get())
         tweets_bulk = []
         for t in prepare_tweets(todo, locale):
-            if pile_medias and t["medias"]:
+            if pile_medias and t["media_files"]:
                 pile_medias.put(t)
             if pile_catchup and t["to_tweetid"]:
                 if not db.find_tweet(t["to_tweetid"]):
@@ -106,8 +106,8 @@ def downloader(pile_medias, medias_dir, exit_event, debug=False):
             continue
         done = 0
         for tweet in todo:
-            for media_id, media_url in tweet["medias"]:
-                done += download_media(tweet, media_id, media_url, medias_dir)
+            for enum, media_id in enumerate(tweet["media_files"]):
+                done += download_media(tweet, media_id, tweet["media_urls"][enum], medias_dir)
         if debug and done:
             log.debug("[medias] +%s files" % done)
     log.info("FINISHED downloader")
