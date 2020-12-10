@@ -13,7 +13,7 @@ Python 3.x compatible.
     python setup.py install
     ```
 
-- Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch#ga-release) (version 6.X)
+- Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch#ga-release) (version 7.X)
 
 - Init gazouilloire collection in a specific directory
     ```bash
