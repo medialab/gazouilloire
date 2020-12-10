@@ -13,7 +13,7 @@ setup(name='gazouilloire',
       author='Benjamin Ooghe-Tabanou',
       author_email='',
       keywords='twitter',
-      python_requires='>=3.6',
+      python_requires='>=3.7',
       packages=find_packages(exclude=["collect*", "dist", "build"]),
       include_package_data=True,
       install_requires=[
