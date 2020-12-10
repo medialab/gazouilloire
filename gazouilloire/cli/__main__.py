@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import click
+import os
 from gazouilloire.config_format import create_conf_example, load_conf, log
 from gazouilloire import run
 from gazouilloire.resolving_script import resolve_script
@@ -63,13 +64,21 @@ def export(path, query, exclude_threads, verbose, export_threads_from_file, colu
 
 @main.command(help="Delete collection: es_indices and current search state will be deleted")
 @click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
-                                                                              "be found. By default, looks in the"
+                                                                              "be found. By default, looks in the "
                                                                               "current directory. Usage: gazou reset "
                                                                               "-p /path/to/directory/")
 @click.option('--es_index', '-i', type=click.Choice(['none', 'tweets', 'links', 'all'], case_sensitive=False),
               default="all", help="Delete only tweet index / link index")
+@click.option('--preserve_search_state/--remove_search_state', '-p', default=False, help="Preserve current search "
+                                                                                         "state: gazouilloire will not "
+                                                                                         "search for tweets that have "
+                                                                                         "been collected in previous "
+                                                                                         "runs. By default, remove "
+                                                                                         "search state: "
+                                                                                         "search tweets as far in the "
+                                                                                         "past as possible.")
 @click.option('--yes/--no', '-y/-n', default=False, help="Skip confirmation messages")
-def reset(path, es_index, yes):
+def reset(path, es_index, yes, preserve_search_state):
     conf = load_conf(path)["database"]
     db_name = conf["db_name"]
     if not yes:
@@ -80,10 +89,19 @@ def reset(path, es_index, yes):
         confirm_delete_index(es, db_name, "tweets", yes)
     if es_index == "links" or es_index == "all":
         confirm_delete_index(es, db_name, "links", yes)
+    if not preserve_search_state:
+        if not yes:
+            click.confirm(".search_state.json will be erased, do you want to continue ?", abort=True)
+        try:
+            os.remove(os.path.join(path, ".search_state.json"))
+            log.info(".search_state.json successfully erased.")
+        except FileNotFoundError:
+            log.warning(".search_state.json does not exist and could not be erased.")
 
 
 def confirm_delete_index(es, db_name, doc_type, yes):
-    if yes or click.confirm("Elasticsearch index {}_{} will be erased, do you want to continue?".format(db_name, doc_type)):
+    if yes or click.confirm("Elasticsearch index {}_{} will be erased, do you want to continue?".format(
+            db_name, doc_type)):
         if es.delete_index(doc_type):
             log.info("{}_{} successfully erased".format(db_name, doc_type))
         else:
