@@ -68,20 +68,22 @@ def export(path, query, exclude_threads, verbose, export_threads_from_file, colu
                                                                               "-p /path/to/directory/")
 @click.option('--es_index', '-i', type=click.Choice(['none', 'tweets', 'links', 'all'], case_sensitive=False),
               default="all", help="Delete only tweet index / link index")
-def reset(path, es_index):
+@click.option('--yes/--no', '-y/-n', default=False, help="Skip confirmation messages")
+def reset(path, es_index, yes):
     conf = load_conf(path)["database"]
     db_name = conf["db_name"]
-    click.confirm("Are you sure you want to reset {}?".format(db_name), abort=True)
+    if not yes:
+        click.confirm("Are you sure you want to reset {}?".format(db_name), abort=True)
     es_index = es_index.lower()
     es = ElasticManager(conf["host"], conf["port"], db_name)
     if es_index == "tweets" or es_index == "all":
-        confirm_delete_index(es, db_name, "tweets")
+        confirm_delete_index(es, db_name, "tweets", yes)
     if es_index == "links" or es_index == "all":
-        confirm_delete_index(es, db_name, "links")
+        confirm_delete_index(es, db_name, "links", yes)
 
 
-def confirm_delete_index(es, db_name, doc_type):
-    if click.confirm("Elasticsearch index {}_{} will be erased, do you want to continue?".format(db_name, doc_type)):
+def confirm_delete_index(es, db_name, doc_type, yes):
+    if yes or click.confirm("Elasticsearch index {}_{} will be erased, do you want to continue?".format(db_name, doc_type)):
         if es.delete_index(doc_type):
             log.info("{}_{} successfully erased".format(db_name, doc_type))
         else:
