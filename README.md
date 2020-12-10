@@ -82,6 +82,28 @@ a `config.json` file is created. Open it to configure the collection parameters.
     ```
     gazouilloire start
     ```
+  
+- Gazouilloire stores its current search state in the collection directory. This means that if you restart Gazouilloire, 
+it will not search
+again for tweets that were already found. If you want a fresh start (e.g. if you modify the query
+terms in config.json), you can reset the search state with:
+
+    ```bash
+    gazouilloire reset -i none
+    ```
+    The `--es_index/-i` option allows you to also remove the links or tweets Elasticsearch indices.
+    To remove only links and search state: 
+    ```
+    gazouilloire reset -i links
+    ```
+    To remove only tweets and search state:
+    ```
+    gazouilloire reset -i tweets
+    ```
+    To remove links, tweets and search state:
+    ```
+    gazouilloire reset
+    ```
 
 - Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in csv format:
 
