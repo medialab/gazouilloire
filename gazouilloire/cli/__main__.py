@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 import click
-from gazouilloire.config_format import create_conf_example, load_conf
+from gazouilloire.config_format import create_conf_example, load_conf, log
 from gazouilloire import run
 from gazouilloire.resolving_script import resolve_script
 from gazouilloire.exports.export_csv import export_csv
+from gazouilloire.database.elasticmanager import ElasticManager
 
 
 @click.group()
@@ -66,17 +67,22 @@ def export(path, query, exclude_threads, verbose, export_threads_from_file, colu
                                                                               "current directory. Usage: gazou reset "
                                                                               "-p /path/to/directory/")
 @click.option('--es_index', '-i', type=click.Choice(['none', 'tweets', 'links', 'all'], case_sensitive=False),
-              default = "all", help="Delete only tweet index / link index")
+              default="all", help="Delete only tweet index / link index")
 def reset(path, es_index):
-    conf = load_conf(path)
-    db_name = conf["database"]["db_name"]
+    conf = load_conf(path)["database"]
+    db_name = conf["db_name"]
     click.confirm("Are you sure you want to reset {}?".format(db_name), abort=True)
     es_index = es_index.lower()
-    delete_tweets = False
-    delete_links = False
+    es = ElasticManager(conf["host"], conf["port"], db_name)
     if es_index == "tweets" or es_index == "all":
-        delete_tweets = click.confirm("Elasticsearch index '{}_tweets' will be erased, do you want to "
-                                      "continue?".format(db_name))
+        confirm_delete_index(es, db_name, "tweets")
     if es_index == "links" or es_index == "all":
-        delete_links = click.confirm("Elasticsearch index '{}_links' will be erased, do you want to "
-                                     "continue?".format(db_name))
+        confirm_delete_index(es, db_name, "links")
+
+
+def confirm_delete_index(es, db_name, doc_type):
+    if click.confirm("Elasticsearch index {}_{} will be erased, do you want to continue?".format(db_name, doc_type)):
+        if es.delete_index(doc_type):
+            log.info("{}_{} successfully erased".format(db_name, doc_type))
+        else:
+            log.warning("{}_{} does not exist and could not be erased".format(db_name, doc_type))

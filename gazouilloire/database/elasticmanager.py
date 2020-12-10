@@ -112,6 +112,16 @@ class ElasticManager:
             self.client.indices.create(
                 index=self.links, body=DB_MAPPINGS["links_mapping"])
 
+    def delete_index(self, doc_type):
+        """
+        Check if index exists, if so, delete it
+        """
+        index_name = getattr(self, doc_type)
+        if self.exists(index_name):
+            self.client.indices.delete(index=index_name)
+            return True
+        return False
+
     # depiler() methods
 
     def update(self, tweet_id, new_value):
