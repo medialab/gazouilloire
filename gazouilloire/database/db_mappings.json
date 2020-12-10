@@ -1,8 +1,7 @@
 {
   "tweets_mapping": {
     "mappings": {
-      "tweet": {
-        "properties": {
+      "properties": {
           "collected_via": {
             "type": "keyword"
           },
@@ -223,7 +222,6 @@
             "type": "boolean"
           }
         }
-      }
     },
     "settings": {
       "index": {
@@ -233,8 +231,7 @@
   },
   "links_mapping": {
     "mappings": {
-      "link": {
-        "properties": {
+      "properties": {
           "link_id": {
             "type": "keyword"
           },
@@ -242,7 +239,6 @@
             "type": "keyword"
           }
         }
-      }
     },
     "settings": {
       "index": {

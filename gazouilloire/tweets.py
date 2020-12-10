@@ -60,8 +60,8 @@ def get_dates(t, locale, field='created_at'):
     if locale:
         utc_date = timezone('UTC').localize(tim)
         locale_date = utc_date.astimezone(locale)
-        return utc_date.timestamp(), datetime.strftime(locale_date, "%Y-%m-%dT%H:%M:%S")
-    return tim.timestamp(), datetime.strftime(tim, "%Y-%m-%dT%H:%M:%S")
+        return str(utc_date.timestamp()), datetime.strftime(locale_date, "%Y-%m-%dT%H:%M:%S")
+    return str(tim.timestamp()), datetime.strftime(tim, "%Y-%m-%dT%H:%M:%S")
 
 
 def nostr_field(f): return f.replace('_str', '')

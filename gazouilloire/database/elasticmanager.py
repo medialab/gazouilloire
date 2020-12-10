@@ -10,7 +10,7 @@ try:
         DB_MAPPINGS = json.loads(db_mappings.read())
         # ensure intended mappings are there
         for key in ["tweet", "link"]:
-            DB_MAPPINGS[key + "s_mapping"]["mappings"][key]["properties"]
+            DB_MAPPINGS[key + "s_mapping"]["mappings"]["properties"]
 except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
     print("ERROR - Could not open db_mappings.json: %s %s" % (type(e), e))
     sys.exit(1)
@@ -64,6 +64,7 @@ def format_tweet_fields(tweet):
         elastic_tweet["coordinates"] = elastic_tweet["coordinates"].get(
             'coordinates', None)
     return elastic_tweet
+
 
 def prepare_db(host, port, db_name):
     try:
@@ -127,7 +128,7 @@ class ElasticManager:
     def update(self, tweet_id, new_value):
         """Updates the given tweet to the content of 'new_value' argument"""
         formatted_new_value = format_tweet_fields(new_value)
-        return self.client.update(index=self.tweets, doc_type="tweet", id=tweet_id,
+        return self.client.update(index=self.tweets, id=tweet_id,
                                   body={"doc": formatted_new_value, "doc_as_upsert": True})
 
     def prepare_indexing_links(self, links):
@@ -136,8 +137,7 @@ class ElasticManager:
             yield {
                 '_index': self.links,
                 "_op_type": "index",
-                '_source': l,
-                "_type": "link"
+                '_source': l
             }
 
     def prepare_indexing_tweets(self, tweets):
@@ -158,7 +158,6 @@ class ElasticManager:
             yield {
                 '_index': self.tweets,
                 "_op_type": "update",
-                "_type": "tweet",
                 "_id": t.pop("_id"),
                 "script": {
                     "source": source,
@@ -179,7 +178,6 @@ class ElasticManager:
         """Yields an update action for the links of every tweet in the list"""
         for l in links:
             l.update({
-                "_type": "tweet",
                 "_index": self.tweets,
                 "_op_type": "update"
             })
@@ -194,7 +192,6 @@ class ElasticManager:
                 doc = format_tweet_fields(tweet)
             yield {
                 "_id": tweet["_id"],
-                "_type": "tweet",
                 "_index": self.tweets,
                 "_op_type": "update",
                 "_source": {
@@ -205,7 +202,7 @@ class ElasticManager:
 
     def set_deleted(self, tweet_id):
         """Sets the field 'deleted' of the given tweet to True"""
-        return self.client.update(index=self.tweets, doc_type="tweet", id=tweet_id,
+        return self.client.update(index=self.tweets, id=tweet_id,
                                   body={"doc": {"deleted": True}, "doc_as_upsert": True})
 
     def find_tweet(self, tweet_id):
@@ -213,7 +210,6 @@ class ElasticManager:
         try:
             response = self.client.get(
                 index=self.tweets,
-                doc_type="tweet",
                 id=tweet_id
             )
         except exceptions.NotFoundError:
@@ -272,7 +268,7 @@ class ElasticManager:
 
     def insert_link(self, link, resolved_link):
         """Inserts the given link in the database"""
-        self.client.index(index=self.links, doc_type="link",
+        self.client.index(index=self.links,
                           body={"link_id": link, "real": resolved_link})
 
     def prepare_indexing_tweets_with_new_links(self, tweets, links, domains):
@@ -284,7 +280,6 @@ class ElasticManager:
                 '_index': self.tweets,
                 "_op_type": "index",
                 '_source': t["_source"],
-                "_type": "tweet",
                 "_id": t["_id"]
             }
 
@@ -305,7 +300,7 @@ class ElasticManager:
 
     def count_tweets(self, key, value):
         """Counts the number of documents where the given key is equal to the given value"""
-        return self.client.count(index=self.tweets, doc_type='tweet', body={"query": {"term": {key: value}}})['count']
+        return self.client.count(index=self.tweets, body={"query": {"term": {key: value}}})['count']
 
     def update_resolved_tweets(self, tweetsdone):
         """Sets the "links_to_resolve" field of the tweets in tweetsdone to False"""
@@ -319,7 +314,7 @@ class ElasticManager:
             }
         }
         self.client.update_by_query(
-            body=q, doc_type="tweet", index=self.tweets)
+            body=q, index=self.tweets)
 
     # export methods
     def search_thread_elements(self, ids_list):
@@ -369,7 +364,7 @@ class ElasticManager:
 
     def multi_get(self, ids, batch_size=1000):
         for i in range(0, len(ids), batch_size):
-            batch = self.client.mget(body={'ids': ids[i:i+batch_size]}, index=self.tweets, doc_type="tweet")
+            batch = self.client.mget(body={'ids': ids[i:i+batch_size]}, index=self.tweets)
             for tweet in batch["docs"]:
                 yield tweet
 

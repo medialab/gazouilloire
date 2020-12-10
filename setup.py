@@ -17,7 +17,7 @@ setup(name='gazouilloire',
       packages=find_packages(exclude=["collect*", "dist", "build"]),
       include_package_data=True,
       install_requires=[
-          "elasticsearch>=6.0.0, <7.0.0",
+          "elasticsearch >= 7.0.0",
           "pymongo >= 3.0",
           "twitter >= 1.14.1",
           "requests",
