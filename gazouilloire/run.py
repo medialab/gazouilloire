@@ -53,7 +53,7 @@ def breakable_sleep(delay, exit_event):
     while time.time() < t and not exit_event.is_set():
         time.sleep(1)
 
-def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit_event, debug=False):
+def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit_event):
     db = ElasticManager(**db_conf)
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         log.info("Pile length: " + str(pile.qsize()))
@@ -73,7 +73,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
             tweets_bulk.append(t)
 
         helpers.bulk(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
-        if debug and tweets_bulk:
+        if tweets_bulk:
             log.debug("Saved %s tweets in database" % len(tweets_bulk))
         breakable_sleep(2, exit_event)
     log.info("FINISHED depiler")
@@ -97,7 +97,7 @@ def download_media(tweet, media_id, media_url, medias_dir="medias"):
         return 0
 
 
-def downloader(pile_medias, medias_dir, media_types, exit_event, debug=False):
+def downloader(pile_medias, medias_dir, media_types, exit_event):
     while not exit_event.is_set() or not pile_medias.empty():
         todo = []
         while not pile_medias.empty():
@@ -110,13 +110,13 @@ def downloader(pile_medias, medias_dir, media_types, exit_event, debug=False):
             for enum, media_id in enumerate(tweet["media_files"]):
                 if tweet["media_types"][enum] in media_types:
                     done += download_media(tweet, media_id, tweet["media_urls"][enum], medias_dir)
-        if debug and done:
+        if done:
             log.debug("[medias] +%s files" % done)
     log.info("FINISHED downloader")
 
 # TODO
 # - mark as deleted tweet_ids missing from request result
-def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
+def catchupper(pile, pile_catchup, twitterco, exit_event):
     while not exit_event.is_set() or not pile_catchup.empty():
         todo = []
         while not pile_catchup.empty() and len(todo) < 100:
@@ -130,7 +130,7 @@ def catchupper(pile, pile_catchup, twitterco, exit_event, debug=False):
                     pile_catchup.put(t)
                 breakable_sleep(10, exit_event)
                 continue
-            if debug and tweets:
+            if tweets:
                 log.debug("[conversations] +%d tweets" % len(tweets))
             for t in tweets:
                 t["gazouilloire_source"] = "thread"
@@ -167,7 +167,7 @@ re_split_url_pieces = re.compile(r'[^a-z0-9]+', re.I)
 def format_url_query(urlquery):
     return " ".join([k for k in re_split_url_pieces.split(urlquery) if k.strip()])
 
-def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event, debug=False):
+def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event):
     # Stream parameters reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters
     # Stream operators reference: https://developer.twitter.com/en/docs/tweets/rules-and-filtering/overview/standard-operators.html
     # Stream special messages reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/streaming-message-types
@@ -225,8 +225,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                     args['track'] = ",".join(query_keywords)
                 if query_users:
                     args['follow'] = ",".join(query_users)
-            if debug:
-                log.debug("Calling stream with args %s" % args)
+            log.debug("Calling stream with args %s" % args)
             streamiter = streamco.statuses.filter(**args)
         except KeyboardInterrupt:
             log.info("closing streamer...")
@@ -278,13 +277,11 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                             if not keep:
                                 continue
                         pile.put(tweet)
-                        if debug:
-                            log.debug("[stream] +1 tweet")
+                        log.debug("[stream] +1 tweet")
                 else:
                     if 'delete' in msg and 'status' in msg['delete'] and 'id_str' in msg['delete']['status']:
                         pile_deleted.put(msg['delete']['status']['id_str'])
-                        if debug:
-                            log.debug("[stream] -1 tweet (deleted by user)")
+                        log.debug("[stream] -1 tweet (deleted by user)")
                     else:
                         log.info("Got special data: %s" % str(msg))
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
@@ -293,8 +290,7 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
             log.info("closing streamer (%s: %s)..." % (type(e), e))
             exit_event.set()
 
-        if debug:
-            log.debug("Stream stayed alive for %sh" % str(old_div((time.time()-ts),3600)))
+        log.debug("Stream stayed alive for %sh" % str(old_div((time.time()-ts),3600)))
         breakable_sleep(2, exit_event)
     log.info("FINISHED streamer")
 
@@ -328,7 +324,7 @@ def write_search_state(state):
 # TODO
 # - improve logs : add INFO on result of all queries on a keyword if new
 
-def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event, debug=False):
+def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event):
     # Search operators reference: https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2, retry=3)
@@ -396,13 +392,12 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
 
             since = queries_since_id[query]
             max_id = 0
-            if debug:
-                log.debug("Starting search query on %s since %s" % (query, since))
+            log.debug("Starting search query on %s since %s" % (query, since))
             while not exit_event.is_set():
                 while not left and not exit_event.is_set():
                     try:
                         next_reset, _, left = get_twitter_rates(searchco, searchco2, retry=1)
-                        if debug and left:
+                        if left:
                             log.debug("Resuming search with %d remaining calls for the next %s seconds" % (left, int(next_reset - time.time())))
                     except Exception as e:
                         log.debug("Issue while collecting twitter rates. %s: %s" % (type(e), e))
@@ -461,8 +456,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                     news += 1
                 if news == 0:
                     break
-                if debug:
-                    log.debug("[search] +%d tweets (%s)" % (news, query))
+                log.debug("[search] +%d tweets (%s)" % (news, query))
             queries_since_id[query] = since
             write_search_state(queries_since_id)
         breakable_sleep(max(timegap, next_reset - time.time() - 2*left), exit_event)
@@ -546,26 +540,26 @@ def main(conf):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     exit_event = Event()
-    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf['database'], locale, exit_event, conf['debug']))
+    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf['database'], locale, exit_event))
     depile.daemon = True
     depile.start()
     if grab_conversations:
-        catchup = Process(target=catchupper, args=(pile, pile_catchup, ResConn, exit_event, conf['debug']))
+        catchup = Process(target=catchupper, args=(pile, pile_catchup, ResConn, exit_event))
         catchup.daemon = True
         catchup.start()
     if resolve_links:
-        resolve = Process(target=resolver, args=(RESOLVER_BATCH_SIZE, conf['database'], exit_event, conf['debug']))
+        resolve = Process(target=resolver, args=(RESOLVER_BATCH_SIZE, conf['database'], exit_event))
         resolve.daemon = True
         resolve.start()
     if dl_medias:
-        download = Process(target=downloader, args=(pile_medias, medias_dir, medias_types, exit_event, conf['debug']))
+        download = Process(target=downloader, args=(pile_medias, medias_dir, medias_types, exit_event))
         download.daemon = True
         download.start()
     signal.signal(signal.SIGINT, default_handler)
-    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, streamgeocode, exit_event, conf['debug']))
+    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, streamgeocode, exit_event))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event, conf['debug']))
+    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event))
     search.start()
     def stopper(*args):
         exit_event.set()
