@@ -1,8 +1,9 @@
 # Gazouilloire
 
 Twitter stream + search API grabber handling various config options such as collecting only during specific time periods, or limiting the collection to some locations.
+Automatically goes back to "fill in the gaps" when there are cuts in the tweet collection.
 
-Python 3.x compatible.
+Python >= 3.7 compatible.
 
 ## HowTo
 
