@@ -34,7 +34,12 @@
     "geolocalisation_type": "admin", "possible_values": "country/admin/city",
     "resolve_redirected_links": true,
     "grab_conversations": false,
-    "download_medias": false,
+    "download_medias": {
+        "photos": false,
+        "videos": false,
+        "animated_gifs": false
+    },
+    "save_videos_as_snapshots": true,
     "medias_directory": "medias",
     "timezone": "Europe/Paris",
     "debug": false

@@ -194,7 +194,7 @@ def prepare_tweet(tweet, locale=None):
     medids = set()
     media_urls = []
     media_files = []
-    media_types = set()
+    media_types = []
     links = set()
     hashtags = set()
     mentions = {}
@@ -215,7 +215,7 @@ def prepare_tweet(tweet, locale=None):
                 med_name = med_url.split('/')[-1].split("?tag=")[0]
                 if med_name not in medids:
                     medids.add(med_name)
-                    media_types.add(entity["type"])
+                    media_types.append(entity["type"])
                     media_urls.append(med_url.split("?tag=")[0])
                     media_files.append("%s_%s" % (source_id, med_name))
             else:
@@ -242,7 +242,7 @@ def prepare_tweet(tweet, locale=None):
         'retweeted_user_id': rtuid,
         'retweeted_timestamp_utc': rtime,
         "media_files": media_files,
-        'media_types': list(media_types),
+        'media_types': media_types,
         'media_urls': media_urls,
         'links': sorted(links),
         'links_to_resolve': len(links) > 0,

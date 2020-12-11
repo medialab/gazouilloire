@@ -96,7 +96,8 @@ def download_media(tweet, media_id, media_url, medias_dir="medias"):
         log.warning("Could not download media %s for tweet %s (%s: %s)" % (media_url, tweet["url"], type(e), e))
         return 0
 
-def downloader(pile_medias, medias_dir, exit_event, debug=False):
+
+def downloader(pile_medias, medias_dir, media_types, exit_event, debug=False):
     while not exit_event.is_set() or not pile_medias.empty():
         todo = []
         while not pile_medias.empty():
@@ -107,7 +108,8 @@ def downloader(pile_medias, medias_dir, exit_event, debug=False):
         done = 0
         for tweet in todo:
             for enum, media_id in enumerate(tweet["media_files"]):
-                done += download_media(tweet, media_id, tweet["media_urls"][enum], medias_dir)
+                if tweet["media_types"][enum] in media_types:
+                    done += download_media(tweet, media_id, tweet["media_urls"][enum], medias_dir)
         if debug and done:
             log.debug("[medias] +%s files" % done)
     log.info("FINISHED downloader")
@@ -530,8 +532,9 @@ def main(conf):
                 sys.exit(1)
     grab_conversations = "grab_conversations" in conf and conf["grab_conversations"]
     resolve_links = "resolve_redirected_links" in conf and conf["resolve_redirected_links"]
-    dl_medias = "download_medias" in conf and conf["download_medias"]
+    dl_medias = "download_medias" in conf and conf["download_medias"] and any(conf["download_medias"].values())
     if dl_medias:
+        medias_types = set([k for k in conf["download_medias"] if conf["download_medias"][k]])
         medias_dir = conf.get("medias_directory", "medias")
         if not os.path.exists(medias_dir):
             os.makedirs(medias_dir)
@@ -555,7 +558,7 @@ def main(conf):
         resolve.daemon = True
         resolve.start()
     if dl_medias:
-        download = Process(target=downloader, args=(pile_medias, medias_dir, exit_event, conf['debug']))
+        download = Process(target=downloader, args=(pile_medias, medias_dir, medias_types, exit_event, conf['debug']))
         download.daemon = True
         download.start()
     signal.signal(signal.SIGINT, default_handler)
