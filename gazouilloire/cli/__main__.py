@@ -6,6 +6,7 @@ from gazouilloire import run
 from gazouilloire.resolving_script import resolve_script
 from gazouilloire.exports.export_csv import export_csv
 from gazouilloire.database.elasticmanager import ElasticManager
+import shutil
 
 
 @click.group()
@@ -69,7 +70,7 @@ def export(path, query, exclude_threads, verbose, export_threads_from_file, colu
                                                                               "-p /path/to/directory/")
 @click.option('--es_index', '-i', type=click.Choice(['none', 'tweets', 'links', 'all'], case_sensitive=False),
               default="all", help="Delete only tweet index / link index")
-@click.option('--preserve_search_state/--remove_search_state', '-p', default=False, help="Preserve current search "
+@click.option('--preserve_search_state/--remove_search_state', '-s', default=False, help="Preserve current search "
                                                                                          "state: gazouilloire will not "
                                                                                          "search for tweets that have "
                                                                                          "been collected in previous "
@@ -77,8 +78,11 @@ def export(path, query, exclude_threads, verbose, export_threads_from_file, colu
                                                                                          "search state: "
                                                                                          "search tweets as far in the "
                                                                                          "past as possible.")
+@click.option('--preserve_media/--remove_media', '-m', default=False, help="Preserve medias folder: photos, videos, "
+                                                                           "etc. will not be erased. By default, "
+                                                                           "erase.")
 @click.option('--yes/--no', '-y/-n', default=False, help="Skip confirmation messages")
-def reset(path, es_index, yes, preserve_search_state):
+def reset(path, es_index, yes, preserve_search_state, preserve_media):
     conf = load_conf(path)["database"]
     db_name = conf["db_name"]
     if not yes:
@@ -91,12 +95,21 @@ def reset(path, es_index, yes, preserve_search_state):
         confirm_delete_index(es, db_name, "links", yes)
     if not preserve_search_state:
         if not yes:
-            click.confirm(".search_state.json will be erased, do you want to continue ?", abort=True)
-        try:
-            os.remove(os.path.join(path, ".search_state.json"))
-            log.info(".search_state.json successfully erased.")
-        except FileNotFoundError:
-            log.warning(".search_state.json does not exist and could not be erased.")
+            if click.confirm(".search_state.json will be erased, do you want to continue ?"):
+                try:
+                    os.remove(os.path.join(path, ".search_state.json"))
+                    log.info(".search_state.json successfully erased.")
+                except FileNotFoundError:
+                    log.warning(".search_state.json does not exist and could not be erased.")
+    if not preserve_media:
+        if not yes:
+            click.confirm("medias folder will be erased, do you want to continue ?", abort=True)
+            try:
+                shutil.rmtree(os.path.join(path, "medias"))
+                log.info("medias folder successfully erased.")
+            except FileNotFoundError:
+                log.warning("medias folder does not exist and could not be erased.")
+
 
 
 def confirm_delete_index(es, db_name, doc_type, yes):
