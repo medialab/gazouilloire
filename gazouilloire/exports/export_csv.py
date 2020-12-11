@@ -112,8 +112,8 @@ def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, 
         count = len(body)
         iterator = yield_csv(db.multi_get(body))
     else:
-        count = db.client.count(index=db.tweets, doc_type='tweet', body=body)['count']
-        body["sort"] = ["_id"]
+        count = db.client.count(index=db.tweets, body=body)['count']
+        body["sort"] = ["timestamp_utc"]
         iterator = yield_csv(helpers.scan(client=db.client, index=db.tweets, query=body, preserve_order=True))
     if verbose:
         import progressbar
