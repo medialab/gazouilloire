@@ -56,6 +56,9 @@
             "type": "keyword",
             "index": false
           },
+          "media_types": {
+            "type": "keyword"
+          },
           "media_urls": {
             "type": "keyword",
             "index": false

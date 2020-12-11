@@ -191,11 +191,12 @@ def prepare_tweet(tweet, locale=None):
                 tweet[ent][field] = tweet[ent].get(field, [])
                 if field in tweet['quoted_status'][ent]:
                     tweet[ent][field] += tweet['quoted_status'][ent][field]
-    medids = set([])
+    medids = set()
     media_urls = []
     media_files = []
-    links = set([])
-    hashtags = set([])
+    media_types = set()
+    links = set()
+    hashtags = set()
     mentions = {}
     if 'entities' in tweet or 'extended_entities' in tweet:
         source_id = rti or qti or tweet['id_str']
@@ -211,10 +212,11 @@ def prepare_tweet(tweet, locale=None):
                         "bitrate", 0))[-1]["url"]
                 else:
                     med_url = entity["media_url_https"]
-                med_name = med_url.split('/')[-1]
+                med_name = med_url.split('/')[-1].split("?tag=")[0]
                 if med_name not in medids:
                     medids.add(med_name)
-                    media_urls.append(med_url)
+                    media_types.add(entity["type"])
+                    media_urls.append(med_url.split("?tag=")[0])
                     media_files.append("%s_%s" % (source_id, med_name))
             else:
                 normalized = normalize(entity["expanded_url"])
@@ -240,6 +242,7 @@ def prepare_tweet(tweet, locale=None):
         'retweeted_user_id': rtuid,
         'retweeted_timestamp_utc': rtime,
         "media_files": media_files,
+        'media_types': list(media_types),
         'media_urls': media_urls,
         'links': sorted(links),
         'links_to_resolve': len(links) > 0,

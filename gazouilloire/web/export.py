@@ -73,6 +73,7 @@ TWEET_FIELDS = [
   "links",                          # list of links included in the text content, with redirections resolved, separated by |
   "media_urls",                     # list of links to images/videos embedded, separated by |
   "media_files",                    # list of filenames of images/videos embedded and downloaded, separated by |, ignorable when medias collections isn't enabled
+  "media_types",                    # list of media types (photo, video, animated gif), separated by |
   "mentioned_names",                # list of text IDs of users mentionned, separated by |
   "mentioned_ids",                  # list of digital IDs of users mentionned, separated by |
   "hashtags"                        # list of hashtags used, lowercased, separated by |

@@ -21,8 +21,8 @@ def yield_csv(queryiterator):
             continue
         source["id"] = t["_id"]
         source["links"] = source.get("proper_links", source.get("links", []))
-        for multiple in ["links", "hashtags", "collected_via", "media_urls", "media_files", "mentioned_names",
-                         "mentioned_ids"]:
+        for multiple in ["links", "hashtags", "collected_via", "media_urls", "media_files", "media_types",
+                         "mentioned_names", "mentioned_ids"]:
             source[multiple] = "|".join(source[multiple])
         for boolean in ["possibly_sensitive", "user_verified", "match_query"]:
             source[boolean] = int(source[boolean]) if boolean in source else ''
