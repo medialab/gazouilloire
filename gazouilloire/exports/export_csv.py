@@ -78,7 +78,7 @@ def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, 
     threads = conf.get('grab_conversations', False)
     if selection:
         SELECTION = selection.split(",")
-        mapping = DB_MAPPINGS["tweets_mapping"]["mappings"]["tweet"]["properties"]
+        mapping = DB_MAPPINGS["tweets_mapping"]["mappings"]["properties"]
         for field in SELECTION:
             if field not in mapping and field != "id":
                 log.warning("Field '{}' not in elasticsearch mapping, are you sure that you spelled it correctly?"
