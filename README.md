@@ -16,14 +16,13 @@ Python >= 3.7 compatible.
 
 - Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch#ga-release) (version 7.X)
 
-- Init gazouilloire collection in a specific directory
+- Init gazouilloire collection in a specific directory...
     ```bash
-    gazouilloire init path/to/collection/directory'
+    gazouilloire init path/to/collection/directory
     ```
-or in the current directory
-
+- ...or in the current directory
     ```bash
-    gazouilloire init
+    gazouilloire init path/to/collection/directory
     ```
 a `config.json` file is created. Open it to configure the collection parameters.
 
