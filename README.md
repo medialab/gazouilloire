@@ -22,7 +22,7 @@ Python >= 3.7 compatible.
     ```
 - ...or in the current directory
     ```bash
-    gazouilloire init path/to/collection/directory
+    gazouilloire init
     ```
 a `config.json` file is created. Open it to configure the collection parameters.
 
