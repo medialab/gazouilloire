@@ -1,12 +1,5 @@
-# From "A simple unix/linux daemon in Python" by Sander Marechal 
-# See http://stackoverflow.com/a/473702/1422096 and http://web.archive.org/web/20131017130434/http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
-#
-# Modified to add quit() that allows to run some code before closing the daemon
-# See http://stackoverflow.com/a/40423758/1422096
-#
-# Modified for Python 3 (see also: http://web.archive.org/web/20131017130434/http://www.jejik.com/files/examples/daemon3x.py)
-#
-# Joseph Ernest, 20200507_1220
+# Adapted from Joseph Ernest https://gist.github.com/josephernest/77fdb0012b72ebdf4c9d19d6256a1119
+
 
 import sys, os, time, atexit
 from signal import signal, SIGTERM
@@ -127,12 +120,12 @@ class Daemon:
 				print(str(err))
 				sys.exit(1)
 
-	def restart(self):
+	def restart(self, conf):
 		"""
 		Restart the daemon
 		"""
 		self.stop()
-		self.start()
+		self.start(conf)
 
 	def run(self, conf):
 		run.main(conf)

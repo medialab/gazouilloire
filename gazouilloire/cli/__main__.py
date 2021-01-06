@@ -30,6 +30,14 @@ def start(path):
     daemon.start(conf)
 
 
+@main.command(help="Restart collection as daemon, following the parameters defined in config.json.")
+@click.argument('path', type=click.Path(exists=True), default=".")
+def restart(path):
+    conf = load_conf(path)
+    daemon = Daemon()
+    daemon.restart(conf)
+
+
 @main.command(help="Start collection following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
 def run(path):
