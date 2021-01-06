@@ -16,7 +16,10 @@ class Daemon:
 		self.stdin = stdin
 		self.stdout = stdout
 		self.stderr = stderr
-		self.pidfile = pidfile
+		if os.path.isdir(pidfile):
+			self.pidfile = os.path.join(pidfile, '_.pid')
+		else:
+			self.pidfile = pidfile
 	
 	def daemonize(self):
 		"""

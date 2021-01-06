@@ -27,7 +27,7 @@ def init(path):
 def start(path):
     log.info("Tweet collection will start in daemon mode")
     conf = load_conf(path, daemon=True)
-    daemon = Daemon()
+    daemon = Daemon(pidfile=path)
     daemon.start(conf)
 
 
@@ -36,7 +36,7 @@ def start(path):
 def restart(path):
     log.info("Restarting...")
     conf = load_conf(path, daemon=True)
-    daemon = Daemon()
+    daemon = Daemon(pidfile=path)
     daemon.restart(conf)
 
 
@@ -48,8 +48,9 @@ def run(path):
 
 
 @main.command(help="Stop collection daemon.")
-def stop():
-    daemon = Daemon()
+@click.argument('path', type=click.Path(exists=True), default=".")
+def stop(path):
+    daemon = Daemon(pidfile=path)
     stopped = daemon.stop()
     if stopped:
         log.info("Collection stopped")
