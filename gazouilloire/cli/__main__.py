@@ -25,7 +25,7 @@ def init(path):
 @main.command(help="Start collection as daemon, following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
 def start(path):
-    conf = load_conf(path)
+    conf = load_conf(path, daemon=True)
     daemon = Daemon()
     daemon.start(conf)
 
@@ -33,7 +33,7 @@ def start(path):
 @main.command(help="Restart collection as daemon, following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
 def restart(path):
-    conf = load_conf(path)
+    conf = load_conf(path, daemon=True)
     daemon = Daemon()
     daemon.restart(conf)
 

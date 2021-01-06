@@ -3,6 +3,7 @@ import os
 import sys
 from shutil import copyfile
 import logging
+from datetime import datetime
 
 log = logging.getLogger("gazouilloire")
 log.setLevel(logging.INFO)
@@ -14,15 +15,22 @@ console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(
 log.addHandler(console_handler)
 
 
-def create_error_handler(path):
-    # create file handler which logs only error messages
-    error_handler = logging.FileHandler(os.path.join(os.path.realpath(path), 'error.log'))
-    error_handler.setLevel(logging.ERROR)
-    error_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
-    log.addHandler(error_handler)
+def create_file_handler(path):
+    # create file handler for logs in daemon mode
+    file_path = os.path.join(
+        os.path.realpath(path),
+        "logs",
+        datetime.strftime(datetime.now(), "%Y%m%d-%H%M.log")
+    )
+    log.info("From now on, logs will print to {}".format(file_path))
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    file_handler = logging.FileHandler(file_path)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    log.addHandler(file_handler)
 
 
-def load_conf(dir_path):
+def load_conf(dir_path, daemon=False):
     file_path = os.path.join(os.path.realpath(dir_path), "config.json")
     if os.path.isfile(file_path):
         try:
@@ -31,7 +39,8 @@ def load_conf(dir_path):
         except Exception as e:
             log.error('Could not open %s: %s %s' % (file_path, type(e), e))
             sys.exit(1)
-        create_error_handler(dir_path)
+        if daemon:
+            create_file_handler(dir_path)
         return conf
     else:
         log.error('file {} does not exist. Try running the following command:\ngazouilloire init <your_path>'
