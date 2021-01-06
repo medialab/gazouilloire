@@ -25,6 +25,7 @@ def init(path):
 @main.command(help="Start collection as daemon, following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
 def start(path):
+    log.info("Tweet collection will start in daemon mode")
     conf = load_conf(path, daemon=True)
     daemon = Daemon()
     daemon.start(conf)
@@ -33,6 +34,7 @@ def start(path):
 @main.command(help="Restart collection as daemon, following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
 def restart(path):
+    log.info("Restarting...")
     conf = load_conf(path, daemon=True)
     daemon = Daemon()
     daemon.restart(conf)
@@ -48,7 +50,9 @@ def run(path):
 @main.command(help="Stop collection daemon.")
 def stop():
     daemon = Daemon()
-    daemon.stop()
+    stopped = daemon.stop()
+    if stopped:
+        log.info("Collection stopped")
 
 
 @main.command(help="Resolve urls contained in a given Elasticsearch database. Usage: 'gazou resolve db_name'")

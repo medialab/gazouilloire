@@ -4,7 +4,7 @@
 import sys, os, time, atexit
 from signal import signal, SIGTERM
 from gazouilloire import run
-
+from gazouilloire.config_format import log
 
 class Daemon:
 	"""
@@ -30,7 +30,7 @@ class Daemon:
 				# exit first parent
 				sys.exit(0) 
 		except OSError as e: 
-			sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+			log.error("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
 			sys.exit(1)
 	
 		# decouple from parent environment
@@ -44,7 +44,7 @@ class Daemon:
 				# exit from second parent
 				sys.exit(0) 
 		except OSError as e: 
-			sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+			log.error("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
 			sys.exit(1) 
 	
 		# redirect standard file descriptors
@@ -82,7 +82,7 @@ class Daemon:
 	
 		if pid:
 			message = "pidfile %s already exist. Daemon already running?\n"
-			sys.stderr.write(message % self.pidfile)
+			log.error(message % self.pidfile)
 			sys.exit(1)
 		
 		# Start the daemon
@@ -103,8 +103,8 @@ class Daemon:
 	
 		if not pid:
 			message = "pidfile %s does not exist. Daemon not running?\n"
-			sys.stderr.write(message % self.pidfile)
-			return # not an error in a restart
+			log.warning(message % self.pidfile)
+			return False
 
 		# Try killing the daemon process	
 		try:
@@ -119,6 +119,7 @@ class Daemon:
 			else:
 				print(str(err))
 				sys.exit(1)
+		return True
 
 	def restart(self, conf):
 		"""

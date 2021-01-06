@@ -22,7 +22,7 @@ def create_file_handler(path):
         "logs",
         datetime.strftime(datetime.now(), "%Y%m%d-%H%M.log")
     )
-    log.info("From now on, logs will print to {}".format(file_path))
+    log.info("Tweets collection logs will print to {}".format(file_path))
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     file_handler = logging.FileHandler(file_path)
     file_handler.setLevel(logging.DEBUG)
