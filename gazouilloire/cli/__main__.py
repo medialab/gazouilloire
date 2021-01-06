@@ -2,7 +2,8 @@
 import click
 import os
 from gazouilloire.config_format import create_conf_example, load_conf, log
-from gazouilloire import run
+from gazouilloire.daemon import Daemon
+from gazouilloire.run import main as main_run
 from gazouilloire.resolving_script import resolve_script
 from gazouilloire.exports.export_csv import export_csv
 from gazouilloire.database.elasticmanager import ElasticManager
@@ -21,11 +22,25 @@ def init(path):
     create_conf_example(path)
 
 
-@main.command(help="Start collection following the parameters defined in config.json.")
+@main.command(help="Start collection as daemon, following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
 def start(path):
     conf = load_conf(path)
-    run.main(conf)
+    daemon = Daemon()
+    daemon.start(conf)
+
+
+@main.command(help="Start collection following the parameters defined in config.json.")
+@click.argument('path', type=click.Path(exists=True), default=".")
+def run(path):
+    conf = load_conf(path)
+    main_run(conf)
+
+
+@main.command(help="Stop collection daemon.")
+def stop():
+    daemon = Daemon()
+    daemon.stop()
 
 
 @main.command(help="Resolve urls contained in a given Elasticsearch database. Usage: 'gazou resolve db_name'")
