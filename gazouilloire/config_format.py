@@ -19,6 +19,7 @@ log.addHandler(console_handler)
 def create_file_handler(path):
     # create file handler for logs in daemon mode
     dir_path = os.path.join(os.path.realpath(path), "logs")
+    os.makedirs(dir_path, exist_ok=True)
     file_path = os.path.join(dir_path, datetime.strftime(datetime.now(), "%Y%m%d-%H%M.log"))
     for past_file in os.listdir(dir_path):
         past_file = os.path.join(dir_path, past_file)
@@ -27,7 +28,6 @@ def create_file_handler(path):
                 dst.writelines(src)
             os.remove(past_file)
     log.info("Tweets collection logs will print to {}".format(file_path))
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
     file_handler = logging.FileHandler(file_path)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))

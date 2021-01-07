@@ -44,7 +44,10 @@ def restart(path):
 @click.argument('path', type=click.Path(exists=True), default=".")
 def run(path):
     conf = load_conf(path)
-    main_run(conf)
+    if os.path.exists(os.path.join(path, ".lock")):
+        log.error("pidfile .lock already exists. Daemon already running?")
+    else:
+        main_run(conf)
 
 
 @main.command(help="Stop collection daemon.")
