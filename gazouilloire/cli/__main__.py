@@ -26,7 +26,7 @@ def init(path):
 @click.argument('path', type=click.Path(exists=True), default=".")
 def start(path):
     log.info("Tweet collection will start in daemon mode")
-    conf = load_conf(path, daemon=True)
+    conf = load_conf(path)
     daemon = Daemon(pidfile=path)
     daemon.start(conf)
 
@@ -35,7 +35,7 @@ def start(path):
 @click.argument('path', type=click.Path(exists=True), default=".")
 def restart(path):
     log.info("Restarting...")
-    conf = load_conf(path, daemon=True)
+    conf = load_conf(path)
     daemon = Daemon(pidfile=path)
     daemon.restart(conf)
 
@@ -137,7 +137,6 @@ def reset(path, es_index, yes, preserve_search_state, preserve_media):
                 log.info("medias folder successfully erased.")
             except FileNotFoundError:
                 log.warning("medias folder does not exist and could not be erased.")
-
 
 
 def confirm_delete_index(es, db_name, doc_type, yes):

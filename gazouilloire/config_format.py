@@ -4,6 +4,7 @@ import sys
 from shutil import copyfile
 import logging
 from datetime import datetime
+import gzip
 
 log = logging.getLogger("gazouilloire")
 log.setLevel(logging.INFO)
@@ -17,11 +18,14 @@ log.addHandler(console_handler)
 
 def create_file_handler(path):
     # create file handler for logs in daemon mode
-    file_path = os.path.join(
-        os.path.realpath(path),
-        "logs",
-        datetime.strftime(datetime.now(), "%Y%m%d-%H%M.log")
-    )
+    dir_path = os.path.join(os.path.realpath(path), "logs")
+    file_path = os.path.join(dir_path, datetime.strftime(datetime.now(), "%Y%m%d-%H%M.log"))
+    for past_file in os.listdir(dir_path):
+        past_file = os.path.join(dir_path, past_file)
+        if past_file != file_path and past_file.endswith(".log"):
+            with open(past_file, 'rb') as src, gzip.open(past_file.replace(".log", ".log.gz"), 'wb') as dst:
+                dst.writelines(src)
+            os.remove(past_file)
     log.info("Tweets collection logs will print to {}".format(file_path))
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     file_handler = logging.FileHandler(file_path)
@@ -30,7 +34,7 @@ def create_file_handler(path):
     log.addHandler(file_handler)
 
 
-def load_conf(dir_path, daemon=False):
+def load_conf(dir_path):
     file_path = os.path.join(os.path.realpath(dir_path), "config.json")
     if os.path.isfile(file_path):
         try:
@@ -39,8 +43,6 @@ def load_conf(dir_path, daemon=False):
         except Exception as e:
             log.error('Could not open %s: %s %s' % (file_path, type(e), e))
             sys.exit(1)
-        if daemon:
-            create_file_handler(dir_path)
         return conf
     else:
         log.error('file {} does not exist. Try running the following command:\ngazouilloire init <your_path>'

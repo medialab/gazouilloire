@@ -4,7 +4,7 @@
 import sys, os, time, atexit
 from signal import signal, SIGTERM
 from gazouilloire import run
-from gazouilloire.config_format import log
+from gazouilloire.config_format import log, create_file_handler
 
 class Daemon:
 	"""
@@ -18,8 +18,10 @@ class Daemon:
 		self.stderr = stderr
 		if os.path.isdir(pidfile):
 			self.pidfile = os.path.join(pidfile, '_.pid')
+			self.path = pidfile
 		else:
 			self.pidfile = pidfile
+			self.path = os.getcwd()
 	
 	def daemonize(self):
 		"""
@@ -89,6 +91,7 @@ class Daemon:
 			sys.exit(1)
 		
 		# Start the daemon
+		create_file_handler(self.path)
 		self.daemonize()
 		self.run(conf)
 
