@@ -2,9 +2,10 @@
 
 
 import sys, os, time, atexit
-from signal import signal, SIGTERM
+from signal import signal, SIGTERM, SIGKILL
 from gazouilloire import run
 from gazouilloire.config_format import log, create_file_handler
+
 
 class Daemon:
 	"""
@@ -12,12 +13,12 @@ class Daemon:
 	
 	Usage: subclass the Daemon class and override the run() method
 	"""
-	def __init__(self, pidfile='_.pid', stdin=os.devnull, stdout=os.devnull, stderr=os.devnull):
+	def __init__(self, pidfile='.lock', stdin=os.devnull, stdout=os.devnull, stderr=os.devnull):
 		self.stdin = stdin
 		self.stdout = stdout
 		self.stderr = stderr
 		if os.path.isdir(pidfile):
-			self.pidfile = os.path.join(pidfile, '_.pid')
+			self.pidfile = os.path.join(pidfile, '.lock')
 			self.path = pidfile
 		else:
 			self.pidfile = pidfile
@@ -112,19 +113,25 @@ class Daemon:
 			log.warning(message % self.pidfile)
 			return False
 
-		# Try killing the daemon process	
+		# Try killing the daemon process
+		elapsed = 0
 		try:
-			while 1:
+			while elapsed < 300:
 				os.kill(pid, SIGTERM)
-				time.sleep(0.1)
+				elapsed += 1
+				time.sleep(1)
 		except OSError as err:
 			err = str(err)
 			if err.find("No such process") > 0:
 				if os.path.exists(self.pidfile):
 					os.remove(self.pidfile)
+				return True
 			else:
 				print(str(err))
 				sys.exit(1)
+		os.kill(pid, SIGKILL)
+		if os.path.exists(self.pidfile):
+			os.remove(self.pidfile)
 		return True
 
 	def restart(self, conf):
