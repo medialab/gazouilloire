@@ -59,6 +59,37 @@ def stop(path):
         log.info("Collection stopped")
 
 
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['','K','M','G','T','P','E','Z']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Y', suffix)
+
+
+@main.command(help="Get current status.")
+@click.argument('path', type=click.Path(exists=True), default=".")
+def status(path):
+    conf = load_conf(path)["database"]
+    running = "running" if os.path.exists(os.path.join(path, ".lock")) else "not running"
+    es = ElasticManager(conf["host"], conf["port"], conf["db_name"])
+    tweets = es.client.cat.indices(index=es.tweets, format="json")[0]
+    links = es.client.cat.indices(index=es.links, format="json")[0]
+    media_path = os.path.join(path, "medias")
+    media_count = 0
+    media_size = 0
+    if os.path.isdir(media_path):
+        for (path, dirs, files) in os.walk(media_path):
+            for f in files:
+                media_size += os.path.getsize(os.path.join(path, f))
+                media_count += 1
+    media_size = sizeof_fmt(media_size)
+    print("name: {}\nstatus: {}\ntweets: {}\nlinks: {}\nmedia: {}\ndisk space tweets: {}\n"
+          "disk space links: {}\ndisk space media: {}"
+          .format(conf["db_name"], running, tweets["docs.count"], links["docs.count"], media_count,
+                  tweets["store.size"].upper(), links["store.size"].upper(), media_size))
+
+
 @main.command(help="Resolve urls contained in a given Elasticsearch database. Usage: 'gazou resolve db_name'")
 @click.argument('db_name', required=True, type=str)
 @click.option('--host', default="localhost")
