@@ -199,7 +199,8 @@ terms in config.json), you can reset the search state with:
 
 ## Credits & License
 
-[Benjamin Ooghe-Tabanou](https://github.com/boogheta), [Jules Farjas](https://github.com/farjasju) & al @ [Sciences Po médialab](https://github.com/medialab)
+[Benjamin Ooghe-Tabanou](https://github.com/boogheta), [Jules Farjas](https://github.com/farjasju),
+ [Béatrice Mazoyer](https://github.com/bmaz) & al @ [Sciences Po médialab](https://github.com/medialab)
 
 Read more about Gazouilloire's migration from Python2 & Mongo to Python3 & ElasticSearch in [Jules' report](https://github.com/farjasju/medialabInternshipReport).
 
