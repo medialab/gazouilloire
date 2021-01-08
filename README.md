@@ -76,11 +76,23 @@ a `config.json` file is created. Open it to configure the collection parameters.
 - Run with:
 
     ```bash
-    gazouilloire start path/to/collection/directory
+    gazouilloire run path/to/collection/directory
     ```
     or, to run the script in the current directory:
     ```
+    gazouilloire run
+    ```
+- The tool can also run as daemon with:
+    ```
     gazouilloire start
+    ```
+- Stop the daemon with :
+    ```
+    gazouilloire stop
+    ```
+- Access the current collection status (running/not running, nomber of collected docs, disk usage, etc.) with
+    ```
+    gazouilloire status
     ```
   
 - Gazouilloire stores its current search state in the collection directory. This means that if you restart Gazouilloire, 
