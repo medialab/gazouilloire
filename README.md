@@ -53,7 +53,16 @@ a `config.json` file is created. Open it to configure the collection parameters.
   Note that there are three possibilities to filter further:
 
   - **language**: in order to collect only tweets written in a specific language : just add `"language": "fr"` to the config (the language should be written in [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes))
-  - **geolocalisation**: just add `"geolocalisation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box as shown in the config example file
+  - **geolocalisation**: there are two ways to specify a geographical filter:
+  
+      ```json
+      "geolocation": "Paris, France",
+      "geolocation_type": "city", #possible values: "country"/"admin"/"city"
+      ```
+      or using a bounding box:
+      ```json
+      "geolocation": [48.70908786918211, 2.1533203125, 49.00274483644453, 2.610626220703125],
+      ```
   - **time_limited_keywords**: in order to filter on specific keywords during planned time period:
 
     ```json

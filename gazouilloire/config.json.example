@@ -24,7 +24,7 @@
         ]
     },
     "language": null,
-    "geolocalisation": "Paris, France",
+    "geolocation": "Paris, France",
     "resolve_redirected_links": true,
     "grab_conversations": false,
     "download_medias": {

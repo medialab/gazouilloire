@@ -504,17 +504,17 @@ def main(conf):
     language = conf.get('language', None)
     streamgeocode = None
     searchgeocode = None
-    if "geolocalisation" in conf and conf["geolocalisation"]:
-        if type(conf["geolocalisation"]) == list:
+    if "geolocation" in conf and conf["geolocation"]:
+        if type(conf["geolocation"]) == list:
             try:
-                x1, y1, x2, y2 = conf["geolocalisation"]
+                x1, y1, x2, y2 = conf["geolocation"]
                 streamgeocode, searchgeocode = generate_geoloc_strings(x1, y1, x2, y2)
             except Exception as e:
-                log.error('geolocalisation is wrongly formatted, should be something such as ["Lat1", "Long1", "Lat2", "Long2"]')
+                log.error('geolocation is wrongly formatted, should be something such as ["Lat1", "Long1", "Lat2", "Long2"]')
                 sys.exit(1)
         else:
             GeoConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
-            res = GeoConn.geo.search(query=conf["geolocalisation"].replace(" ", "+"), granularity=conf.get("geolocalisation_type", "admin"), max_results=1)
+            res = GeoConn.geo.search(query=conf["geolocation"].replace(" ", "+"), granularity=conf.get("geolocation_type", "admin"), max_results=1)
             try:
                 place = res["result"]["places"][0]
                 log.info('Limiting tweets search to place "%s" with id "%s"' % (place['full_name'], place['id']))
@@ -522,7 +522,7 @@ def main(conf):
                 y2, x2 = place["bounding_box"]['coordinates'][0][2]
                 streamgeocode, searchgeocode = generate_geoloc_strings(x1, y1, x2, y2)
             except Exception as e:
-                log.error('Could not find a place matching geolocalisation %s: %s %s' % (conf["geolocalisation"], type(e), e))
+                log.error('Could not find a place matching geolocation %s: %s %s' % (conf["geolocation"], type(e), e))
                 sys.exit(1)
     grab_conversations = "grab_conversations" in conf and conf["grab_conversations"]
     resolve_links = "resolve_redirected_links" in conf and conf["resolve_redirected_links"]
