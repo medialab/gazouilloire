@@ -84,6 +84,6 @@ def required_format(conf):
             'in config.json '
         )
         sys.exit(1)
-    if conf["debug"]:
+    if conf["verbose"]:
         log.setLevel(logging.DEBUG)
     return conf

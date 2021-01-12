@@ -34,5 +34,5 @@
     },
     "medias_directory": "medias",
     "timezone": "Europe/Paris",
-    "debug": false
+    "verbose": false
 }
