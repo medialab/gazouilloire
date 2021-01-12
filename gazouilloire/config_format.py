@@ -74,10 +74,10 @@ def required_format(conf):
             if subfield not in conf[field]:
                 log.error('required element %s is missing in config.json' % subfield)
                 sys.exit(1)
-    query_terms = ['keywords', 'url_pieces', 'time_limited_keywords']
+    query_terms = {'keywords': [], 'url_pieces': [], 'time_limited_keywords': {}}
     for k in query_terms:
         if k not in conf:
-            conf[k] = []
+            conf[k] = query_terms[k]
     if all(len(conf[k]) == 0 for k in query_terms):
         log.error(
             'at least one of the query fields (keywords, url_pieces, time_limited_keywords) must be filled in '
