@@ -4,7 +4,7 @@ with open('./README.md', 'r') as f:
     long_description = f.read()
 
 setup(name='gazouilloire',
-      version='1.0.0-alpha',
+      version='1.0.0-alpha1',
       description='Twitter stream & search API grabber',
       long_description=long_description,
       long_description_content_type='text/markdown',
