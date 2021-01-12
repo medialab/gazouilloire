@@ -19,7 +19,11 @@ def main():
                    "collection parameters have to be configured before launching 'gazouilloire start'")
 @click.argument('path', type=click.Path(exists=True), default=".")
 def init(path):
-    create_conf_example(path)
+    if create_conf_example(path):
+        print(
+            "Welcome to Gazouilloire! \nPlease make sure that Elasticsearch 7 is installed and edit {}"
+            "\nConfiguration parameters are detailed in https://github.com/medialab/gazouilloire#howto"
+            .format(os.path.join(os.path.realpath(path), "config.json")))
 
 
 @main.command(help="Start collection as daemon, following the parameters defined in config.json.")

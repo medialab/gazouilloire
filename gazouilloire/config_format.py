@@ -54,8 +54,10 @@ def create_conf_example(dir_path):
     file_path = os.path.join(dir_path, "config.json")
     if not os.path.isfile(file_path):
         copyfile(os.path.join(os.path.dirname(__file__), "config.json.example"), file_path)
+        return True
     else:
         log.warning('A file named config.json already exists in %s' % os.path.realpath(dir_path))
+        return False
 
 
 def required_format(conf):
