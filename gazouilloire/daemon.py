@@ -8,151 +8,151 @@ from gazouilloire.config_format import log, create_file_handler
 
 
 class Daemon:
-	"""
-	A generic daemon class.
-	
-	Usage: subclass the Daemon class and override the run() method
-	"""
-	def __init__(self, pidfile='.lock', stdin=os.devnull, stdout=os.devnull, stderr=os.devnull):
-		self.stdin = stdin
-		self.stdout = stdout
-		self.stderr = stderr
-		if os.path.isdir(pidfile):
-			self.pidfile = os.path.join(pidfile, '.lock')
-			self.path = pidfile
-		else:
-			self.pidfile = pidfile
-			self.path = os.getcwd()
+    """
+    A generic daemon class.
 
-	def daemonize(self):
-		"""
-		do the UNIX double-fork magic, see Stevens' "Advanced 
-		Programming in the UNIX Environment" for details (ISBN 0201563177)
-		http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
-		"""
-		try:
-			pid = os.fork()
-			if pid > 0:
-				# exit first parent
-				sys.exit(0)
-		except OSError as e:
-			log.error("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
-			sys.exit(1)
+    Usage: subclass the Daemon class and override the run() method
+    """
+    def __init__(self, pidfile='.lock', stdin=os.devnull, stdout=os.devnull, stderr=os.devnull):
+        self.stdin = stdin
+        self.stdout = stdout
+        self.stderr = stderr
+        if os.path.isdir(pidfile):
+            self.pidfile = os.path.join(pidfile, '.lock')
+            self.path = pidfile
+        else:
+            self.pidfile = pidfile
+            self.path = os.getcwd()
 
-		# decouple from parent environment
-		os.setsid()
-		os.umask(0)
+    def daemonize(self):
+        """
+        do the UNIX double-fork magic, see Stevens' "Advanced
+        Programming in the UNIX Environment" for details (ISBN 0201563177)
+        http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
+        """
+        try:
+            pid = os.fork()
+            if pid > 0:
+                # exit first parent
+                sys.exit(0)
+        except OSError as e:
+            log.error("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+            sys.exit(1)
 
-		# do second fork
-		try:
-			pid = os.fork()
-			if pid > 0:
-				# exit from second parent
-				sys.exit(0)
-		except OSError as e:
-			log.error("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
-			sys.exit(1)
+        # decouple from parent environment
+        os.setsid()
+        os.umask(0)
 
-		# redirect standard file descriptors
-		sys.stdout.flush()
-		sys.stderr.flush()
-		si = open(self.stdin, 'r')
-		so = open(self.stdout, 'a+')
-		se = open(self.stderr, 'a+')
-		os.dup2(si.fileno(), sys.stdin.fileno())
-		os.dup2(so.fileno(), sys.stdout.fileno())
-		os.dup2(se.fileno(), sys.stderr.fileno())
+        # do second fork
+        try:
+            pid = os.fork()
+            if pid > 0:
+                # exit from second parent
+                sys.exit(0)
+        except OSError as e:
+            log.error("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+            sys.exit(1)
 
-		atexit.register(self.onstop)
-		signal(SIGTERM, lambda signum, stack_frame: exit())
+        # redirect standard file descriptors
+        sys.stdout.flush()
+        sys.stderr.flush()
+        si = open(self.stdin, 'r')
+        so = open(self.stdout, 'a+')
+        se = open(self.stderr, 'a+')
+        os.dup2(si.fileno(), sys.stdin.fileno())
+        os.dup2(so.fileno(), sys.stdout.fileno())
+        os.dup2(se.fileno(), sys.stderr.fileno())
 
-		# write pidfile
-		pid = str(os.getpid())
-		open(self.pidfile,'w+').write("%s\n" % pid)
+        atexit.register(self.onstop)
+        signal(SIGTERM, lambda signum, stack_frame: exit())
 
-	def onstop(self):
-		self.quit()
-		os.remove(self.pidfile)
+        # write pidfile
+        pid = str(os.getpid())
+        open(self.pidfile,'w+').write("%s\n" % pid)
 
-	def start(self, conf):
-		"""
-		Start the daemon
-		"""
-		# Check for a pidfile to see if the daemon already runs
-		try:
-			pf = open(self.pidfile,'r')
-			pid = int(pf.read().strip())
-			pf.close()
-		except IOError:
-			pid = None
+    def onstop(self):
+        self.quit()
+        os.remove(self.pidfile)
 
-		if pid:
-			message = "pidfile %s already exist. Daemon already running?\n"
-			log.error(message % self.pidfile)
-			sys.exit(1)
+    def start(self, conf):
+        """
+        Start the daemon
+        """
+        # Check for a pidfile to see if the daemon already runs
+        try:
+            pf = open(self.pidfile,'r')
+            pid = int(pf.read().strip())
+            pf.close()
+        except IOError:
+            pid = None
 
-		# Start the daemon
-		create_file_handler(self.path)
-		self.daemonize()
-		self.run(conf)
+        if pid:
+            message = "pidfile %s already exist. Daemon already running?\n"
+            log.error(message % self.pidfile)
+            sys.exit(1)
 
-	def stop_children_before_exit(self, children):
-		alive = [True for i in children]
-		retries = 0
-		while any(alive):
-			sig = SIGTERM if retries == 0 else SIGKILL
-			for enum, child in enumerate(children):
-				try:
-					child.send_signal(sig)
-				except psutil.NoSuchProcess:
-					alive[enum] = False
-			time.sleep(1)
-			retries += 1
-		if os.path.exists(self.pidfile):
-			os.remove(self.pidfile)
+        # Start the daemon
+        create_file_handler(self.path)
+        self.daemonize()
+        self.run(conf)
 
-	def stop(self):
-		"""
-		Stop the daemon
-		"""
-		# Get the pid from the pidfile
-		try:
-			pf = open(self.pidfile,'r')
-			pid = int(pf.read().strip())
-			pf.close()
-		except IOError:
-			pid = None
+    def stop_children_before_exit(self, children):
+        alive = [True for i in children]
+        retries = 0
+        while any(alive):
+            sig = SIGTERM if retries == 0 else SIGKILL
+            for enum, child in enumerate(children):
+                try:
+                    child.send_signal(sig)
+                except psutil.NoSuchProcess:
+                    alive[enum] = False
+            time.sleep(1)
+            retries += 1
+        if os.path.exists(self.pidfile):
+            os.remove(self.pidfile)
 
-		if not pid:
-			message = "pidfile %s does not exist. Daemon not running?\n"
-			log.warning(message % self.pidfile)
-			return False
+    def stop(self):
+        """
+        Stop the daemon
+        """
+        # Get the pid from the pidfile
+        try:
+            pf = open(self.pidfile,'r')
+            pid = int(pf.read().strip())
+            pf.close()
+        except IOError:
+            pid = None
 
-		# Try killing the daemon process
-		retries = 0
-		try:
-			while True:
-				sig = SIGTERM if retries == 0 else SIGKILL
-				parent = psutil.Process(pid)
-				children = parent.children(recursive=True)
-				parent.send_signal(sig)
-				retries += 1
-				time.sleep(1)
-		except psutil.NoSuchProcess:
-			self.stop_children_before_exit(children)
-			return True
+        if not pid:
+            message = "pidfile %s does not exist. Daemon not running?\n"
+            log.warning(message % self.pidfile)
+            return False
 
-	def restart(self, conf):
-		"""
-		Restart the daemon
-		"""
-		self.stop()
-		self.start(conf)
+        # Try killing the daemon process
+        retries = 0
+        try:
+            while True:
+                sig = SIGTERM if retries == 0 else SIGKILL
+                parent = psutil.Process(pid)
+                children = parent.children(recursive=True)
+                parent.send_signal(sig)
+                retries += 1
+                time.sleep(1)
+        except psutil.NoSuchProcess:
+            self.stop_children_before_exit(children)
+            return True
 
-	def run(self, conf):
-		run.main(conf)
+    def restart(self, conf):
+        """
+        Restart the daemon
+        """
+        self.stop()
+        self.start(conf)
 
-	def quit(self):
-		"""
-		You should override this method when you subclass Daemon. It will be called before the process is stopped.
-		"""
+    def run(self, conf):
+        run.main(conf)
+
+    def quit(self):
+        """
+        You should override this method when you subclass Daemon. It will be called before the process is stopped.
+        """
