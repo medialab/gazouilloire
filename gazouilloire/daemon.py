@@ -23,7 +23,6 @@ class Daemon:
 		else:
 			self.pidfile = pidfile
 			self.path = os.getcwd()
-		self.retry = 15
 
 	def daemonize(self):
 		"""
@@ -97,22 +96,20 @@ class Daemon:
 		self.daemonize()
 		self.run(conf)
 
-
 	def stop_children_before_exit(self, children):
 		alive = [True for i in children]
-		elapsed = 0
+		retries = 0
 		while any(alive):
-			sig = SIGTERM if elapsed < self.retry else SIGKILL
+			sig = SIGTERM if retries == 0 else SIGKILL
 			for enum, child in enumerate(children):
 				try:
 					child.send_signal(sig)
 				except psutil.NoSuchProcess:
 					alive[enum] = False
 			time.sleep(1)
-			elapsed += 1
+			retries += 1
 		if os.path.exists(self.pidfile):
 			os.remove(self.pidfile)
-
 
 	def stop(self):
 		"""
@@ -132,14 +129,14 @@ class Daemon:
 			return False
 
 		# Try killing the daemon process
-		elapsed = 0
+		retries = 0
 		try:
-			while elapsed < self.retry:
-				sig = SIGTERM if elapsed < self.retry - 2 else SIGKILL
+			while True:
+				sig = SIGTERM if retries == 0 else SIGKILL
 				parent = psutil.Process(pid)
 				children = parent.children(recursive=True)
 				parent.send_signal(sig)
-				elapsed += 1
+				retries += 1
 				time.sleep(1)
 		except psutil.NoSuchProcess:
 			self.stop_children_before_exit(children)
