@@ -1,7 +1,7 @@
 # Adapted from Joseph Ernest https://gist.github.com/josephernest/77fdb0012b72ebdf4c9d19d6256a1119
 
 
-import sys, os, time, atexit
+import sys, os, time, atexit, psutil
 from signal import signal, SIGTERM, SIGKILL
 from gazouilloire import run
 from gazouilloire.config_format import log, create_file_handler
@@ -23,36 +23,37 @@ class Daemon:
 		else:
 			self.pidfile = pidfile
 			self.path = os.getcwd()
-	
+		self.retry = 15
+
 	def daemonize(self):
 		"""
 		do the UNIX double-fork magic, see Stevens' "Advanced 
 		Programming in the UNIX Environment" for details (ISBN 0201563177)
 		http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
 		"""
-		try: 
-			pid = os.fork() 
+		try:
+			pid = os.fork()
 			if pid > 0:
 				# exit first parent
-				sys.exit(0) 
-		except OSError as e: 
+				sys.exit(0)
+		except OSError as e:
 			log.error("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
 			sys.exit(1)
-	
+
 		# decouple from parent environment
-		os.setsid() 
-		os.umask(0) 
-	
+		os.setsid()
+		os.umask(0)
+
 		# do second fork
-		try: 
-			pid = os.fork() 
+		try:
+			pid = os.fork()
 			if pid > 0:
 				# exit from second parent
-				sys.exit(0) 
-		except OSError as e: 
+				sys.exit(0)
+		except OSError as e:
 			log.error("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
-			sys.exit(1) 
-	
+			sys.exit(1)
+
 		# redirect standard file descriptors
 		sys.stdout.flush()
 		sys.stderr.flush()
@@ -62,14 +63,14 @@ class Daemon:
 		os.dup2(si.fileno(), sys.stdin.fileno())
 		os.dup2(so.fileno(), sys.stdout.fileno())
 		os.dup2(se.fileno(), sys.stderr.fileno())
-	
+
 		atexit.register(self.onstop)
 		signal(SIGTERM, lambda signum, stack_frame: exit())
 
-		# write pidfile        
+		# write pidfile
 		pid = str(os.getpid())
 		open(self.pidfile,'w+').write("%s\n" % pid)
-	
+
 	def onstop(self):
 		self.quit()
 		os.remove(self.pidfile)
@@ -85,16 +86,33 @@ class Daemon:
 			pf.close()
 		except IOError:
 			pid = None
-	
+
 		if pid:
 			message = "pidfile %s already exist. Daemon already running?\n"
 			log.error(message % self.pidfile)
 			sys.exit(1)
-		
+
 		# Start the daemon
 		create_file_handler(self.path)
 		self.daemonize()
 		self.run(conf)
+
+
+	def stop_children_before_exit(self, children):
+		alive = [True for i in children]
+		elapsed = 0
+		while any(alive):
+			sig = SIGTERM if elapsed < self.retry else SIGKILL
+			for enum, child in enumerate(children):
+				try:
+					child.send_signal(sig)
+				except psutil.NoSuchProcess:
+					alive[enum] = False
+			time.sleep(1)
+			elapsed += 1
+		if os.path.exists(self.pidfile):
+			os.remove(self.pidfile)
+
 
 	def stop(self):
 		"""
@@ -107,7 +125,7 @@ class Daemon:
 			pf.close()
 		except IOError:
 			pid = None
-	
+
 		if not pid:
 			message = "pidfile %s does not exist. Daemon not running?\n"
 			log.warning(message % self.pidfile)
@@ -116,23 +134,16 @@ class Daemon:
 		# Try killing the daemon process
 		elapsed = 0
 		try:
-			while elapsed < 300:
-				os.kill(pid, SIGTERM)
+			while elapsed < self.retry:
+				sig = SIGTERM if elapsed < self.retry - 2 else SIGKILL
+				parent = psutil.Process(pid)
+				children = parent.children(recursive=True)
+				parent.send_signal(sig)
 				elapsed += 1
 				time.sleep(1)
-		except OSError as err:
-			err = str(err)
-			if err.find("No such process") > 0:
-				if os.path.exists(self.pidfile):
-					os.remove(self.pidfile)
-				return True
-			else:
-				print(str(err))
-				sys.exit(1)
-		os.kill(pid, SIGKILL)
-		if os.path.exists(self.pidfile):
-			os.remove(self.pidfile)
-		return True
+		except psutil.NoSuchProcess:
+			self.stop_children_before_exit(children)
+			return True
 
 	def restart(self, conf):
 		"""
