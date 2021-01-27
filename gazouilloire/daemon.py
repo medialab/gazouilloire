@@ -118,16 +118,12 @@ class Daemon:
 
         # Kill the daemon process
         parent = psutil.Process(pid)
-        procs = parent.children(recursive=True)
+        children = parent.children(recursive=True)
         parent.terminate()
-        for p in procs:
-            p.terminate()
-        procs.append(parent)
-        gone, alive = psutil.wait_procs(procs, timeout=timeout)
+        gone, alive = psutil.wait_procs(children, timeout=timeout)
         for p in alive:
             p.kill()
-        if os.path.exists(self.pidfile):
-            os.remove(self.pidfile)
+        os.remove(self.pidfile)
         os.remove(self.stoplock)
         return True
 
