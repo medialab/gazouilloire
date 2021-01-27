@@ -113,12 +113,13 @@ class Daemon:
             log.warning(message % self.pidfile)
             return False
 
-        # Try killing the daemon process
+        # Kill the daemon process
         parent = psutil.Process(pid)
         procs = parent.children(recursive=True)
-        procs.append(parent)
+        parent.terminate()
         for p in procs:
             p.terminate()
+        procs.append(parent)
         gone, alive = psutil.wait_procs(procs, timeout=15)
         for p in alive:
             p.kill()
