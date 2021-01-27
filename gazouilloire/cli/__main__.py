@@ -37,11 +37,12 @@ def start(path):
 
 @main.command(help="Restart collection as daemon, following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-def restart(path):
+@click.option('--timeout', '-t', type=int, default=15, help="Time (in seconds) before killing the process.")
+def restart(path, timeout):
     log.info("Restarting...")
     conf = load_conf(path)
     daemon = Daemon(pidfile=path)
-    daemon.restart(conf)
+    daemon.restart(conf, timeout)
 
 
 @main.command(help="Start collection following the parameters defined in config.json.")
@@ -56,9 +57,10 @@ def run(path):
 
 @main.command(help="Stop collection daemon.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-def stop(path):
+@click.option('--timeout', '-t', type=int, default=15, help="Time (in seconds) before killing the process.")
+def stop(path, timeout):
     daemon = Daemon(pidfile=path)
-    stopped = daemon.stop()
+    stopped = daemon.stop(timeout)
     if stopped:
         log.info("Collection stopped")
 

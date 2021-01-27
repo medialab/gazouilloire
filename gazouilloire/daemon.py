@@ -96,7 +96,7 @@ class Daemon:
         self.daemonize()
         self.run(conf)
 
-    def stop(self):
+    def stop(self, timeout):
         """
         Stop the daemon
         """
@@ -120,18 +120,18 @@ class Daemon:
         for p in procs:
             p.terminate()
         procs.append(parent)
-        gone, alive = psutil.wait_procs(procs, timeout=15)
+        gone, alive = psutil.wait_procs(procs, timeout=timeout)
         for p in alive:
             p.kill()
         if os.path.exists(self.pidfile):
             os.remove(self.pidfile)
         return True
 
-    def restart(self, conf):
+    def restart(self, conf, timeout):
         """
         Restart the daemon
         """
-        self.stop()
+        self.stop(timeout)
         self.start(conf)
 
     def run(self, conf):
