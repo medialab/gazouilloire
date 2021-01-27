@@ -29,9 +29,9 @@ def init(path):
 @main.command(help="Start collection as daemon, following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
 def start(path):
-    log.info("Tweet collection will start in daemon mode")
     conf = load_conf(path)
-    daemon = Daemon(pidfile=path)
+    daemon = Daemon(path=path)
+    log.info("Tweet collection will start in daemon mode")
     daemon.start(conf)
 
 
@@ -39,9 +39,9 @@ def start(path):
 @click.argument('path', type=click.Path(exists=True), default=".")
 @click.option('--timeout', '-t', type=int, default=15, help="Time (in seconds) before killing the process.")
 def restart(path, timeout):
-    log.info("Restarting...")
     conf = load_conf(path)
-    daemon = Daemon(pidfile=path)
+    daemon = Daemon(path=path)
+    log.info("Restarting...")
     daemon.restart(conf, timeout)
 
 
@@ -51,6 +51,8 @@ def run(path):
     conf = load_conf(path)
     if os.path.exists(os.path.join(path, ".lock")):
         log.error("pidfile .lock already exists. Daemon already running?")
+    elif os.path.exists(os.path.join(path, ".stoplock")):
+        log.error("Please wait for the daemon to stop before running a new collection process.")
     else:
         main_run(conf)
 
@@ -59,7 +61,7 @@ def run(path):
 @click.argument('path', type=click.Path(exists=True), default=".")
 @click.option('--timeout', '-t', type=int, default=15, help="Time (in seconds) before killing the process.")
 def stop(path, timeout):
-    daemon = Daemon(pidfile=path)
+    daemon = Daemon(path=path)
     stopped = daemon.stop(timeout)
     if stopped:
         log.info("Collection stopped")

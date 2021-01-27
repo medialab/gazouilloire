@@ -13,16 +13,16 @@ class Daemon:
 
     Usage: subclass the Daemon class and override the run() method
     """
-    def __init__(self, pidfile='.lock', stdin=os.devnull, stdout=os.devnull, stderr=os.devnull):
+    def __init__(self, path, stdin=os.devnull, stdout=os.devnull, stderr=os.devnull):
         self.stdin = stdin
         self.stdout = stdout
         self.stderr = stderr
-        if os.path.isdir(pidfile):
-            self.pidfile = os.path.join(pidfile, '.lock')
-            self.path = pidfile
-        else:
-            self.pidfile = pidfile
-            self.path = os.getcwd()
+        self.pidfile = os.path.join(path, '.lock')
+        self.stoplock = os.path.join(path, '.stoplock')
+        self.path = path
+        if os.path.isfile(self.stoplock):
+            log.error("The daemon is currently being stopped. Please wait before trying to start, restart or stop.")
+            sys.exit(1)
 
     def daemonize(self):
         """
@@ -100,6 +100,8 @@ class Daemon:
         """
         Stop the daemon
         """
+        # Indicate that the daemon is stopping by creating a .stoplock file
+        open(self.stoplock, 'w').close()
         # Get the pid from the pidfile
         try:
             pf = open(self.pidfile,'r')
@@ -111,6 +113,7 @@ class Daemon:
         if not pid:
             message = "pidfile %s does not exist. Daemon not running?\n"
             log.warning(message % self.pidfile)
+            os.remove(self.stoplock)
             return False
 
         # Kill the daemon process
@@ -125,6 +128,7 @@ class Daemon:
             p.kill()
         if os.path.exists(self.pidfile):
             os.remove(self.pidfile)
+        os.remove(self.stoplock)
         return True
 
     def restart(self, conf, timeout):
