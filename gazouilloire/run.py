@@ -59,7 +59,7 @@ def write_pile(pile, todo, filename):
         store.append(pile.get())
     store.extend(todo)
     if store:
-        path = os.path.join("piles", datetime.strftime(datetime.now(), filename +"_%Y%m%d-%H%M.json"
+        path = os.path.join("piles", datetime.strftime(datetime.now(), filename +"_%Y%m%d-%H%M.json"))
         log.info("Save {} tweets to {}".format(len(store), os.path.realpath(path)))
         if not os.path.isdir("piles"):
             os.mkdir("piles")
