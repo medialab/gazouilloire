@@ -32,7 +32,7 @@ from math import pi, sin, cos, acos
 
 from gazouilloire.tweets import prepare_tweet, prepare_tweets
 from gazouilloire.database.elasticmanager import ElasticManager, prepare_db
-from elasticsearch import helpers
+from elasticsearch import helpers, exceptions
 from gazouilloire.url_resolve import resolve_loop, count_and_log
 from gazouilloire.config_format import load_conf, log
 
@@ -53,29 +53,51 @@ def breakable_sleep(delay, exit_event):
     while time.time() < t and not exit_event.is_set():
         time.sleep(1)
 
+def write_pile(pile, todo, filename):
+    store = []
+    while not pile.empty():
+        store.append(pile.get())
+    store.extend(todo)
+    if store:
+        path = os.path.join("piles", datetime.strftime(datetime.now(), filename +"_%Y%m%d-%H%M.json"
+        log.info("Save {} tweets to {}".format(len(store), os.path.realpath(path)))
+        if not os.path.isdir("piles"):
+            os.mkdir("piles")
+        with open(path, "w") as f:
+            json.dump(store, f)
+
 def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit_event):
     db = ElasticManager(**db_conf)
+    todo = []
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         log.info("Pile length: " + str(pile.qsize()))
-        while not pile_deleted.empty():
-            todelete = pile_deleted.get()
-            db.set_deleted(todelete)
-        todo = []
-        while not pile.empty():
-            todo.append(pile.get())
-        tweets_bulk = []
-        for t in prepare_tweets(todo, locale):
-            if pile_medias and t["media_files"]:
-                pile_medias.put(t)
-            if pile_catchup and t["to_tweetid"]:
-                if not db.find_tweet(t["to_tweetid"]):
-                    pile_catchup.put(t["to_tweetid"])
-            tweets_bulk.append(t)
+        try:
+            while not pile_deleted.empty():
+                todelete = pile_deleted.get()
+                db.set_deleted(todelete)
+            todo = []
+            while not pile.empty():
+                todo.append(pile.get())
+            tweets_bulk = []
+            for t in prepare_tweets(todo, locale):
+                if pile_medias and t["media_files"]:
+                    pile_medias.put(t)
+                if pile_catchup and t["to_tweetid"]:
+                    if not db.find_tweet(t["to_tweetid"]):
+                        pile_catchup.put(t["to_tweetid"])
+                tweets_bulk.append(t)
 
-        helpers.bulk(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
-        if tweets_bulk:
-            log.debug("Saved %s tweets in database" % len(tweets_bulk))
+            helpers.bulk(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
+            if tweets_bulk:
+                log.debug("Saved %s tweets in database" % len(tweets_bulk))
+        except exceptions.ConnectionError as e:
+            log.error(e)
+            log.error("Depiler can't connect to elasticsearch. Ending collection.".upper())
+            exit_event.set()
+            break
         breakable_sleep(2, exit_event)
+    write_pile(pile_deleted, [], "pile_deleted")
+    write_pile(pile, todo, "pile")
     log.info("FINISHED depiler")
 
 def download_media(tweet, media_id, media_url, medias_dir="medias"):
