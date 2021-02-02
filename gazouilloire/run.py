@@ -29,7 +29,7 @@ import signal
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
-
+import shutil
 from gazouilloire.tweets import prepare_tweet, prepare_tweets
 from gazouilloire.database.elasticmanager import ElasticManager, prepare_db
 from elasticsearch import helpers, exceptions
@@ -53,6 +53,7 @@ def breakable_sleep(delay, exit_event):
     while time.time() < t and not exit_event.is_set():
         time.sleep(1)
 
+
 def write_pile(pile, todo, filename):
     store = []
     while not pile.empty():
@@ -66,9 +67,25 @@ def write_pile(pile, todo, filename):
         with open(path, "w") as f:
             json.dump(store, f)
 
+
+def load_pile(file, pile):
+    with open(os.path.join("piles",file), "r") as f:
+        tweets = json.load(f)
+        for t in tweets:
+            pile.put(t)
+    log.debug("Loaded {} tweets from {}".format(len(tweets), file))
+
+
 def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit_event):
     db = ElasticManager(**db_conf)
     todo = []
+    if os.path.isdir("piles"):
+        for f in os.listdir("piles"):
+            if f.startswith("pile_deleted"):
+                load_pile(f, pile_deleted)
+            elif f.startswith("pile"):
+                load_pile(f, pile)
+        shutil.rmtree("piles")
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         log.info("Pile length: " + str(pile.qsize()))
         try:
