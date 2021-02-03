@@ -328,8 +328,13 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                         log.info("Got special data: %s" % str(msg))
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
             log.warning("Stream connection lost, reconnecting in a sec... (%s: %s)" % (type(e), e))
-        except (Exception, KeyboardInterrupt) as e:
+        except KeyboardInterrupt as e:
             log.info("closing streamer (%s: %s)..." % (type(e), e))
+            exit_event.set()
+        except Exception as e:
+            import traceback
+            log.info("streamer crashed (%s: %s)..." % (type(e), e))
+            log.error(traceback.format_exc())
             exit_event.set()
 
         log.debug("Stream stayed alive for %sh" % str(old_div((time.time()-ts),3600)))
