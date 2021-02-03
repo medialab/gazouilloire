@@ -217,7 +217,7 @@ def prepare_tweet(tweet, locale=None):
                 if med_name not in medids:
                     medids.add(med_name)
                     media_types.append(entity["type"])
-                    media_urls.append(med_url.split("?tag=")[0])
+                    media_urls.append(med_url)
                     media_files.append("%s_%s" % (source_id, med_name))
             else:
                 normalized = normalize(entity["expanded_url"])
