@@ -35,14 +35,16 @@ def create_file_handler(path):
 
 
 def load_conf(dir_path):
-    file_path = os.path.join(os.path.realpath(dir_path), "config.json")
+    real_path = os.path.realpath(dir_path)
+    file_path = os.path.join(real_path, "config.json")
     if os.path.isfile(file_path):
         try:
             with open(file_path, "r") as confile:
-                conf =  required_format(json.load(confile))
+                conf = required_format(json.load(confile))
         except Exception as e:
             log.error('Could not open %s: %s %s' % (file_path, type(e), e))
             sys.exit(1)
+        conf["path"] = real_path
         return conf
     else:
         log.error('file {} does not exist. Try running the following command:\ngazouilloire init <your_path>'

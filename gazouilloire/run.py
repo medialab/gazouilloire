@@ -60,10 +60,10 @@ def write_pile(pile, todo, filename):
         store.append(pile.get())
     store.extend(todo)
     if store:
-        path = os.path.join("piles", datetime.strftime(datetime.now(), filename +"_%Y%m%d-%H%M.json"))
-        log.info("Save {} tweets to {}".format(len(store), os.path.realpath(path)))
-        if not os.path.isdir("piles"):
-            os.mkdir("piles")
+        path = datetime.strftime(datetime.now(), filename +"_%Y%m%d-%H%M.json")
+        log.info("Save {} tweets to {}".format(len(store), path))
+        if not os.path.isdir(os.path.dirname(path)):
+            os.mkdir(os.path.dirname(path))
         with open(path, "w") as f:
             json.dump(store, f)
 
@@ -76,16 +76,17 @@ def load_pile(file, pile):
     log.debug("Loaded {} tweets from {}".format(len(tweets), file))
 
 
-def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit_event):
-    db = ElasticManager(**db_conf)
+def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_event):
+    db = ElasticManager(**conf['database'])
     todo = []
-    if os.path.isdir("piles"):
-        for f in os.listdir("piles"):
+    pile_dir = os.path.join(conf["path"], "piles")
+    if os.path.isdir(pile_dir):
+        for f in os.listdir(pile_dir):
             if f.startswith("pile_deleted"):
-                load_pile(f, pile_deleted)
+                load_pile(os.path.join(pile_dir, f), pile_deleted)
             elif f.startswith("pile"):
-                load_pile(f, pile)
-        shutil.rmtree("piles")
+                load_pile(os.path.join(pile_dir, f), pile)
+        shutil.rmtree(pile_dir)
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         log.info("Pile length: " + str(pile.qsize()))
         try:
@@ -113,8 +114,8 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, db_conf, locale, exit
             exit_event.set()
             break
         breakable_sleep(2, exit_event)
-    write_pile(pile_deleted, [], "pile_deleted")
-    write_pile(pile, todo, "pile")
+    write_pile(pile_deleted, [], os.path.join(pile_dir, "pile_deleted"))
+    write_pile(pile, todo, os.path.join(pile_dir, "pile"))
     log.info("FINISHED depiler")
 
 def download_media(tweet, media_id, media_url, medias_dir="medias"):
@@ -593,7 +594,7 @@ def main(conf):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     exit_event = Event()
-    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf['database'], locale, exit_event))
+    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_event))
     depile.daemon = True
     depile.start()
     if grab_conversations:
