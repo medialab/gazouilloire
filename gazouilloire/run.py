@@ -113,6 +113,11 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
             log.error("Depiler can't connect to elasticsearch. Ending collection.".upper())
             exit_event.set()
             break
+        except Exception as e:
+            log.error(e)
+            log.error("Ending collection.".upper())
+            exit_event.set()
+            break
         breakable_sleep(2, exit_event)
     write_pile(pile_deleted, [], os.path.join(pile_dir, "pile_deleted"))
     write_pile(pile, todo, os.path.join(pile_dir, "pile"))
