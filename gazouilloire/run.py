@@ -114,7 +114,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
             exit_event.set()
             break
         except Exception as e:
-            log.error(e)
+            log.error(str(type(e)) + ": " +str(e))
             log.error("Ending collection.".upper())
             exit_event.set()
             break
