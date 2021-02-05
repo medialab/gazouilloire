@@ -77,7 +77,7 @@ a `config.json` file is created. Open it to configure the collection parameters.
 
   - **catchup_past_week**: Twitter's free API allows to collect tweet up to 7 days in the past only which gazouilloire does by default, set this option to `false` to disable this and only collect tweets posted after the collection was started.
 
-  - **download_medias**: set to `true` to activate automatic downloading of all medias (images and videos) posted by users within their tweets (this does not include images from social cards). Setup the `medias_directory` field in complement to setup the absolute path where Gazouilloire should store the images and videos on the machine.
+  - **download_medias**: set `"download_medias": {"photo": true, "video": false, "animated_gif": false}` to activate automatic downloading of photos posted by users, without videos or gifs (this does not include images from social cards). All fields can also be set to `true` to download everything. Setup the `medias_directory` field in complement to setup the absolute path where Gazouilloire should store the images and videos on the machine.
 
   - **timezone**: adjust the timezone within which tweets timestamps should be computed. Allowed values are proposed on Gazouilloire's startup when setting up an invalid one.
 
