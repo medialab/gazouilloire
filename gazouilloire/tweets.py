@@ -101,7 +101,9 @@ def grab_extra_meta(source, result, locale=None):
             if meta in source['place']:
                 key = "place_%s" % meta.replace('place_', '').replace('full_', '')
                 result[key] = source['place'][meta]
-        if "bounding_box" in source["place"] and "coordinates" in source["place"]["bounding_box"]:
+        if "bounding_box" in source["place"] \
+                and source["place"]["bounding_box"] is not None \
+                and "coordinates" in source["place"]["bounding_box"]:
             result["place_coordinates"] = source["place"]["bounding_box"]["coordinates"][0]
     try:
         result['user_url'] = source['user']['entities']['url']['urls'][0]['expanded_url']
