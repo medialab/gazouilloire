@@ -36,7 +36,7 @@ from elasticsearch import helpers, exceptions
 from gazouilloire.url_resolve import resolve_loop, count_and_log
 from gazouilloire.config_format import load_conf, log
 
-RESOLVER_BATCH_SIZE = 200
+RESOLVER_BATCH_SIZE = 5000
 
 
 def get_timestamp(time, locale):
