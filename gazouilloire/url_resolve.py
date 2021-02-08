@@ -12,6 +12,7 @@ from ural import normalize_url, get_hostname
 from gazouilloire.config_format import log
 import logging
 
+
 def count_and_log(db, batch_size, done=0, skip=0):
     db.client.indices.refresh(index=db.tweets)
     todo = list(db.find_tweets_with_unresolved_links(batch_size=batch_size))
@@ -70,7 +71,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
                 normalized_url = normalize(last.url)
                 domains = get_domains(normalized_url)
                 if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
-                    log.warning("failed to resolve %s: %s (last url: %s)" % (source, res.error, last.url))
+                    log.debug("failed to resolve %s: %s (last url: %s)" % (source, res.error, last.url))
                     continue
                     # TODO:
                     #  Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
