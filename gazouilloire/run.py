@@ -30,7 +30,7 @@ from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 import shutil
-from gazouilloire.tweets import prepare_tweet, prepare_tweets
+from twitwi import normalize_tweet
 from gazouilloire.database.elasticmanager import ElasticManager, prepare_db
 from elasticsearch import helpers, exceptions
 from gazouilloire.url_resolve import resolve_loop, count_and_log
@@ -76,6 +76,17 @@ def load_pile(file, pile):
     log.debug("Loaded {} tweets from {}".format(len(tweets), file))
 
 
+def prepare_tweets(tweets, locale):
+    for tweet in tweets:
+        if not isinstance(tweet, dict):
+            continue
+        if "_id" not in tweet:
+            for subtweet in normalize_tweet(tweet, locale=locale, id_key='_id', extract_referenced_tweets=True):
+                yield subtweet
+        else:
+            yield tweet
+
+
 def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_event):
     db = ElasticManager(**conf['database'])
     todo = []
@@ -104,7 +115,6 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
                     if not db.find_tweet(t["to_tweetid"]):
                         pile_catchup.put(t["to_tweetid"])
                 tweets_bulk.append(t)
-
             helpers.bulk(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
             if tweets_bulk:
                 log.debug("Saved %s tweets in database" % len(tweets_bulk))
@@ -114,7 +124,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
             exit_event.set()
             break
         except Exception as e:
-            log.error(str(type(e)) + ": " +str(e))
+            log.error(str(type(e)) + ": " + str(e))
             log.error("Ending collection.".upper())
             exit_event.set()
             break
@@ -178,7 +188,7 @@ def catchupper(pile, pile_catchup, twitterco, exit_event):
             if tweets:
                 log.debug("[conversations] +%d tweets" % len(tweets))
             for t in tweets:
-                t["gazouilloire_source"] = "thread"
+                t["collection_source"] = "thread"
                 pile.put(dict(t))
         breakable_sleep(5, exit_event)
     log.info("FINISHED catchupper")
@@ -298,8 +308,8 @@ def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_key
                 if msg.get("timeout"):
                     continue
                 if msg.get('id_str'):
-                    msg["gazouilloire_source"] = "stream"
-                    for tweet in prepare_tweet(msg, locale=locale):
+                    msg["collection_source"] = "stream"
+                    for tweet in normalize_tweet(msg, locale=locale, id_key='_id', extract_referenced_tweets=True):
                         if geocode or (urlpieces and not keywords):
                             tmptext = tweet["text"].lower()
                             keep = False
@@ -508,7 +518,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                                 break
                         if skip:
                             continue
-                    tw["gazouilloire_source"] = "search"
+                    tw["collection_source"] = "search"
                     pile.put(dict(tw))
                     news += 1
                 if news:
