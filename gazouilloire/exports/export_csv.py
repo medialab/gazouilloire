@@ -4,7 +4,8 @@
 import sys
 import csv
 from gazouilloire.database.elasticmanager import ElasticManager, helpers, DB_MAPPINGS
-from gazouilloire.web.export import TWEET_FIELDS
+from twitwi import transform_tweet_into_csv_dict
+from twitwi.constants import TWEET_FIELDS
 from gazouilloire.config_format import log
 
 
@@ -17,17 +18,9 @@ def yield_csv(queryiterator):
                 log.error(t["_id"] + " not found in database")
                 continue
         # ignore tweets only caught on deletion missing most fields
-        if len(source) < 10:
-            continue
-        source["id"] = t["_id"]
-        source["links"] = source.get("proper_links", source.get("links", []))
-        for multiple in ["links", "hashtags", "collected_via", "media_urls", "media_files", "media_types",
-                         "mentioned_names", "mentioned_ids"]:
-            source[multiple] = "|".join(source[multiple])
-        for boolean in ["possibly_sensitive", "user_verified", "match_query"]:
-            source[boolean] = int(source[boolean]) if boolean in source else ''
-
-        yield source
+        if len(source) >= 10:
+            transform_tweet_into_csv_dict(source, tweet_id=t["_id"])
+            yield source
 
 
 def build_body(query, exclude_threads):
