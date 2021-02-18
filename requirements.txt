@@ -1,19 +1,13 @@
-virtualenvwrapper
-pymongo >= 3.0
+idna < 3.0.0
+elasticsearch >= 7.10.1
 twitter >= 1.14.1
-pytz
+twitwi
 requests
 urllib3[secure]
-fake-useragent
-progressbar2
-csvkit
-flask
-Flask-Caching
-flask-compress
-# required for py3.7+
-networkx == 2.2
-future
-ural
-elasticsearch >= 6.0.0, < 7.0.0
+pytz
+psutil
+ural == 0.25.1
 minet >= 0.20.2
+future
 click
+progressbar2
