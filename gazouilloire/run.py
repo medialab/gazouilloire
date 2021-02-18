@@ -99,7 +99,9 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
                 load_pile(os.path.join(pile_dir, f), pile)
         shutil.rmtree(pile_dir)
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
-        log.info("Pile length: " + str(pile.qsize()))
+        pilesize = pile.qsize()
+        if pilesize:
+            log.info("Pile length: " + str(pilesize))
         try:
             while not pile_deleted.empty():
                 todelete = pile_deleted.get()
