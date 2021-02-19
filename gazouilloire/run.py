@@ -39,6 +39,45 @@ from gazouilloire.config_format import load_conf, log
 RESOLVER_BATCH_SIZE = 5000
 
 
+class CustomTwitter(Twitter):
+
+    def __getattr__(self, k):
+
+        if k.startswith('__'):
+            raise AttributeError
+
+        def extend_call(arg):
+            return self.callable_cls(
+                auth=self.auth, format=self.format, domain=self.domain,
+                callable_cls=self.callable_cls, timeout=self.timeout,
+                secure=self.secure, gzip=self.gzip, retry=self.retry,
+                uriparts=self.uriparts + (arg,))
+
+        if k == "_":
+            return extend_call
+        else:
+            return extend_call(k)
+
+
+class CustomTwitterStream(TwitterStream):
+
+    def __getattr__(self, k):
+
+        if k.startswith('__'):
+            raise AttributeError
+
+        def extend_call(arg):
+            return self.callable_cls(
+                auth=self.auth, format=self.format, domain=self.domain,
+                callable_cls=self.callable_cls, timeout=self.timeout,
+                secure=self.secure, gzip=self.gzip, retry=self.retry,
+                uriparts=self.uriparts + (arg,))
+
+        if k == "_":
+            return extend_call
+        else:
+            return extend_call(k)
+
 def get_timestamp(time, locale):
     tim = datetime.strptime(time, '%a %b %d %H:%M:%S +0000 %Y')
     if locale:
@@ -555,11 +594,11 @@ def main(conf):
         sys.exit(1)
     try:
         oauth = OAuth(conf['twitter']['oauth_token'], conf['twitter']['oauth_secret'], conf['twitter']['key'], conf['twitter']['secret'])
-        oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
-        SearchConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
-        SearchConn2 = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth2, secure=True)
-        ResConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
-        StreamConn = TwitterStream(domain="stream.twitter.com", api_version="1.1", auth=oauth, secure=True, block=False, timeout=10)
+        oauth2 = OAuth2(bearer_token=json.loads(CustomTwitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
+        SearchConn = CustomTwitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
+        SearchConn2 = CustomTwitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth2, secure=True)
+        ResConn = CustomTwitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
+        StreamConn = CustomTwitterStream(domain="stream.twitter.com", api_version="1.1", auth=oauth, secure=True, block=False, timeout=10)
     except Exception as e:
         log.error('Could not initiate connections to Twitter API: %s %s' % (type(e), e))
         sys.exit(1)
@@ -587,7 +626,7 @@ def main(conf):
                 log.error('geolocation is wrongly formatted, should be something such as ["Lat1", "Long1", "Lat2", "Long2"]')
                 sys.exit(1)
         else:
-            GeoConn = Twitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
+            GeoConn = CustomTwitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
             res = GeoConn.geo.search(query=conf["geolocation"].replace(" ", "+"), granularity=conf.get("geolocation_type", "admin"), max_results=1)
             try:
                 place = res["result"]["places"][0]
