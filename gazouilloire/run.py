@@ -529,8 +529,9 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
                     log.debug("[search] +%d tweets (%s)" % (news, query))
                 if news < 25:
                     break
-            queries_since_id[query] = since
-            write_search_state(queries_since_id)
+            if not exit_event.is_set():
+                queries_since_id[query] = since
+                write_search_state(queries_since_id)
         breakable_sleep(max(timegap, next_reset - time.time() - 1.5*left), exit_event)
       #TODO: indent 4 spaces
       except KeyboardInterrupt:
