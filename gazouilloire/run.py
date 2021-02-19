@@ -97,6 +97,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
                 load_pile(os.path.join(pile_dir, f), pile_deleted)
             elif f.startswith("pile"):
                 load_pile(os.path.join(pile_dir, f), pile)
+        #TODO: delete pile file in load_pile
         shutil.rmtree(pile_dir)
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         pilesize = pile.qsize()
@@ -131,6 +132,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
             exit_event.set()
             break
         breakable_sleep(2, exit_event)
+    #TODO: move write_pile openation to main process, after all other processes are dead
     write_pile(pile_deleted, [], os.path.join(pile_dir, "pile_deleted"))
     write_pile(pile, todo, os.path.join(pile_dir, "pile"))
     log.info("FINISHED depiler")
@@ -530,6 +532,7 @@ def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, loc
             queries_since_id[query] = since
             write_search_state(queries_since_id)
         breakable_sleep(max(timegap, next_reset - time.time() - 1.5*left), exit_event)
+      #TODO: indent 4 spaces
       except KeyboardInterrupt:
         log.info( "closing searcher...")
         exit_event.set()
