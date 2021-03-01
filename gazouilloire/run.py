@@ -24,7 +24,8 @@ from ssl import SSLError
 import socket
 import requests
 requests.packages.urllib3.disable_warnings()
-from multiprocessing import Process, Queue, Event
+from multiprocessing import Process, Event
+from gazouilloire.internal import Queue
 import signal
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from pytz import timezone, all_timezones
