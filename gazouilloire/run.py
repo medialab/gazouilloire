@@ -25,7 +25,7 @@ import socket
 import requests
 requests.packages.urllib3.disable_warnings()
 from multiprocessing import Process, Event
-from gazouilloire.internal import Queue
+from gazouilloire.multiprocessing import Queue
 import signal
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
 from pytz import timezone, all_timezones
