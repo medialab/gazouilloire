@@ -104,8 +104,11 @@ def status(path):
 @click.option('--port', default=9200)
 @click.option('--batch_size', default=5000)
 @click.option('--verbose/--silent', default=False)
-def resolve(host, port, db_name, batch_size, verbose):
-    resolve_script(batch_size, host, port, db_name, verbose=verbose)
+@click.option('--url_debug/--url_retry', default=False)
+def resolve(host, port, db_name, batch_size, verbose, url_debug):
+    if url_debug:
+        verbose = False
+    resolve_script(batch_size, host, port, db_name, verbose=verbose, url_debug=url_debug)
 
 
 @main.command(help="Export tweets in csv format. Type 'gazou export' to get all collected tweets, or 'gazou export "

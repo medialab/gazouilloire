@@ -34,9 +34,13 @@ def get_domains(url):
     return result
 
 
-def resolve_loop(batch_size, db, todo, skip, verbose):
+def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
     if verbose:
         log.setLevel(logging.DEBUG)
+        if url_debug:
+            fh = logging.FileHandler('url_resolve.log')
+            fh.setLevel(logging.DEBUG)
+            log.addHandler(fh)
     done = 0
     batch_urls = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
     alreadydone = {l["link_id"]: (l["real"], get_domains(l["real"])) for l in db.find_links_in(batch_urls, batch_size)}
@@ -51,6 +55,9 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
     if urls_to_clear:
         links_to_save = []
         log.info("%s urls to resolve" % (len(urls_to_clear)))
+        if url_debug:
+            for url in urls_to_clear:
+                log.info(url)
         try:
             for res in multithreaded_resolve(
                     urls_to_clear,
@@ -67,7 +74,8 @@ def resolve_loop(batch_size, db, todo, skip, verbose):
                 domains = get_domains(normalized_url)
                 if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
                     log.debug("failed to resolve %s: %s (last url: %s)" % (source, res.error, last.url))
-                    continue
+                    if not url_debug:
+                        continue
                     # TODO:
                     #  Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
 

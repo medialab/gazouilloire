@@ -237,13 +237,14 @@ def catchupper(pile, pile_catchup, twitterco, exit_event):
         breakable_sleep(5, exit_event)
     log.info("FINISHED catchupper")
 
-def resolver(batch_size, db_conf, exit_event, verbose=False):
+
+def resolver(batch_size, db_conf, exit_event, verbose=False, url_debug=False):
     db = prepare_db(**db_conf)
     skip = 0
     done = 0
     while not exit_event.is_set():
         todo = count_and_log(db, batch_size, done=done, skip=skip)
-        done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose)
+        done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose, url_debug=url_debug)
         time.sleep(30)
     log.info("FINISHED resolver")
 
