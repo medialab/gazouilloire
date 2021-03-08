@@ -37,10 +37,10 @@ def get_domains(url):
 def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
     if verbose:
         log.setLevel(logging.DEBUG)
-        if url_debug:
-            fh = logging.FileHandler('url_resolve.log')
-            fh.setLevel(logging.DEBUG)
-            log.addHandler(fh)
+    if url_debug:
+        fh = logging.FileHandler('url_resolve.log')
+        fh.setLevel(logging.DEBUG)
+        log.addHandler(fh)
     done = 0
     batch_urls = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
     alreadydone = {l["link_id"]: (l["real"], get_domains(l["real"])) for l in db.find_links_in(batch_urls, batch_size)}
@@ -59,7 +59,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
             for url in urls_to_clear:
                 log.info(url)
         try:
-            for res in multithreaded_resolve(
+            for enum, res in enumerate(multithreaded_resolve(
                     urls_to_clear,
                     threads=min(50, len(urls_to_clear)),
                     throttle=0.2,
@@ -67,7 +67,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
                     insecure=True,
                     timeout=Timeout(connect=10, read=30),
                     follow_meta_refresh=True
-            ):
+            )):
                 source = res.url
                 last = res.stack[-1]
                 normalized_url = custom_normalize_url(last.url)
@@ -87,11 +87,20 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
         except Exception as e:
             log.error("CRASHED with %s (%s) while resolving batch, skipping it for now..." % (e, type(e)))
             log.error("CRASHED with %s (%s) while resolving %s" % (e, type(e), urls_to_clear))
-            skip += batch_size
-            log.info("STORING %s REDIRECTIONS IN ELASTIC" % (len(links_to_save)))
-            if links_to_save:
-                helpers.bulk(db.client, actions=db.prepare_indexing_links(links_to_save))
-            return done, skip
+            if url_debug:
+                current_url = urls_to_clear[enum]
+                normalized_url = custom_normalize_url(current_url)
+                domains = get_domains(normalized_url)
+                links_to_save.append({'link_id': current_url, 'real': normalized_url, 'domains': domains})
+                alreadydone[source] = (normalized_url, domains)
+                if source != normalized_url:
+                    done += 1
+            else:
+                skip += batch_size
+                log.info("STORING %s REDIRECTIONS IN ELASTIC" % (len(links_to_save)))
+                if links_to_save:
+                    helpers.bulk(db.client, actions=db.prepare_indexing_links(links_to_save))
+                return done, skip
 
         log.info("STORING %s REDIRECTIONS IN ELASTIC" % (len(links_to_save)))
         if links_to_save:
