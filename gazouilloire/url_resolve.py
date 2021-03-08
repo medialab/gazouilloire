@@ -59,7 +59,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
             for url in urls_to_clear:
                 log.info(url)
         try:
-            for enum, res in enumerate(multithreaded_resolve(
+            for res in multithreaded_resolve(
                     urls_to_clear,
                     threads=min(50, len(urls_to_clear)),
                     throttle=0.2,
@@ -67,7 +67,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
                     insecure=True,
                     timeout=Timeout(connect=10, read=30),
                     follow_meta_refresh=True
-            )):
+            ):
                 source = res.url
                 last = res.stack[-1]
                 normalized_url = custom_normalize_url(last.url)
@@ -88,13 +88,13 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
             log.error("CRASHED with %s (%s) while resolving batch, skipping it for now..." % (e, type(e)))
             log.error("CRASHED with %s (%s) while resolving %s" % (e, type(e), urls_to_clear))
             if url_debug:
-                current_url = urls_to_clear[enum]
-                normalized_url = custom_normalize_url(current_url)
-                domains = get_domains(normalized_url)
-                links_to_save.append({'link_id': current_url, 'real': normalized_url, 'domains': domains})
-                alreadydone[source] = (normalized_url, domains)
-                if source != normalized_url:
-                    done += 1
+                for url in urls_to_clear:
+                    normalized_url = custom_normalize_url(url)
+                    domains = get_domains(normalized_url)
+                    links_to_save.append({'link_id': url, 'real': normalized_url, 'domains': domains})
+                    alreadydone[url] = (normalized_url, domains)
+                    if url != normalized_url:
+                        done += 1
             else:
                 skip += batch_size
                 log.info("STORING %s REDIRECTIONS IN ELASTIC" % (len(links_to_save)))
