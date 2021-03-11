@@ -8,6 +8,7 @@ from gazouilloire.run import main as main_run
 from gazouilloire.resolving_script import resolve_script
 from gazouilloire.exports.export_csv import export_csv
 from gazouilloire.database.elasticmanager import ElasticManager
+from twitwi.constants import TWEET_FIELDS
 import shutil
 
 CONTEXT_SETTINGS = {
@@ -117,10 +118,23 @@ def resolve(host, port, db_name, batch_size, verbose, url_debug):
     resolve_script(batch_size, host, port, db_name, verbose=verbose, url_debug=url_debug)
 
 
+COLUMN_HELP = '\n'.join('  . %s' % c for c in TWEET_FIELDS)
+
+
+class CommandWithRawEpilog(click.Command):
+    def format_epilog(self, ctx, formatter):
+        if self.epilog:
+            formatter.write_paragraph()
+            for line in self.epilog.split('\n'):
+                formatter.write_text(line)
+
+
 @main.command(help="Export tweets in csv format. Type 'gazou export' to get all collected tweets, or 'gazou export "
-                   "medialab médialab' to get all tweets that contain medialab or médialab")
+                   "medialab médialab' to get all tweets that contain medialab or médialab",
+              epilog="List of available columns/fields:\n%s" % COLUMN_HELP,
+              cls=CommandWithRawEpilog)
 @click.argument('query', nargs=-1)
-@click.option('--columns', '--select', '-c', '-s', help="Names of fields, separated by comma. Usage: gazou export -s "
+@click.option('--columns', '--select', '-c', '-s', help="Names of fields, separated by comma. Check the end of this message to see a full list of available columns. Usage: gazou export -s "
                                                         "id,hashtags,local_time")
 @click.option('--output', '-o', type=click.Path(exists=False), help="File to write the tweets in. By default, "
                                                                     "'export' writes in stdout. Usage: gazou export -o "
