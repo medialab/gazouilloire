@@ -606,8 +606,8 @@ def main(conf):
                 log.error('geolocation is wrongly formatted, should be something such as ["Lat1", "Long1", "Lat2", "Long2"]')
                 sys.exit(1)
         else:
-            GeoConn = CustomTwitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
-            res = GeoConn.geo.search(query=conf["geolocation"].replace(" ", "+"), granularity=conf.get("geolocation_type", "admin"), max_results=1)
+            geoconn, _, _ = instantiate_clients(oauth, oauth2)
+            res = geoconn.geo.search(query=conf["geolocation"].replace(" ", "+"), granularity=conf.get("geolocation_type", "admin"), max_results=1)
             try:
                 place = res["result"]["places"][0]
                 log.info('Limiting tweets search to place "%s" with id "%s"' % (place['full_name'], place['id']))
