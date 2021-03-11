@@ -105,7 +105,7 @@ def status(path):
                   tweets["store.size"].upper(), links["store.size"].upper(), media_size))
 
 
-@main.command(help="Resolve urls contained in a given Elasticsearch database. Usage: 'gazou resolve db_name'")
+@main.command(help="Resolve urls contained in a given Elasticsearch database. Usage: 'gazou resolve'")
 @click.option('--host', default="localhost")
 @click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
                                                                               "be found. By default, looks in the"
@@ -115,11 +115,16 @@ def status(path):
 @click.option('--batch_size', default=5000)
 @click.option('--verbose/--silent', default=False)
 @click.option('--url_debug/--url_retry', default=False)
-def resolve(host, port, path, batch_size, verbose, url_debug):
+@click.option('--db-name', help="Name of the ElasticSearch database containing the tweets. "
+                                "Will take precedence over --path if also given. "
+                                "Usage: gazou resolve --db-name mydb")
+def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
     if url_debug:
         verbose = False
 
-    db_name = load_conf(path)["database"]["db_name"]
+    if db_name is None:
+        db_name = load_conf(path)["database"]["db_name"]
+
     resolve_script(batch_size, host, port, db_name, verbose=verbose, url_debug=url_debug)
 
 
