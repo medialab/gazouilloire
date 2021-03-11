@@ -3,6 +3,7 @@
 *.zip
 *.tmp
 *.bak
+*.egg-info
 *~
 *.log
 .vscode/
