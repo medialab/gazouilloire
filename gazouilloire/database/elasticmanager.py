@@ -87,7 +87,11 @@ class ElasticManager:
         self.host = host
         self.port = port
         self.db_name = db_name.replace(" ", "_")
-        self.client = Elasticsearch(host + ":" + str(port))
+        self.client = Elasticsearch(
+            host + ":" + str(port),
+            retry_on_timeout=True,
+            timeout=30
+        )
         self.tweets = self.db_name + "_tweets"
         if links_index:
             self.links = links_index
