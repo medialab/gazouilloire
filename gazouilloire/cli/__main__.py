@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import click
 import os
+from gazouilloire.__version__ import __version__
 from gazouilloire.config_format import create_conf_example, load_conf, log
 from gazouilloire.daemon import Daemon
 from gazouilloire.run import main as main_run
@@ -9,8 +10,13 @@ from gazouilloire.exports.export_csv import export_csv
 from gazouilloire.database.elasticmanager import ElasticManager
 import shutil
 
+CONTEXT_SETTINGS = {
+    'help_option_names': ['-h', '--help']
+}
 
-@click.group()
+
+@click.group(context_settings=CONTEXT_SETTINGS)
+@click.version_option(version=__version__, message='%(version)s')
 def main():
     pass
 
