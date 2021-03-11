@@ -106,15 +106,20 @@ def status(path):
 
 
 @main.command(help="Resolve urls contained in a given Elasticsearch database. Usage: 'gazou resolve db_name'")
-@click.argument('db_name', required=True, type=str)
 @click.option('--host', default="localhost")
+@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
+                                                                              "be found. By default, looks in the"
+                                                                              "current directory. Usage: gazou resolve "
+                                                                              "-p /path/to/directory/")
 @click.option('--port', default=9200)
 @click.option('--batch_size', default=5000)
 @click.option('--verbose/--silent', default=False)
 @click.option('--url_debug/--url_retry', default=False)
-def resolve(host, port, db_name, batch_size, verbose, url_debug):
+def resolve(host, port, path, batch_size, verbose, url_debug):
     if url_debug:
         verbose = False
+
+    db_name = load_conf(path)["database"]["db_name"]
     resolve_script(batch_size, host, port, db_name, verbose=verbose, url_debug=url_debug)
 
 
