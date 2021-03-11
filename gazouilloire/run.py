@@ -40,44 +40,20 @@ from gazouilloire.config_format import load_conf, log
 RESOLVER_BATCH_SIZE = 5000
 
 
-class CustomTwitter(Twitter):
+def instantiate_clients(oauth, oauth2):
+    common_kwargs = {
+        'domain': 'api.twitter.com',
+        'api_version': '1.1',
+        'format': 'json',
+        'secure': True
+    }
 
-    def __getattr__(self, k):
+    search = Twitter(auth=oauth, **common_kwargs)
+    search2 = Twitter(auth=oauth2, **common_kwargs)
+    stream = TwitterStream(domain="stream.twitter.com", api_version="1.1", auth=oauth, secure=True, block=False, timeout=10)
 
-        if k.startswith('__'):
-            raise AttributeError
+    return search, search2, stream
 
-        def extend_call(arg):
-            return self.callable_cls(
-                auth=self.auth, format=self.format, domain=self.domain,
-                callable_cls=self.callable_cls, timeout=self.timeout,
-                secure=self.secure, gzip=self.gzip, retry=self.retry,
-                uriparts=self.uriparts + (arg,))
-
-        if k == "_":
-            return extend_call
-        else:
-            return extend_call(k)
-
-
-class CustomTwitterStream(TwitterStream):
-
-    def __getattr__(self, k):
-
-        if k.startswith('__'):
-            raise AttributeError
-
-        def extend_call(arg):
-            return self.callable_cls(
-                auth=self.auth, format=self.format, domain=self.domain,
-                callable_cls=self.callable_cls, timeout=self.timeout,
-                secure=self.secure, gzip=self.gzip, retry=self.retry,
-                uriparts=self.uriparts + (arg,))
-
-        if k == "_":
-            return extend_call
-        else:
-            return extend_call(k)
 
 def get_timestamp(time, locale):
     tim = datetime.strptime(time, '%a %b %d %H:%M:%S +0000 %Y')
@@ -215,7 +191,9 @@ def downloader(pile_medias, medias_dir, media_types, exit_event):
 
 # TODO
 # - mark as deleted tweet_ids missing from request result
-def catchupper(pile, pile_catchup, twitterco, exit_event):
+def catchupper(pile, pile_catchup, oauth, oauth2, exit_event):
+    twitterco, _, _ = instantiate_clients(oauth, oauth2)
+
     while not exit_event.is_set() or not pile_catchup.empty():
         todo = []
         while not pile_catchup.empty() and len(todo) < 100:
@@ -270,7 +248,9 @@ re_split_url_pieces = re.compile(r'[^a-z0-9]+', re.I)
 def format_url_query(urlquery):
     return " ".join([k for k in re_split_url_pieces.split(urlquery) if k.strip()])
 
-def streamer(pile, pile_deleted, streamco, resco, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event):
+def streamer(pile, pile_deleted, oauth, oauth2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event):
+    resco, _, streamco = instantiate_clients(oauth, oauth2)
+
     # Stream parameters reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters
     # Stream operators reference: https://developer.twitter.com/en/docs/tweets/rules-and-filtering/overview/standard-operators.html
     # Stream special messages reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/streaming-message-types
@@ -432,7 +412,9 @@ def write_search_state(state):
 # TODO
 # - improve logs : add INFO on result of all queries on a keyword if new
 
-def searcher(pile, searchco, searchco2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event, no_rollback=False):
+def searcher(pile, oauth, oauth2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event, no_rollback=False):
+    searchco, searchco2, _ = instantiate_clients(oauth, oauth2)
+
     # Search operators reference: https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators
     try:
         next_reset, max_per_reset, left = get_twitter_rates(searchco, searchco2, retry=3)
@@ -596,11 +578,7 @@ def main(conf):
         sys.exit(1)
     try:
         oauth = OAuth(conf['twitter']['oauth_token'], conf['twitter']['oauth_secret'], conf['twitter']['key'], conf['twitter']['secret'])
-        oauth2 = OAuth2(bearer_token=json.loads(CustomTwitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
-        SearchConn = CustomTwitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
-        SearchConn2 = CustomTwitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth2, secure=True)
-        ResConn = CustomTwitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
-        StreamConn = CustomTwitterStream(domain="stream.twitter.com", api_version="1.1", auth=oauth, secure=True, block=False, timeout=10)
+        oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
     except Exception as e:
         log.error('Could not initiate connections to Twitter API: %s %s' % (type(e), e))
         sys.exit(1)
@@ -628,8 +606,8 @@ def main(conf):
                 log.error('geolocation is wrongly formatted, should be something such as ["Lat1", "Long1", "Lat2", "Long2"]')
                 sys.exit(1)
         else:
-            GeoConn = CustomTwitter(domain="api.twitter.com", api_version="1.1", format="json", auth=oauth, secure=True)
-            res = GeoConn.geo.search(query=conf["geolocation"].replace(" ", "+"), granularity=conf.get("geolocation_type", "admin"), max_results=1)
+            geoconn, _, _ = instantiate_clients(oauth, oauth2)
+            res = geoconn.geo.search(query=conf["geolocation"].replace(" ", "+"), granularity=conf.get("geolocation_type", "admin"), max_results=1)
             try:
                 place = res["result"]["places"][0]
                 log.info('Limiting tweets search to place "%s" with id "%s"' % (place['full_name'], place['id']))
@@ -660,7 +638,7 @@ def main(conf):
     depile.daemon = True
     depile.start()
     if grab_conversations:
-        catchup = Process(target=catchupper, args=(pile, pile_catchup, ResConn, exit_event))
+        catchup = Process(target=catchupper, args=(pile, pile_catchup, oauth, oauth2, exit_event))
         catchup.daemon = True
         catchup.start()
     if resolve_links:
@@ -672,10 +650,10 @@ def main(conf):
         download.daemon = True
         download.start()
     signal.signal(signal.SIGINT, default_handler)
-    stream = Process(target=streamer, args=(pile, pile_deleted, StreamConn, ResConn, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, streamgeocode, exit_event))
+    stream = Process(target=streamer, args=(pile, pile_deleted, oauth, oauth2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, streamgeocode, exit_event))
     stream.daemon = True
     stream.start()
-    search = Process(target=searcher, args=(pile, SearchConn, SearchConn2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event, no_rollback))
+    search = Process(target=searcher, args=(pile, oauth, oauth2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event, no_rollback))
     search.start()
     def stopper(*args):
         exit_event.set()
