@@ -128,23 +128,10 @@ def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
     resolve_script(batch_size, host, port, db_name, verbose=verbose, url_debug=url_debug)
 
 
-COLUMN_HELP = '\n'.join('  . %s' % c for c in TWEET_FIELDS)
-
-
-class CommandWithRawEpilog(click.Command):
-    def format_epilog(self, ctx, formatter):
-        if self.epilog:
-            formatter.write_paragraph()
-            for line in self.epilog.split('\n'):
-                formatter.write_text(line)
-
-
 @main.command(help="Export tweets in csv format. Type 'gazou export' to get all collected tweets, or 'gazou export "
-                   "medialab médialab' to get all tweets that contain medialab or médialab",
-              epilog="List of available columns/fields:\n%s" % COLUMN_HELP,
-              cls=CommandWithRawEpilog)
+                   "medialab médialab' to get all tweets that contain medialab or médialab")
 @click.argument('query', nargs=-1)
-@click.option('--columns', '--select', '-c', '-s', help="Names of fields, separated by comma. Check the end of this message to see a full list of available columns. Usage: gazou export -s "
+@click.option('--columns', '--select', '-c', '-s', help="Names of fields, separated by comma. Run gazou export --list-fields to see the full list of available fields. Usage: gazou export -s "
                                                         "id,hashtags,local_time")
 @click.option('--output', '-o', type=click.Path(exists=False), help="File to write the tweets in. By default, "
                                                                     "'export' writes in stdout. Usage: gazou export -o "
@@ -161,9 +148,14 @@ class CommandWithRawEpilog(click.Command):
 @click.option('--export_threads_from_file', '-f', type=click.Path(exists=True), help="Take a csv file with tweets ids "
                                                                                      "and return the conversations "
                                                                                      "containing those tweets")
-def export(path, query, exclude_threads, verbose, export_threads_from_file, columns, output):
-    conf = load_conf(path)
-    export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, columns, output)
+@click.option('--list-fields', is_flag=True, help="Print the full list of available fields to export then quit.")
+def export(path, query, exclude_threads, verbose, export_threads_from_file, columns, list_fields, output):
+    if list_fields:
+        for field in TWEET_FIELDS:
+            print(field)
+    else:
+        conf = load_conf(path)
+        export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, columns, output)
 
 
 @main.command(help="Delete collection: es_indices and current search state will be deleted")
