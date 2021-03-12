@@ -12,7 +12,7 @@ Python >= 3.7 compatible.
     pip install gazouilloire
     ```
 
-- Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch#ga-release) (version 7.X)
+- Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch#ga-release), version 7.X (you can also use [Docker](https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html) for this)
 
 - Init gazouilloire collection in a specific directory...
     ```bash
@@ -33,7 +33,7 @@ a `config.json` file is created. Open it to configure the collection parameters.
        "oauth_token": "<Access Token>xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
        "oauth_secret": "<Access Token Secret>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     }
-    
+
     ```
 
 - Write down the list of desired **keywords** and **@users** and/or the list of desired **url_pieces** as json arrays:
@@ -103,8 +103,8 @@ a `config.json` file is created. Open it to configure the collection parameters.
     ```
     gazouilloire status
     ```
-  
-- Gazouilloire stores its current search state in the collection directory. This means that if you restart Gazouilloire, 
+
+- Gazouilloire stores its current search state in the collection directory. This means that if you restart Gazouilloire,
 it will not search
 again for tweets that were already found. If you want a fresh start (e.g. if you modify the query
 terms in config.json), you can reset the search state with:
@@ -113,7 +113,7 @@ terms in config.json), you can reset the search state with:
     gazouilloire reset -i none
     ```
     The `--es_index/-i` option allows you to also remove the links or tweets Elasticsearch indices.
-    To remove only links and search state: 
+    To remove only links and search state:
     ```
     gazouilloire reset -i links
     ```
@@ -143,23 +143,23 @@ terms in config.json), you can reset the search state with:
     ```
 
 - Other available options:
-    ```bash      
+    ```bash
     # Export a csv of all tweets having a specific word in their text:
     gazou export medialab
-    
+
     # Export a csv of all tweets having one of many specific words in their text:
     gazou export medialab digitalhumanities datajournalism '#python'
-  
+
     # Export only a selection of columns:
     gazouilloire export --columns/-c id,user_screen_name,local_time,links
     # or
     gazou export --select/-s id,user_screen_name,local_time,links
     # Other example: export only the text of the tweets:
     gazou export -s text
-    
+
     # Exclude tweets from conversations or from quotes (i.e. that do not match the keywords defined in config.json)
     gazou export --exclude_threads
-    
+
     # Export all tweets matching a specific Elasticsearch term query, for instance by user name:
     gazou export "{'user_screen_name': 'medialab_ScPo'}"
     ```
@@ -169,7 +169,7 @@ terms in config.json), you can reset the search state with:
 - Elasticsearch
 
   - Remember to [set the heap size](https://www.elastic.co/guide/en/elasticsearch/reference/current/heap-size.html) (at 1GB by default) when moving to production. 1GB is fine for indices under 15-20 million tweets, but be sure to set a higher value for heavier corpora.
-  
+
     Set these values here `/etc/elasticsearch/jvm.options` (if you use Elasticsearch as a service) or here `your_installation_folder/config/jvm.options` (if you have a custom installation folder):
     ```
     -Xms2g
