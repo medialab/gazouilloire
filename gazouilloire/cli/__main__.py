@@ -112,9 +112,9 @@ def status(path):
                                                                               "current directory. Usage: gazou resolve "
                                                                               "-p /path/to/directory/")
 @click.option('--port', default=9200)
-@click.option('--batch_size', default=5000)
+@click.option('--batch-size', default=5000)
 @click.option('--verbose/--silent', default=False)
-@click.option('--url_debug/--url_retry', default=False)
+@click.option('--url-debug/--url-retry', default=False)
 @click.option('--db-name', help="Name of the ElasticSearch database containing the tweets. "
                                 "Will take precedence over --path if also given. "
                                 "Usage: gazou resolve --db-name mydb")
@@ -140,12 +140,12 @@ def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
                                                                               "be found. By default, looks in the"
                                                                               "current directory. Usage: gazou export "
                                                                               "-p /path/to/directory/")
-@click.option('--exclude_threads/--include_threads', default=False, help="Exclude tweets from conversations or from "
+@click.option('--exclude-threads/--include-threads', default=False, help="Exclude tweets from conversations or from "
                                                                          "quotes (i.e. that do not match the keywords "
                                                                          "defined in config.json). By default, threads "
                                                                          "are included.")
 @click.option('--verbose/--quiet', default=True, help="Display or hide the progress bar. By default, display.")
-@click.option('--export_threads_from_file', '-f', type=click.Path(exists=True), help="Take a csv file with tweets ids "
+@click.option('--export-threads-from-file', '-f', type=click.Path(exists=True), help="Take a csv file with tweets ids "
                                                                                      "and return the conversations "
                                                                                      "containing those tweets")
 @click.option('--list-fields', is_flag=True, help="Print the full list of available fields to export then quit.")
@@ -163,9 +163,9 @@ def export(path, query, exclude_threads, verbose, export_threads_from_file, colu
                                                                               "be found. By default, looks in the "
                                                                               "current directory. Usage: gazou reset "
                                                                               "-p /path/to/directory/")
-@click.option('--es_index', '-i', type=click.Choice(['none', 'tweets', 'links', 'all'], case_sensitive=False),
+@click.option('--es-index', '-i', type=click.Choice(['none', 'tweets', 'links', 'all'], case_sensitive=False),
               default="all", help="Delete only tweet index / link index")
-@click.option('--preserve_search_state/--remove_search_state', '-s', default=False, help="Preserve current search "
+@click.option('--preserve-search-state/--remove-search-state', '-s', default=False, help="Preserve current search "
                                                                                          "state: gazouilloire will not "
                                                                                          "search for tweets that have "
                                                                                          "been collected in previous "
@@ -173,7 +173,7 @@ def export(path, query, exclude_threads, verbose, export_threads_from_file, colu
                                                                                          "search state: "
                                                                                          "search tweets as far in the "
                                                                                          "past as possible.")
-@click.option('--preserve_media/--remove_media', '-m', default=False, help="Preserve medias folder: photos, videos, "
+@click.option('--preserve-media/--remove-media', '-m', default=False, help="Preserve medias folder: photos, videos, "
                                                                            "etc. will not be erased. By default, "
                                                                            "erase.")
 @click.option('--yes/--no', '-y/-n', default=False, help="Skip confirmation messages")
