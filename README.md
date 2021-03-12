@@ -112,7 +112,7 @@ terms in config.json), you can reset the search state with:
     ```bash
     gazouilloire reset -i none
     ```
-    The `--es_index/-i` option allows you to also remove the links or tweets Elasticsearch indices.
+    The `--es-index/-i` option allows you to also remove the links or tweets Elasticsearch indices.
     To remove only links and search state:
     ```
     gazouilloire reset -i links
@@ -158,7 +158,7 @@ terms in config.json), you can reset the search state with:
     gazou export -s text
 
     # Exclude tweets from conversations or from quotes (i.e. that do not match the keywords defined in config.json)
-    gazou export --exclude_threads
+    gazou export --exclude-threads
 
     # Export all tweets matching a specific Elasticsearch term query, for instance by user name:
     gazou export "{'user_screen_name': 'medialab_ScPo'}"
