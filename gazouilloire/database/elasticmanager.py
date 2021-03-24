@@ -146,7 +146,8 @@ class ElasticManager:
 
     def prepare_indexing_tweets(self, tweets):
         """Yields an indexing action for every tweet of a list. For existing tweets, only some fields are updated."""
-        for t in tweets:
+        for tweet in tweets:
+            t = tweet.copy()
             reply_count = t.get("reply_count", None)
             if reply_count is not None:
                 source = "ctx._source.match_query |= params.match_query; \
