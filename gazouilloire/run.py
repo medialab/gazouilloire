@@ -96,8 +96,8 @@ def prepare_tweets(tweets, locale):
     for tweet in tweets:
         if not isinstance(tweet, dict):
             continue
-        if "_id" not in tweet:
-            for subtweet in normalize_tweet(tweet, locale=locale, id_key='_id', extract_referenced_tweets=True):
+        if "collected_via" not in tweet:
+            for subtweet in normalize_tweet(tweet, locale=locale, extract_referenced_tweets=True):
                 yield subtweet
         else:
             yield tweet
@@ -334,7 +334,7 @@ def streamer(pile, pile_deleted, oauth, oauth2, keywords, urlpieces, timed_keywo
                     continue
                 if msg.get('id_str'):
                     msg["collection_source"] = "stream"
-                    for tweet in normalize_tweet(msg, locale=locale, id_key='_id', extract_referenced_tweets=True):
+                    for tweet in normalize_tweet(msg, locale=locale, extract_referenced_tweets=True):
                         if geocode or (urlpieces and not keywords):
                             tmptext = tweet["text"].lower()
                             keep = False

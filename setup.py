@@ -26,7 +26,7 @@ setup(name='gazouilloire',
       install_requires=[
           "idna < 3.0.0",
           "elasticsearch >= 7.10.1",
-          "twitwi >= 0.5.0",
+          "twitwi >= 0.6.0",
           "requests",
           "pytz",
           "psutil",

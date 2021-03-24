@@ -163,7 +163,7 @@ class ElasticManager:
             yield {
                 '_index': self.tweets,
                 "_op_type": "update",
-                "_id": t.pop("_id"),
+                "_id": t.pop("id"),
                 "script": {
                     "source": source,
                     "lang": "painless",
