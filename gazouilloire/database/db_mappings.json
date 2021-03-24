@@ -1,6 +1,7 @@
 {
   "tweets_mapping": {
     "mappings": {
+      "dynamic": false,
       "properties": {
           "collected_via": {
             "type": "keyword"
