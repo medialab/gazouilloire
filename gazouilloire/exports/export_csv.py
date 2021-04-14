@@ -23,7 +23,7 @@ def yield_csv(queryiterator):
             yield source
 
 
-def build_body(query, exclude_threads):
+def build_body(query, exclude_threads, since=None, until=None):
     body = {
         "query": {
             "bool": {
@@ -34,6 +34,8 @@ def build_body(query, exclude_threads):
     }
     filter = body["query"]["bool"]["filter"]
     exclude_clause = {"term": {"match_query": True}}
+    if exclude_threads:
+        filter.append(exclude_clause)
 
     if len(query) == 1:
         query = query[0]
@@ -47,23 +49,17 @@ def build_body(query, exclude_threads):
             filter.append({"term": query})
         else:
             filter.append({"term": {"text": query.lower()}})
-        if exclude_threads:
-            filter.append(exclude_clause)
 
     elif len(query) > 1:
         filter.append({"bool": {"should": [{"term": {"text": arg.lower()}} for arg in query]}})
-        if exclude_threads:
-            filter.append(exclude_clause)
 
-    elif len(query) == 0:
-        if exclude_threads:
-            filter.append(exclude_clause)
-        else:
-            body = {
-                "query": {
-                    "match_all": {}
-                }
+    elif len(query) == 0 and not exclude_threads:
+        body = {
+            "query": {
+                "match_all": {}
             }
+        }
+        
     return body
 
 
