@@ -133,6 +133,8 @@ def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
 @click.argument('query', nargs=-1)
 @click.option('--columns', '--select', '-c', '-s', help="Names of fields, separated by comma. Run gazou export --list-fields to see the full list of available fields. Usage: gazou export -s "
                                                         "id,hashtags,local_time")
+@click.option('--until', help="Export tweets published strictly before the given date, in isoformat")
+@click.option('--since', help="Export tweets published after the given date (included), in isoformat")
 @click.option('--output', '-o', type=click.Path(exists=False), help="File to write the tweets in. By default, "
                                                                     "'export' writes in stdout. Usage: gazou export -o "
                                                                     "my_tweet_file.csv")
@@ -149,14 +151,16 @@ def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
 @click.option('--export-threads-from-file', '-f', type=click.Path(exists=True), help="Take a csv file with tweets ids "
                                                                                      "and return the conversations "
                                                                                      "containing those tweets")
-@click.option('--list-fields', is_flag=True, help="Print the full list of available fields to export then quit.")
-def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, columns, list_fields, output):
+@click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
+def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, columns, list_fields,
+           output, since, until):
     if list_fields:
         for field in TWEET_FIELDS:
             print(field)
     else:
         conf = load_conf(path)
-        export_csv(conf, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, columns, output)
+        export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
+                   verbose, export_threads_from_file, columns, output)
 
 
 @main.command(help="Delete collection: es_indices and current search state will be deleted")

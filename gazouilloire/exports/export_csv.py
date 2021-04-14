@@ -3,10 +3,15 @@
 
 import sys
 import csv
+from datetime import datetime
 from gazouilloire.database.elasticmanager import ElasticManager, helpers, DB_MAPPINGS
 from twitwi import transform_tweet_into_csv_dict
 from twitwi.constants import TWEET_FIELDS
 from gazouilloire.config_format import log
+
+
+def isodate_to_timestamp(isodate):
+    return str(datetime.fromisoformat(isodate).timestamp())
 
 
 def yield_csv(queryiterator):
@@ -24,48 +29,58 @@ def yield_csv(queryiterator):
 
 
 def build_body(query, exclude_threads, exclude_retweets, since=None, until=None):
-    body = {
-        "query": {
-            "bool": {
-                "filter": [
-                ]
-            }
-        }
-    }
-    filter = body["query"]["bool"]["filter"]
-    exclude_clause = {"term": {"match_query": True}}
-    if exclude_threads:
-        filter.append(exclude_clause)
-    if exclude_retweets:
-        body["query"]["bool"]["must_not"] = {"exists": {"field": "retweeted_id"}}
-
-    if len(query) == 1:
-        query = query[0]
-        if '{' in query:
-            try:
-                query = eval(query)
-            except Exception as e:
-                sys.stderr.write(
-                    "WARNING: query wrongly formatted: %s\n" % query)
-                sys.exit("%s: %s\n" % (type(e), e))
-            filter.append({"term": query})
-        else:
-            filter.append({"term": {"text": query.lower()}})
-
-    elif len(query) > 1:
-        filter.append({"bool": {"should": [{"term": {"text": arg.lower()}} for arg in query]}})
-
-    elif len(query) == 0 and not exclude_threads and not exclude_retweets:
+    if len(query) == 0 and not exclude_threads and not exclude_retweets and not since and not until:
         body = {
             "query": {
                 "match_all": {}
             }
         }
 
+    else:
+        body = {
+            "query": {
+                "bool": {
+                    "filter": [
+                    ]
+                }
+            }
+        }
+        filter = body["query"]["bool"]["filter"]
+        if exclude_threads:
+            filter.append({"term": {"match_query": True}})
+        if exclude_retweets:
+            body["query"]["bool"]["must_not"] = {"exists": {"field": "retweeted_id"}}
+        if since or until:
+            range_clause = {"range": {"timestamp_utc": {}}}
+            if since:
+                range_clause["range"]["timestamp_utc"]["gte"] = isodate_to_timestamp(since)
+            if until:
+                range_clause["range"]["timestamp_utc"]["lt"] = isodate_to_timestamp(until)
+            filter.append(range_clause)
+
+        if len(query) == 1:
+            query = query[0]
+            if '{' in query:
+                try:
+                    query = eval(query)
+                except Exception as e:
+                    sys.stderr.write(
+                        "WARNING: query wrongly formatted: %s\n" % query)
+                    sys.exit("%s: %s\n" % (type(e), e))
+                filter.append({"term": query})
+            else:
+                filter.append({"term": {"text": query.lower()}})
+
+        elif len(query) > 1:
+            filter.append({"bool": {"should": [{"term": {"text": arg.lower()}} for arg in query]}})
+
+
+
     return body
 
 
-def export_csv(conf, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, selection, outputfile):
+def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
+               verbose, export_threads_from_file, selection, outputfile):
     threads = conf.get('grab_conversations', False)
     if selection:
         SELECTION = selection.split(",")
@@ -97,7 +112,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, verbose, export_t
             ids = db.get_thread_ids_from_ids(ids)
         body = ids
     else:
-        body = build_body(query, exclude_threads, exclude_retweets)
+        body = build_body(query, exclude_threads, exclude_retweets, since, until)
 
     if isinstance(body, list):
         count = len(body)
