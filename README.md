@@ -146,6 +146,11 @@ terms in config.json), you can reset the search state with:
     ```bash
     # Export a csv of all tweets having a specific word in their text:
     gazou export medialab
+  
+    # Export a csv of all tweets between 2 dates (the last date is excluded):
+    gazou export --since "2021-03-24T12:00" --until "2021-03-24T13:00"
+    # or
+    gazou export --since "2021-03-24" --until "2021-03-25"
 
     # Export a csv of all tweets having one of many specific words in their text:
     gazou export medialab digitalhumanities datajournalism '#python'
@@ -159,6 +164,9 @@ terms in config.json), you can reset the search state with:
 
     # Exclude tweets from conversations or from quotes (i.e. that do not match the keywords defined in config.json)
     gazou export --exclude-threads
+  
+    # Exclude retweets from the export
+    gazou export --exclude-retweets
 
     # Export all tweets matching a specific Elasticsearch term query, for instance by user name:
     gazou export "{'user_screen_name': 'medialab_ScPo'}"
