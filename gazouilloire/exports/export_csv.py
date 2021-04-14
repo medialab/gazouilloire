@@ -23,7 +23,7 @@ def yield_csv(queryiterator):
             yield source
 
 
-def build_body(query, exclude_threads, since=None, until=None):
+def build_body(query, exclude_threads, exclude_retweets, since=None, until=None):
     body = {
         "query": {
             "bool": {
@@ -36,6 +36,8 @@ def build_body(query, exclude_threads, since=None, until=None):
     exclude_clause = {"term": {"match_query": True}}
     if exclude_threads:
         filter.append(exclude_clause)
+    if exclude_retweets:
+        body["query"]["bool"]["must_not"] = {"exists": {"field": "retweeted_id"}}
 
     if len(query) == 1:
         query = query[0]
@@ -53,17 +55,17 @@ def build_body(query, exclude_threads, since=None, until=None):
     elif len(query) > 1:
         filter.append({"bool": {"should": [{"term": {"text": arg.lower()}} for arg in query]}})
 
-    elif len(query) == 0 and not exclude_threads:
+    elif len(query) == 0 and not exclude_threads and not exclude_retweets:
         body = {
             "query": {
                 "match_all": {}
             }
         }
-        
+
     return body
 
 
-def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, selection, outputfile):
+def export_csv(conf, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, selection, outputfile):
     threads = conf.get('grab_conversations', False)
     if selection:
         SELECTION = selection.split(",")
@@ -95,7 +97,7 @@ def export_csv(conf, query, exclude_threads, verbose, export_threads_from_file, 
             ids = db.get_thread_ids_from_ids(ids)
         body = ids
     else:
-        body = build_body(query, exclude_threads)
+        body = build_body(query, exclude_threads, exclude_retweets)
 
     if isinstance(body, list):
         count = len(body)
