@@ -8,6 +8,8 @@
 *.log
 .vscode/
 backups
+build
+dist
 medias
 logs
 config.py
