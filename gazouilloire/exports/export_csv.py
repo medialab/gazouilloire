@@ -68,7 +68,7 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None)
                         "WARNING: query wrongly formatted: %s\n" % query)
                     sys.exit("%s: %s\n" % (type(e), e))
                 filter.append({"term": query})
-            elif 'AND' in query or 'OR' in query:
+            elif ' AND ' in query or ' OR ' in query:
                 filter.append({
                     "query_string": {
                         "query": query,
@@ -81,7 +81,7 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None)
         elif len(query) > 1:
             filter.append({"bool": {"should": []}})
             for arg in query:
-                if 'AND' in arg or 'OR' in arg:
+                if ' AND ' in arg or ' OR ' in arg:
                     queryarg = {
                         "query_string": {
                             "query": arg,
