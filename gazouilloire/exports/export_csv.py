@@ -156,16 +156,27 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
     file.close()
 
 
-def daily_count(conf, query, exclude_threads, exclude_retweets, since, until, outputfile):
+def increment_steps(start_date, step):
+    return start_date + timedelta(**{step: 1})
+
+
+def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None):
     db = call_database(conf)
     file = open(outputfile, 'w') if outputfile else sys.stdout
     writer = csv.writer(file, quoting=csv.QUOTE_NONE)
-    since_dt = datetime.fromisoformat(since) if since else datetime.now()
-    until_dt = datetime.fromisoformat(until) if until else datetime.now()
-    for i in range((until_dt - since_dt).days + 1):
-        day = (since_dt + timedelta(days=i)).strftime("%Y-%m-%d")
-        end_day = (since_dt + timedelta(days=i+1)).strftime("%Y-%m-%d")
-        body = build_body(query, exclude_threads, exclude_retweets, day, end_day)
+    if step:
+        since_dt = datetime.fromisoformat(since) if since else datetime.now()
+        until_dt = datetime.fromisoformat(until) if until else datetime.now()
+        one_more_step = increment_steps(since_dt, step)
+        while since_dt < until_dt:
+            body = build_body(query, exclude_threads, exclude_retweets, since_dt.isoformat(), one_more_step.isoformat())
+            count = db.client.count(index=db.tweets, body=body)['count']
+            writer.writerow([",".join(query), since_dt, count])
+            since_dt = increment_steps(since_dt, step)
+            one_more_step = increment_steps(since_dt, step)
+    else:
+        body = build_body(query, exclude_threads, exclude_retweets, since, until)
         count = db.client.count(index=db.tweets, body=body)['count']
-        writer.writerow([",".join(query), day, count])
+        writer.writerow([",".join(query), count])
+
     file.close()
