@@ -6,7 +6,7 @@ from gazouilloire.config_format import create_conf_example, load_conf, log
 from gazouilloire.daemon import Daemon
 from gazouilloire.run import main as main_run
 from gazouilloire.resolving_script import resolve_script
-from gazouilloire.exports.export_csv import export_csv, daily_count
+from gazouilloire.exports.export_csv import export_csv, count_by_step
 from gazouilloire.database.elasticmanager import ElasticManager
 from twitwi.constants import TWEET_FIELDS
 import shutil
@@ -167,6 +167,7 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
 @click.argument('query', nargs=-1)
 @click.option('--until', default=None, help="Count tweets published strictly before the given date, in isoformat")
 @click.option('--since', default=None, help="Count tweets published after the given date (included), in isoformat")
+@click.option('--step', type=click.Choice(['seconds', 'minutes', 'hours', 'days', 'months', 'years']))
 @click.option('--output', '-o', type=click.Path(exists=False), help="File to write the report in. By default, "
                                                                     "'count' writes in stdout. Usage: gazou count -o "
                                                                     "my_count_report.csv")
@@ -179,9 +180,9 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
                                                                          "defined in config.json). By default, threads "
                                                                          "are included.")
 @click.option('--exclude-retweets/--include-retweets', default=False, help="Exclude retweets from the counted tweets")
-def count(path, query, exclude_threads, exclude_retweets, output, since, until):
+def count(path, query, exclude_threads, exclude_retweets, output, since, until, step):
     conf = load_conf(path)
-    daily_count(conf, query, exclude_threads, exclude_retweets, since, until, output)
+    count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, output, step)
 
 
 @main.command(help="Delete collection: es_indices and current search state will be deleted")

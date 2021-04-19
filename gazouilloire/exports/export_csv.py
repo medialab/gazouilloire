@@ -164,9 +164,16 @@ def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, 
     db = call_database(conf)
     file = open(outputfile, 'w') if outputfile else sys.stdout
     writer = csv.writer(file, quoting=csv.QUOTE_NONE)
+    
     if step:
-        since_dt = datetime.fromisoformat(since) if since else datetime.now()
         until_dt = datetime.fromisoformat(until) if until else datetime.now()
+        if not since:
+            body = build_body(query, exclude_threads, exclude_retweets)
+            body["sort"] = ["timestamp_utc"]
+            body["size"] = 1
+            first_tweet = db.client.search(body=body, index=db.tweets)["hits"]["hits"][0]["_source"]
+            since = first_tweet["local_time"]
+        since_dt = datetime.fromisoformat(since)
         one_more_step = increment_steps(since_dt, step)
         while since_dt < until_dt:
             body = build_body(query, exclude_threads, exclude_retweets, since_dt.isoformat(), one_more_step.isoformat())
