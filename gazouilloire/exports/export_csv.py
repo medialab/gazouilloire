@@ -3,7 +3,8 @@
 
 import sys
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime
+from dateutil import relativedelta
 from gazouilloire.database.elasticmanager import ElasticManager, helpers, DB_MAPPINGS
 from twitwi import transform_tweet_into_csv_dict
 from twitwi.constants import TWEET_FIELDS
@@ -157,7 +158,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
 
 
 def increment_steps(start_date, step):
-    return start_date + timedelta(**{step: 1})
+    return start_date + relativedelta.relativedelta(**{step: 1})
 
 
 def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None):
