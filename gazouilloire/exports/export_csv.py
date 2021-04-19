@@ -160,7 +160,7 @@ def daily_count(conf, query, exclude_threads, exclude_retweets, since, until, ou
     db = call_database(conf)
     file = open(outputfile, 'w') if outputfile else sys.stdout
     writer = csv.writer(file, quoting=csv.QUOTE_NONE)
-    since_dt = datetime.fromisoformat(since)
+    since_dt = datetime.fromisoformat(since) if since else datetime.now()
     until_dt = datetime.fromisoformat(until) if until else datetime.now()
     for i in range((until_dt - since_dt).days + 1):
         day = (since_dt + timedelta(days=i)).strftime("%Y-%m-%d")
