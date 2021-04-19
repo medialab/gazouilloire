@@ -3,7 +3,7 @@
 
 import sys
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 from gazouilloire.database.elasticmanager import ElasticManager, helpers, DB_MAPPINGS
 from twitwi import transform_tweet_into_csv_dict
 from twitwi.constants import TWEET_FIELDS
@@ -94,6 +94,17 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None)
 
     return body
 
+def call_database(conf):
+    try:
+        db = ElasticManager(**conf['database'])
+        if db.exists(db.tweets):
+            return db
+        else:
+            log.error("Elasticsearch database does not exist")
+            sys.exit(1)
+    except Exception as e:
+        log.error("Could not initiate connection to database: %s %s" % (type(e), e))
+        sys.exit(1)
 
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                verbose, export_threads_from_file, selection, outputfile):
@@ -108,12 +119,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
     else:
         SELECTION = TWEET_FIELDS
 
-    try:
-        db = ElasticManager(**conf['database'])
-        db.prepare_indices()
-    except Exception as e:
-        log.error("Could not initiate connection to database: %s %s" % (type(e), e))
-        sys.exit(1)
+    db = call_database(conf)
 
     if not threads:
         exclude_threads = False
@@ -147,4 +153,19 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
     writer.writeheader()
     for t in iterator:
         writer.writerow(t)
+    file.close()
+
+
+def daily_count(conf, query, exclude_threads, exclude_retweets, since, until, outputfile):
+    db = call_database(conf)
+    file = open(outputfile, 'w') if outputfile else sys.stdout
+    writer = csv.writer(file, quoting=csv.QUOTE_NONE)
+    since_dt = datetime.fromisoformat(since)
+    until_dt = datetime.fromisoformat(until) if until else datetime.now()
+    for i in range((until_dt - since_dt).days + 1):
+        day = (since_dt + timedelta(days=i)).strftime("%Y-%m-%d")
+        end_day = (since_dt + timedelta(days=i+1)).strftime("%Y-%m-%d")
+        body = build_body(query, exclude_threads, exclude_retweets, day, end_day)
+        count = db.client.count(index=db.tweets, body=body)['count']
+        writer.writerow([",".join(query), day, count])
     file.close()
