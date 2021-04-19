@@ -162,23 +162,23 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
         export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                    verbose, export_threads_from_file, columns, output)
 
-@main.command(help="Export tweets in csv format. Type 'gazou export' to get all collected tweets, or 'gazou export "
-                   "medialab médialab' to get all tweets that contain medialab or médialab")
+@main.command(help="Get a report about the number of tweets. Type 'gazou count' to get the number of collected tweets "
+                   "or 'gazou count médialab' to get the number of tweets that contain médialab")
 @click.argument('query', nargs=-1)
-@click.option('--until', help="Export tweets published strictly before the given date, in isoformat")
-@click.option('--since', help="Export tweets published after the given date (included), in isoformat")
-@click.option('--output', '-o', type=click.Path(exists=False), help="File to write the tweets in. By default, "
-                                                                    "'export' writes in stdout. Usage: gazou export -o "
-                                                                    "my_tweet_file.csv")
+@click.option('--until', default=None, help="Count tweets published strictly before the given date, in isoformat")
+@click.option('--since', default=None, help="Count tweets published after the given date (included), in isoformat")
+@click.option('--output', '-o', type=click.Path(exists=False), help="File to write the report in. By default, "
+                                                                    "'count' writes in stdout. Usage: gazou count -o "
+                                                                    "my_count_report.csv")
 @click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
                                                                               "be found. By default, looks in the"
-                                                                              "current directory. Usage: gazou export "
+                                                                              "current directory. Usage: gazou count "
                                                                               "-p /path/to/directory/")
 @click.option('--exclude-threads/--include-threads', default=False, help="Exclude tweets from conversations or from "
                                                                          "quotes (i.e. that do not match the keywords "
                                                                          "defined in config.json). By default, threads "
                                                                          "are included.")
-@click.option('--exclude-retweets/--include-retweets', default=False, help="Exclude retweets from the exported tweets")
+@click.option('--exclude-retweets/--include-retweets', default=False, help="Exclude retweets from the counted tweets")
 def count(path, query, exclude_threads, exclude_retweets, output, since, until):
     conf = load_conf(path)
     daily_count(conf, query, exclude_threads, exclude_retweets, since, until, output)
