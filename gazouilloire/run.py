@@ -84,12 +84,17 @@ def write_pile(pile, todo, filename):
             json.dump(store, f)
 
 
-def load_pile(file, pile):
-    with open(os.path.join("piles",file), "r") as f:
-        tweets = json.load(f)
-        for t in tweets:
-            pile.put(t)
-    log.debug("Loaded {} tweets from {}".format(len(tweets), file))
+def load_pile(path, file_prefix, pile):
+    if os.path.isdir(path):
+        for file_name in os.listdir(path):
+            if file_name.startswith(file_prefix):
+                file_path = os.path.join(path, file_name)
+                with open(file_path, "r") as f:
+                    objects = json.load(f)
+                    for o in objects:
+                        pile.put(o)
+                log.debug("Loaded {} tweets from {}".format(len(objects), file_name))
+                os.remove(file_path)
 
 
 def prepare_tweets(tweets, locale):
@@ -107,14 +112,8 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
     db = ElasticManager(**conf['database'])
     todo = []
     pile_dir = os.path.join(conf["path"], "piles")
-    if os.path.isdir(pile_dir):
-        for f in os.listdir(pile_dir):
-            if f.startswith("pile_deleted"):
-                load_pile(os.path.join(pile_dir, f), pile_deleted)
-            elif f.startswith("pile"):
-                load_pile(os.path.join(pile_dir, f), pile)
-        #TODO: delete pile file in load_pile
-        shutil.rmtree(pile_dir)
+    load_pile(pile_dir, "pile", pile)
+    load_pile(pile_dir, "pile_deleted", pile_deleted)
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         pilesize = pile.qsize()
         if pilesize:
@@ -194,6 +193,7 @@ def downloader(pile_medias, medias_dir, media_types, exit_event):
 def catchupper(pile, pile_catchup, oauth, oauth2, exit_event, conf):
     twitterco, _, _ = instantiate_clients(oauth, oauth2)
     pile_dir = os.path.join(conf["path"], "piles")
+    load_pile(pile_dir, "pile_catchup", pile_catchup)
     todo = []
     while not exit_event.is_set():
         while not pile_catchup.empty() and len(todo) < 100:
