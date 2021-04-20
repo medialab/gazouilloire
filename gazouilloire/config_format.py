@@ -12,7 +12,7 @@ log.setLevel(logging.INFO)
 # create console handler with the lowest log level
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.DEBUG)
-console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+console_handler.setFormatter(logging.Formatter('%(asctime)s - %(process)d - %(levelname)s - %(message)s'))
 log.addHandler(console_handler)
 
 
