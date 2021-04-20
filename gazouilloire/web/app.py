@@ -5,7 +5,7 @@ import os, json, sys, re, time
 from datetime import date, timedelta, datetime
 try:
     from pymongo import MongoClient
-except:
+except ImportError:
     from pymongo import Connection as MongoClient
 from export import export_csv, get_thread_ids_from_query
 from flask import Flask, render_template, request, make_response

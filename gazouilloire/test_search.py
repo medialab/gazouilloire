@@ -20,7 +20,7 @@ except Exception as e:
         'ERROR: Could not initiate connections to Twitter API: %s %s\n' % (type(e), e))
 try:
     locale = timezone(conf['timezone'])
-except:
+except Exception as e:
     sys.stderr.write('ERROR %s' % "\t".join(all_timezones)+"\n\n")
     sys.exit('ERROR: Unknown timezone set in config.json: %s. Please choose one among the above ones.' %
              conf['timezone'])

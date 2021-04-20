@@ -442,7 +442,7 @@ def searcher(pile, oauth, oauth2, keywords, urlpieces, timed_keywords, locale, l
         queries_since_id = read_search_state()
         assert queries_since_id and sorted(state.keys()) == sorted(queries_since_id.keys())
         log.info("Search queries restarting from previous state.")
-    except:
+    except Exception as e:
         queries_since_id = state
 
     timegap = 1 + len(queries)
@@ -507,7 +507,7 @@ def searcher(pile, oauth, oauth2, keywords, urlpieces, timed_keywords, locale, l
                     args['since_id'] = str(queries_since_id[query])
                 try:
                     res = curco.search.tweets(**args)
-                except:
+                except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
                     curco = searchco if curco == searchco2 else searchco2
                     log.info("Switching search connexion to OAuth%s" % (2 if curco == searchco2 else ""))
                     try:
@@ -584,7 +584,7 @@ def main(conf):
         sys.exit(1)
     try:
         locale = timezone(conf['timezone'])
-    except:
+    except Exception as e:
         log.error("\t".join(all_timezones)+"\n\n")
         log.error('Unknown timezone set in config.json: %s. Please choose one among the above ones.' % conf['timezone'])
         sys.exit(1)
