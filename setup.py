@@ -30,7 +30,7 @@ setup(name='gazouilloire',
           "requests",
           "pytz",
           "psutil",
-          "minet >= 0.46.5",
+          "minet >= 0.46.5, < 0.52",
           "future",
           "click",
           "progressbar2"

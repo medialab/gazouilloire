@@ -6,8 +6,8 @@ requests
 urllib3[secure]
 pytz
 psutil
-ural == 0.25.1
-minet >= 0.20.2
+ural == 0.25.1, < 0.30
+minet >= 0.20.2, < 0.52
 future
 click
 progressbar2
