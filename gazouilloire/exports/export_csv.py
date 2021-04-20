@@ -149,7 +149,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         bar = progressbar.ProgressBar(max_value=count)
         iterator = bar(iterator)
 
-    file = open(outputfile, 'w') if outputfile else sys.stdout
+    file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
     writer = csv.DictWriter(file, fieldnames=SELECTION, restval='', quoting=csv.QUOTE_MINIMAL, extrasaction='ignore')
     writer.writeheader()
     for t in iterator:
@@ -163,9 +163,9 @@ def increment_steps(start_date, step):
 
 def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None):
     db = call_database(conf)
-    file = open(outputfile, 'w') if outputfile else sys.stdout
+    file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
     writer = csv.writer(file, quoting=csv.QUOTE_NONE)
-    
+
     if step:
         until_dt = datetime.fromisoformat(until) if until else datetime.now()
         if not since:
