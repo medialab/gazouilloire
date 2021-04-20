@@ -191,14 +191,14 @@ def downloader(pile_medias, medias_dir, media_types, exit_event):
 
 # TODO
 # - mark as deleted tweet_ids missing from request result
-def catchupper(pile, pile_catchup, oauth, oauth2, exit_event):
+def catchupper(pile, pile_catchup, oauth, oauth2, exit_event, conf):
     twitterco, _, _ = instantiate_clients(oauth, oauth2)
-
-    while not exit_event.is_set() or not pile_catchup.empty():
-        todo = []
+    pile_dir = os.path.join(conf["path"], "piles")
+    todo = []
+    while not exit_event.is_set():
         while not pile_catchup.empty() and len(todo) < 100:
             todo.append(pile_catchup.get())
-        if todo:
+        if todo and not exit_event.is_set():
             try:
                 tweets = twitterco.statuses.lookup(_id=",".join(todo), tweet_mode="extended", _method="POST")
             except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
@@ -207,12 +207,14 @@ def catchupper(pile, pile_catchup, oauth, oauth2, exit_event):
                     pile_catchup.put(t)
                 breakable_sleep(10, exit_event)
                 continue
-            if tweets:
+            if tweets and not exit_event.is_set():
                 log.debug("[conversations] +%d tweets" % len(tweets))
-            for t in tweets:
-                t["collection_source"] = "thread"
-                pile.put(dict(t))
+                for t in tweets:
+                    t["collection_source"] = "thread"
+                    pile.put(dict(t))
+            todo = []
         breakable_sleep(5, exit_event)
+    write_pile(pile_catchup, todo, os.path.join(pile_dir, "pile_catchup"))
     log.info("FINISHED catchupper")
 
 
@@ -638,7 +640,7 @@ def main(conf):
     depile.daemon = True
     depile.start()
     if grab_conversations:
-        catchup = Process(target=catchupper, args=(pile, pile_catchup, oauth, oauth2, exit_event))
+        catchup = Process(target=catchupper, args=(pile, pile_catchup, oauth, oauth2, exit_event, conf))
         catchup.daemon = True
         catchup.start()
     if resolve_links:
