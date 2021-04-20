@@ -70,13 +70,13 @@ def breakable_sleep(delay, exit_event):
         time.sleep(1)
 
 
-def write_pile(pile, todo, filename):
+def write_pile(pile, todo, file_prefix):
     store = []
     while not pile.empty():
         store.append(pile.get())
     store.extend(todo)
     if store:
-        path = datetime.strftime(datetime.now(), filename +"_%Y%m%d-%H%M.json")
+        path = datetime.strftime(datetime.now(), file_prefix +"_%Y%m%d-%H%M.json")
         log.info("Save {} tweets to {}".format(len(store), path))
         if not os.path.isdir(os.path.dirname(path)):
             os.mkdir(os.path.dirname(path))
@@ -112,7 +112,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
     db = ElasticManager(**conf['database'])
     todo = []
     pile_dir = os.path.join(conf["path"], "piles")
-    load_pile(pile_dir, "pile", pile)
+    load_pile(pile_dir, "pile_main", pile)
     load_pile(pile_dir, "pile_deleted", pile_deleted)
     while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
         pilesize = pile.qsize()
@@ -149,7 +149,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
         breakable_sleep(2, exit_event)
     #TODO: move write_pile openation to main process, after all other processes are dead
     write_pile(pile_deleted, [], os.path.join(pile_dir, "pile_deleted"))
-    write_pile(pile, todo, os.path.join(pile_dir, "pile"))
+    write_pile(pile, todo, os.path.join(pile_dir, "pile_main"))
     log.info("FINISHED depiler")
 
 def download_media(tweet, media_id, media_url, medias_dir="medias"):
@@ -214,6 +214,7 @@ def catchupper(pile, pile_catchup, oauth, oauth2, exit_event, conf):
                     pile.put(dict(t))
             todo = []
         breakable_sleep(5, exit_event)
+    time.sleep(5)
     write_pile(pile_catchup, todo, os.path.join(pile_dir, "pile_catchup"))
     log.info("FINISHED catchupper")
 
