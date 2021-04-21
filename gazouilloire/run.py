@@ -185,7 +185,7 @@ def downloader(pile_medias, medias_dir, media_types, exit_event):
                 if tweet["media_types"][enum] in media_types:
                     done += download_media(tweet, media_id, tweet["media_urls"][enum], medias_dir)
         if done:
-            log.debug("[medias] +%s files" % done)
+            log.debug("+%s files" % done)
     log.info("FINISHED downloader")
 
 # TODO
@@ -208,7 +208,7 @@ def catchupper(pile, pile_catchup, oauth, oauth2, exit_event, conf):
                 breakable_sleep(10, exit_event)
                 continue
             if tweets and not exit_event.is_set():
-                log.debug("[conversations] +%d tweets" % len(tweets))
+                log.debug("+%d tweets" % len(tweets))
                 for t in tweets:
                     t["collection_source"] = "thread"
                     pile.put(dict(t))
@@ -363,11 +363,11 @@ def streamer(pile, pile_deleted, oauth, oauth2, keywords, urlpieces, timed_keywo
                             if not keep:
                                 continue
                         pile.put(tweet)
-                        log.debug("[stream] +1 tweet")
+                        log.debug("+1 tweet")
                 else:
                     if 'delete' in msg and 'status' in msg['delete'] and 'id_str' in msg['delete']['status']:
                         pile_deleted.put(msg['delete']['status']['id_str'])
-                        log.debug("[stream] -1 tweet (deleted by user)")
+                        log.debug("-1 tweet (deleted by user)")
                     else:
                         log.info("Got special data: %s" % str(msg))
         except (TwitterHTTPError, BadStatusLine, URLError, SSLError, socket.error) as e:
@@ -552,7 +552,7 @@ def searcher(pile, oauth, oauth2, keywords, urlpieces, timed_keywords, locale, l
                     pile.put(dict(tw))
                     news += 1
                 if news:
-                    log.debug("[search] +%d tweets (%s)" % (news, query))
+                    log.debug("+%d tweets (%s)" % (news, query))
                 if news < 25:
                     break
             if not exit_event.is_set():
@@ -637,28 +637,50 @@ def main(conf):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     exit_event = Event()
-    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_event), daemon=True)
+    depile = Process(
+        target=depiler,
+        args=(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_event),
+        daemon=True,
+        name="depiler   "
+    )
     depile.start()
     if grab_conversations:
-        catchup = Process(target=catchupper, args=(pile, pile_catchup, oauth, oauth2, exit_event, conf), daemon=True)
+        catchup = Process(
+            target=catchupper,
+            args=(pile, pile_catchup, oauth, oauth2, exit_event, conf),
+            daemon=True,
+            name="catchupper"
+        )
         catchup.start()
     if resolve_links:
-        resolve = Process(target=resolver, args=(RESOLVER_BATCH_SIZE, conf['database'], exit_event), daemon=True)
+        resolve = Process(
+            target=resolver,
+            args=(RESOLVER_BATCH_SIZE, conf['database'], exit_event),
+            daemon=True,
+            name="resolver  "
+        )
         resolve.start()
     if dl_medias:
-        download = Process(target=downloader, args=(pile_medias, medias_dir, medias_types, exit_event), daemon=True)
+        download = Process(
+            target=downloader,
+            args=(pile_medias, medias_dir, medias_types, exit_event),
+            daemon=True,
+            name="downloader"
+        )
         download.start()
     signal.signal(signal.SIGINT, default_handler)
     stream = Process(
         target=streamer,
         args=(pile, pile_deleted, oauth, oauth2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, streamgeocode, exit_event),
-        daemon=True
+        daemon=True,
+        name="streamer  "
     )
     stream.start()
     search = Process(
         target=searcher,
         args=(pile, oauth, oauth2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event, no_rollback),
-        daemon=True
+        daemon=True,
+        name="searcher  "
     )
     search.start()
     def stopper(*args):

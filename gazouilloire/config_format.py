@@ -6,13 +6,15 @@ import logging
 from datetime import datetime
 import gzip
 
+LOG_FORMAT = '%(asctime)s - %(processName)s [%(process)d] - %(levelname)s - %(message)s'
+
 log = logging.getLogger("gazouilloire")
 log.setLevel(logging.INFO)
 
 # create console handler with the lowest log level
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.DEBUG)
-console_handler.setFormatter(logging.Formatter('%(asctime)s - %(process)d - %(levelname)s - %(message)s'))
+console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
 log.addHandler(console_handler)
 
 
@@ -30,7 +32,7 @@ def create_file_handler(path):
     log.info("Tweets collection logs will print to {}".format(file_path))
     file_handler = logging.FileHandler(file_path)
     file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
     log.addHandler(file_handler)
 
 
