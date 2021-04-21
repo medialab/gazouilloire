@@ -637,26 +637,29 @@ def main(conf):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     exit_event = Event()
-    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_event))
-    depile.daemon = True
+    depile = Process(target=depiler, args=(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_event), daemon=True)
     depile.start()
     if grab_conversations:
-        catchup = Process(target=catchupper, args=(pile, pile_catchup, oauth, oauth2, exit_event, conf))
-        catchup.daemon = True
+        catchup = Process(target=catchupper, args=(pile, pile_catchup, oauth, oauth2, exit_event, conf), daemon=True)
         catchup.start()
     if resolve_links:
-        resolve = Process(target=resolver, args=(RESOLVER_BATCH_SIZE, conf['database'], exit_event))
-        resolve.daemon = True
+        resolve = Process(target=resolver, args=(RESOLVER_BATCH_SIZE, conf['database'], exit_event), daemon=True)
         resolve.start()
     if dl_medias:
-        download = Process(target=downloader, args=(pile_medias, medias_dir, medias_types, exit_event))
-        download.daemon = True
+        download = Process(target=downloader, args=(pile_medias, medias_dir, medias_types, exit_event), daemon=True)
         download.start()
     signal.signal(signal.SIGINT, default_handler)
-    stream = Process(target=streamer, args=(pile, pile_deleted, oauth, oauth2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, streamgeocode, exit_event))
-    stream.daemon = True
+    stream = Process(
+        target=streamer,
+        args=(pile, pile_deleted, oauth, oauth2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, streamgeocode, exit_event),
+        daemon=True
+    )
     stream.start()
-    search = Process(target=searcher, args=(pile, oauth, oauth2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event, no_rollback))
+    search = Process(
+        target=searcher,
+        args=(pile, oauth, oauth2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event, no_rollback),
+        daemon=True
+    )
     search.start()
     def stopper(*args):
         exit_event.set()
