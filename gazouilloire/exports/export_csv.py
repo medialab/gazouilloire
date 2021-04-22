@@ -11,8 +11,8 @@ from twitwi.constants import TWEET_FIELDS
 from gazouilloire.config_format import log
 
 
-def isodate_to_timestamp(isodate):
-    return str(datetime.fromisoformat(isodate).timestamp())
+def date_to_timestamp(date):
+    return str(date.timestamp())
 
 
 def yield_csv(queryiterator):
@@ -54,9 +54,9 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None)
     if since or until:
         range_clause = {"range": {"timestamp_utc": {}}}
         if since:
-            range_clause["range"]["timestamp_utc"]["gte"] = isodate_to_timestamp(since)
+            range_clause["range"]["timestamp_utc"]["gte"] = date_to_timestamp(since)
         if until:
-            range_clause["range"]["timestamp_utc"]["lt"] = isodate_to_timestamp(until)
+            range_clause["range"]["timestamp_utc"]["lt"] = date_to_timestamp(until)
         filter.append(range_clause)
 
     if len(query) == 1:
@@ -169,21 +169,21 @@ def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, 
     writer = csv.writer(file, quoting=csv.QUOTE_NONE)
 
     if step:
-        until_dt = datetime.fromisoformat(until) if until else datetime.now()
+        if not until:
+            until = datetime.now()
         if not since:
             body = build_body(query, exclude_threads, exclude_retweets)
             body["sort"] = ["timestamp_utc"]
             body["size"] = 1
             first_tweet = db.client.search(body=body, index=db.tweets)["hits"]["hits"][0]["_source"]
-            since = first_tweet["local_time"]
-        since_dt = datetime.fromisoformat(since)
-        one_more_step = increment_steps(since_dt, step)
-        while since_dt < until_dt:
-            body = build_body(query, exclude_threads, exclude_retweets, since_dt.isoformat(), one_more_step.isoformat())
+            since = datetime.fromtimestamp(first_tweet["timestamp_utc"])
+        one_more_step = increment_steps(since, step)
+        while since < until:
+            body = build_body(query, exclude_threads, exclude_retweets, since, one_more_step)
             count = db.client.count(index=db.tweets, body=body)['count']
-            writer.writerow([",".join(query), since_dt, count])
-            since_dt = increment_steps(since_dt, step)
-            one_more_step = increment_steps(since_dt, step)
+            writer.writerow([",".join(query), since, count])
+            since = increment_steps(since, step)
+            one_more_step = increment_steps(since, step)
     else:
         body = build_body(query, exclude_threads, exclude_retweets, since, until)
         count = db.client.count(index=db.tweets, body=body)['count']

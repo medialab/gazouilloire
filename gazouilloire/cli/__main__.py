@@ -131,10 +131,13 @@ def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
 @main.command(help="Export tweets in csv format. Type 'gazou export' to get all collected tweets, or 'gazou export "
                    "medialab médialab' to get all tweets that contain medialab or médialab")
 @click.argument('query', nargs=-1)
-@click.option('--columns', '--select', '-c', '-s', help="Names of fields, separated by comma. Run gazou export --list-fields to see the full list of available fields. Usage: gazou export -s "
-                                                        "id,hashtags,local_time")
-@click.option('--until', help="Export tweets published strictly before the given date, in isoformat")
-@click.option('--since', help="Export tweets published after the given date (included), in isoformat")
+@click.option('--columns', '--select', '-c', '-s', help="Names of fields, separated by comma. Run gazou export "
+                                                        "--list-fields to see the full list of available fields. "
+                                                        "Usage: gazou export -s id,hashtags,local_time")
+@click.option('--until', type=click.DateTime(), help="Export tweets published strictly before the given date, "
+                                                     "in isoformat")
+@click.option('--since', type=click.DateTime(), help="Export tweets published after the given date (included), "
+                                                     "in isoformat")
 @click.option('--output', '-o', type=click.Path(exists=False), help="File to write the tweets in. By default, "
                                                                     "'export' writes in stdout. Usage: gazou export -o "
                                                                     "my_tweet_file.csv")
@@ -165,8 +168,10 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
 @main.command(help="Get a report about the number of tweets. Type 'gazou count' to get the number of collected tweets "
                    "or 'gazou count médialab' to get the number of tweets that contain médialab")
 @click.argument('query', nargs=-1)
-@click.option('--until', default=None, help="Count tweets published strictly before the given date, in isoformat")
-@click.option('--since', default=None, help="Count tweets published after the given date (included), in isoformat")
+@click.option('--until', type=click.DateTime(), help="Count tweets published strictly before the given "
+                                                                   "date, in isoformat")
+@click.option('--since', type=click.DateTime(), help="Count tweets published after the given date "
+                                                                   "(included), in isoformat")
 @click.option('--step', type=click.Choice(['seconds', 'minutes', 'hours', 'days', 'months', 'years']))
 @click.option('--output', '-o', type=click.Path(exists=False), help="File to write the report in. By default, "
                                                                     "'count' writes in stdout. Usage: gazou count -o "
