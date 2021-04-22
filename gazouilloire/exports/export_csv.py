@@ -36,64 +36,65 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None)
                 "match_all": {}
             }
         }
+        return body
 
-    else:
-        body = {
-            "query": {
-                "bool": {
-                    "filter": [
-                    ]
-                }
+    body = {
+        "query": {
+            "bool": {
+                "filter": [
+                ]
             }
         }
-        filter = body["query"]["bool"]["filter"]
-        if exclude_threads:
-            filter.append({"term": {"match_query": True}})
-        if exclude_retweets:
-            body["query"]["bool"]["must_not"] = {"exists": {"field": "retweeted_id"}}
-        if since or until:
-            range_clause = {"range": {"timestamp_utc": {}}}
-            if since:
-                range_clause["range"]["timestamp_utc"]["gte"] = isodate_to_timestamp(since)
-            if until:
-                range_clause["range"]["timestamp_utc"]["lt"] = isodate_to_timestamp(until)
-            filter.append(range_clause)
+    }
+    filter = body["query"]["bool"]["filter"]
+    if exclude_threads:
+        filter.append({"term": {"match_query": True}})
+    if exclude_retweets:
+        body["query"]["bool"]["must_not"] = {"exists": {"field": "retweeted_id"}}
+    if since or until:
+        range_clause = {"range": {"timestamp_utc": {}}}
+        if since:
+            range_clause["range"]["timestamp_utc"]["gte"] = isodate_to_timestamp(since)
+        if until:
+            range_clause["range"]["timestamp_utc"]["lt"] = isodate_to_timestamp(until)
+        filter.append(range_clause)
 
-        if len(query) == 1:
-            query = query[0]
-            if '{' in query:
-                try:
-                    query = eval(query)
-                except Exception as e:
-                    sys.stderr.write(
-                        "WARNING: query wrongly formatted: %s\n" % query)
-                    sys.exit("%s: %s\n" % (type(e), e))
-                filter.append({"term": query})
-            elif ' AND ' in query or ' OR ' in query:
-                filter.append({
+    if len(query) == 1:
+        query = query[0]
+        if '{' in query:
+            try:
+                query = eval(query)
+            except Exception as e:
+                sys.stderr.write(
+                    "WARNING: query wrongly formatted: %s\n" % query)
+                sys.exit("%s: %s\n" % (type(e), e))
+            filter.append({"term": query})
+        elif ' AND ' in query or ' OR ' in query:
+            filter.append({
+                "query_string": {
+                    "query": query,
+                    "default_field": "text"
+                }
+            })
+        else:
+            filter.append({"term": {"text": query.lower()}})
+
+    elif len(query) > 1:
+        filter.append({"bool": {"should": []}})
+        for arg in query:
+            if ' AND ' in arg or ' OR ' in arg:
+                queryarg = {
                     "query_string": {
-                        "query": query,
+                        "query": arg,
                         "default_field": "text"
                     }
-                })
+                }
             else:
-                filter.append({"term": {"text": query.lower()}})
-
-        elif len(query) > 1:
-            filter.append({"bool": {"should": []}})
-            for arg in query:
-                if ' AND ' in arg or ' OR ' in arg:
-                    queryarg = {
-                        "query_string": {
-                            "query": arg,
-                            "default_field": "text"
-                        }
-                    }
-                else:
-                    queryarg = {"term": {"text": arg.lower()}}
-                filter[-1]["bool"]["should"].append(queryarg)
+                queryarg = {"term": {"text": arg.lower()}}
+            filter[-1]["bool"]["should"].append(queryarg)
 
     return body
+
 
 def call_database(conf):
     try:
@@ -106,6 +107,7 @@ def call_database(conf):
     except Exception as e:
         log.error("Could not initiate connection to database: %s %s" % (type(e), e))
         sys.exit(1)
+
 
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                verbose, export_threads_from_file, selection, outputfile):
