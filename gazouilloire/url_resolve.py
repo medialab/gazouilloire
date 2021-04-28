@@ -61,7 +61,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
         try:
             for res in multithreaded_resolve(
                     urls_to_clear,
-                    threads=min(50, len(urls_to_clear)),
+                    threads=50,
                     throttle=0.2,
                     max_redirects=20,
                     insecure=True,

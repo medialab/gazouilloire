@@ -1,4 +1,3 @@
-idna < 3.0.0
 elasticsearch >= 7.10.1
 twitter >= 1.14.1
 twitwi
@@ -6,8 +5,8 @@ requests
 urllib3[secure]
 pytz
 psutil
-ural == 0.25.1, < 0.30
-minet >= 0.20.2, < 0.52
+ural >= 0.30, < 0.31
+minet >= 0.52.1, < 0.53
 future
 click
 progressbar2
