@@ -166,7 +166,7 @@ def increment_steps(start_date, step):
 def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None):
     db = call_database(conf)
     file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
-    writer = csv.writer(file, quoting=csv.QUOTE_NONE)
+    writer = csv.writer(file)
 
     if step:
         if not until:
