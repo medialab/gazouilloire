@@ -181,12 +181,12 @@ def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, 
         while since < until:
             body = build_body(query, exclude_threads, exclude_retweets, since, one_more_step)
             count = db.client.count(index=db.tweets, body=body)['count']
-            writer.writerow([",".join(query), since, count])
+            writer.writerow([",".join(query), since, count] if query else [since, count])
             since = increment_steps(since, step)
             one_more_step = increment_steps(since, step)
     else:
         body = build_body(query, exclude_threads, exclude_retweets, since, until)
         count = db.client.count(index=db.tweets, body=body)['count']
-        writer.writerow([",".join(query), count])
+        writer.writerow([",".join(query), count] if query else [count])
 
     file.close()
