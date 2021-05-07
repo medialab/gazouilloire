@@ -6,8 +6,7 @@ import csv
 from datetime import datetime
 from dateutil import relativedelta
 from gazouilloire.database.elasticmanager import ElasticManager, helpers, DB_MAPPINGS
-from twitwi import transform_tweet_into_csv_dict
-from twitwi.constants import TWEET_FIELDS
+from twitwi import transform_tweet_into_csv_dict, TWEET_FIELDS, FORMATTED_TWEET_DATETIME_FORMAT
 from gazouilloire.config_format import log
 
 

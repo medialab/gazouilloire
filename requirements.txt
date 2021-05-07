@@ -1,6 +1,6 @@
 elasticsearch >= 7.10.1
 twitter >= 1.14.1
-twitwi
+twitwi >= 0.7.2
 requests
 urllib3[secure]
 pytz
