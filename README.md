@@ -170,6 +170,9 @@ terms in config.json), you can reset the search state with:
 
     # Export all tweets matching a specific Elasticsearch term query, for instance by user name:
     gazou export "{'user_screen_name': 'medialab_ScPo'}"
+  
+    # Take a csv file with an "id" column and return all tweets matching these ids:
+    gazou export --export-tweets-from-file yourfile.csv
     ```
 
 ## Troubleshooting
