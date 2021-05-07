@@ -151,19 +151,21 @@ def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
                                                                          "are included.")
 @click.option('--exclude-retweets/--include-retweets', default=False, help="Exclude retweets from the exported tweets")
 @click.option('--verbose/--quiet', default=True, help="Display or hide the progress bar. By default, display.")
+@click.option('--export-tweets-from-file', '-f', type=click.Path(exists=True), help="Take a csv file with tweets ids "
+                                                                                    "and return those tweets")
 @click.option('--export-threads-from-file', '-f', type=click.Path(exists=True), help="Take a csv file with tweets ids "
                                                                                      "and return the conversations "
                                                                                      "containing those tweets")
 @click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
-def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, columns, list_fields,
-           output, since, until):
+def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
+           columns, list_fields, output, since, until):
     if list_fields:
         for field in TWEET_FIELDS:
             print(field)
     else:
         conf = load_conf(path)
         export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-                   verbose, export_threads_from_file, columns, output)
+                   verbose, export_threads_from_file, export_tweets_from_file, columns, output)
 
 @main.command(help="Get a report about the number of tweets. Type 'gazou count' to get the number of collected tweets "
                    "or 'gazou count médialab' to get the number of tweets that contain médialab")

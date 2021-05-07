@@ -109,7 +109,7 @@ def call_database(conf):
 
 
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-               verbose, export_threads_from_file, selection, outputfile):
+               verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile):
     threads = conf.get('grab_conversations', False)
     if selection:
         SELECTION = selection.split(",")
@@ -135,6 +135,14 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                           for t in csv.DictReader(f)])
             ids = db.get_thread_ids_from_ids(ids)
         body = ids
+
+    if export_tweets_from_file:
+        if len(query) > 0:
+            log.error("--export_tweets_from_file option is not compatible with a keyword query")
+            sys.exit(1)
+        with open(export_tweets_from_file) as f:
+            body = sorted([t.get("id", t.get("_id")) for t in csv.DictReader(f)])
+
     else:
         body = build_body(query, exclude_threads, exclude_retweets, since, until)
 
