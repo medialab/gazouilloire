@@ -581,7 +581,10 @@ def main(conf):
         sys.exit(1)
     try:
         oauth = OAuth(conf['twitter']['oauth_token'], conf['twitter']['oauth_secret'], conf['twitter']['key'], conf['twitter']['secret'])
-        oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
+        if "bearer_token" in conf['twitter']:
+            oauth2 = OAuth2(bearer_token=conf['twitter']['bearer_token'])
+        else:
+            oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
     except Exception as e:
         log.error('Could not initiate connections to Twitter API: %s %s' % (type(e), e))
         sys.exit(1)
