@@ -11,11 +11,13 @@ from gazouilloire.database.elasticmanager import ElasticManager
 from elasticsearch import exceptions
 from twitwi.constants import TWEET_FIELDS
 import shutil
+import sys
 
 CONTEXT_SETTINGS = {
     'help_option_names': ['-h', '--help']
 }
 
+PRESERVE_FROM_RESET = {"tweets", "links", "logs", "piles", "search_state", "media"}
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(version=__version__, message='%(version)s')
@@ -101,7 +103,7 @@ def status(path):
     except exceptions.ConnectionError:
         log.error("Connection to Elasticsearch failed. Is Elasticsearch started?")
         return
-    media_path = os.path.join(path, "medias")
+    media_path = os.path.join(path, "media")
     media_count = 0
     media_size = 0
     if os.path.isdir(media_path):
@@ -202,53 +204,61 @@ def count(path, query, exclude_threads, exclude_retweets, output, since, until, 
     conf = load_conf(path)
     count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, output, step)
 
+def check_valid_reset_option(element_list):
+    element_list = element_list.split(",")
+    for e in element_list:
+        if e not in PRESERVE_FROM_RESET:
+            log.error("{} is not an existing option. Elements should be one of the following:".format(e))
+            for valid in PRESERVE_FROM_RESET:
+                print(valid)
+            sys.exit(1)
+    return element_list
 
 @main.command(help="Delete collection: es_indices and current search state will be deleted")
 @click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
                                                                               "be found. By default, looks in the "
                                                                               "current directory. Usage: gazou reset "
                                                                               "-p /path/to/directory/")
-@click.option('--es-index', '-i', type=click.Choice(['none', 'tweets', 'links', 'all'], case_sensitive=False),
-              default="all", help="Delete only tweet index / link index")
-@click.option('--preserve-search-state/--remove-search-state', '-s', default=False, help="Preserve current search "
-                                                                                         "state: gazouilloire will not "
-                                                                                         "search for tweets that have "
-                                                                                         "been collected in previous "
-                                                                                         "runs. By default, remove "
-                                                                                         "search state: "
-                                                                                         "search tweets as far in the "
-                                                                                         "past as possible.")
-@click.option('--preserve-media/--remove-media', '-m', default=False, help="Preserve medias folder: photos, videos, "
-                                                                           "etc. will not be erased. By default, "
-                                                                           "erase.")
+@click.option('--preserve', '-p', help="Erase everything except these elements, separated by comma. Possible values:"
+                                       "tweets,links,logs,piles,search_state,media")
+@click.option('--only', '-p', help="Erase only these elements, separated by comma. Possible values:"
+                                       "tweets,links,logs,piles,search_state,media")
 @click.option('--yes/--no', '-y/-n', default=False, help="Skip confirmation messages")
-def reset(path, es_index, yes, preserve_search_state, preserve_media):
+def reset(path, yes, preserve, only):
     conf = load_conf(path)["database"]
     db_name = conf["db_name"]
+    if preserve and only:
+        log.error("--preserve and --only cannot be used simultaneously")
+        return
+    if preserve:
+        preserve = set(check_valid_reset_option(preserve))
+    elif only:
+        only = set(check_valid_reset_option(only))
+        preserve = PRESERVE_FROM_RESET - only
+    else:
+        preserve = {}
+
     if not yes:
         click.confirm("Are you sure you want to reset {}?".format(db_name), abort=True)
-    es_index = es_index.lower()
     es = ElasticManager(conf["host"], conf["port"], db_name)
-    if es_index == "tweets" or es_index == "all":
-        confirm_delete_index(es, db_name, "tweets", yes)
-    if es_index == "links" or es_index == "all":
-        confirm_delete_index(es, db_name, "links", yes)
-    if not preserve_search_state:
-        if not yes:
-            if click.confirm(".search_state.json will be erased, do you want to continue ?"):
-                try:
-                    os.remove(os.path.join(path, ".search_state.json"))
-                    log.info(".search_state.json successfully erased.")
-                except FileNotFoundError:
-                    log.warning(".search_state.json does not exist and could not be erased.")
-    if not preserve_media:
-        if not yes:
-            click.confirm("medias folder will be erased, do you want to continue ?", abort=True)
+    for index in ["tweets", "links"]:
+        if index not in preserve:
+            confirm_delete_index(es, db_name, index, yes)
+    if "search_state" not in preserve:
+        if yes or click.confirm(".search_state.json will be erased, do you want to continue ?"):
             try:
-                shutil.rmtree(os.path.join(path, "medias"))
-                log.info("medias folder successfully erased.")
+                os.remove(os.path.join(path, ".search_state.json"))
+                log.info(".search_state.json successfully erased.")
             except FileNotFoundError:
-                log.warning("medias folder does not exist and could not be erased.")
+                log.warning(".search_state.json does not exist and could not be erased.")
+    for folder in ["media", "logs", "piles"]:
+        if folder not in preserve:
+            if yes or click.confirm("{} folder will be erased, do you want to continue ?".format(folder)):
+                try:
+                    shutil.rmtree(os.path.join(path, folder))
+                    log.info("{} folder successfully erased.".format(folder))
+                except FileNotFoundError:
+                    log.warning("{} folder does not exist and could not be erased.".format(folder))
 
 
 def confirm_delete_index(es, db_name, doc_type, yes):
