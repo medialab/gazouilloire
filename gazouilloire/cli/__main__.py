@@ -88,22 +88,22 @@ def sizeof_fmt(num, suffix='B'):
 @main.command(help="Get current status.")
 @click.argument('path', type=click.Path(exists=True), default=".")
 def status(path):
-    conf = load_conf(path)["database"]
+    conf = load_conf(path)
     running = "running" if os.path.exists(os.path.join(path, ".lock")) else "not running"
-    es = ElasticManager(conf["host"], conf["port"], conf["db_name"])
+    es = ElasticManager(conf["database"]["host"], conf["database"]["port"], conf["database"]["db_name"])
     try:
         tweets = es.client.cat.indices(index=es.tweets, format="json")[0]
         links = es.client.cat.indices(index=es.links, format="json")[0]
     except exceptions.NotFoundError:
         log.error(
             "{} does not exist in Elasticsearch. Try 'gazou run' or 'gazou start' " \
-            "to start the collection.".format(conf["db_name"])
+            "to start the collection.".format(conf["database"]["db_name"])
         )
         return
     except exceptions.ConnectionError:
         log.error("Connection to Elasticsearch failed. Is Elasticsearch started?")
         return
-    media_path = os.path.join(path, "media")
+    media_path = os.path.join(path, conf.get("media_directory", "media"))
     media_count = 0
     media_size = 0
     if os.path.isdir(media_path):
@@ -114,7 +114,7 @@ def status(path):
     media_size = sizeof_fmt(media_size)
     print("name: {}\nstatus: {}\ntweets: {}\nlinks: {}\nmedia: {}\ndisk space tweets: {}\n"
           "disk space links: {}\ndisk space media: {}"
-          .format(conf["db_name"], running, tweets["docs.count"], links["docs.count"], media_count,
+          .format(conf["database"]["db_name"], running, tweets["docs.count"], links["docs.count"], media_count,
                   tweets["store.size"].upper(), links["store.size"].upper(), media_size))
 
 
@@ -225,8 +225,8 @@ def check_valid_reset_option(element_list):
                                        "tweets,links,logs,piles,search_state,media")
 @click.option('--yes/--no', '-y/-n', default=False, help="Skip confirmation messages")
 def reset(path, yes, preserve, only):
-    conf = load_conf(path)["database"]
-    db_name = conf["db_name"]
+    conf = load_conf(path)
+    db_name = conf["database"]["db_name"]
     if preserve and only:
         log.error("--preserve and --only cannot be used simultaneously")
         return
@@ -240,7 +240,7 @@ def reset(path, yes, preserve, only):
 
     if not yes:
         click.confirm("Are you sure you want to reset {}?".format(db_name), abort=True)
-    es = ElasticManager(conf["host"], conf["port"], db_name)
+    es = ElasticManager(conf["database"]["host"], conf["database"]["port"], db_name)
     for index in ["tweets", "links"]:
         if index not in preserve:
             confirm_delete_index(es, db_name, index, yes)
@@ -253,6 +253,8 @@ def reset(path, yes, preserve, only):
                 log.warning(".search_state.json does not exist and could not be erased.")
     for folder in ["media", "logs", "piles"]:
         if folder not in preserve:
+            if folder == "media":
+                folder = conf.get("media_directory", "media")
             if yes or click.confirm("{} folder will be erased, do you want to continue ?".format(folder)):
                 try:
                     shutil.rmtree(os.path.join(path, folder))
