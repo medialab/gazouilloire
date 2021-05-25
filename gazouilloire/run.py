@@ -108,7 +108,7 @@ def prepare_tweets(tweets, locale):
             yield tweet
 
 
-def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_event):
+def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_event):
     db = ElasticManager(**conf['database'])
     todo = []
     pile_dir = os.path.join(conf["path"], "piles")
@@ -127,8 +127,8 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
                 todo.append(pile.get())
             tweets_bulk = []
             for t in prepare_tweets(todo, locale):
-                if pile_medias and t["media_files"]:
-                    pile_medias.put(t)
+                if pile_media and t["media_files"]:
+                    pile_media.put(t)
                 if pile_catchup and t["to_tweetid"]:
                     if not db.find_tweet(t["to_tweetid"]):
                         pile_catchup.put(t["to_tweetid"])
@@ -152,8 +152,9 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_ev
     write_pile(pile, todo, os.path.join(pile_dir, "pile_main"))
     log.info("FINISHED depiler")
 
-def download_media(tweet, media_id, media_url, medias_dir="medias"):
-    subdir = os.path.join(medias_dir, media_id.split('_')[0][:-15])
+
+def download_media(tweet, media_id, media_url, media_dir="media"):
+    subdir = os.path.join(media_dir, media_id.split('_')[0][:-15])
     if not os.path.exists(subdir):
         os.makedirs(subdir)
     filepath = os.path.join(subdir, media_id)
@@ -171,11 +172,11 @@ def download_media(tweet, media_id, media_url, medias_dir="medias"):
         return 0
 
 
-def downloader(pile_medias, medias_dir, media_types, exit_event):
-    while not exit_event.is_set() or not pile_medias.empty():
+def downloader(pile_media, media_dir, media_types, exit_event):
+    while not exit_event.is_set() or not pile_media.empty():
         todo = []
-        while not pile_medias.empty():
-            todo.append(pile_medias.get())
+        while not pile_media.empty():
+            todo.append(pile_media.get())
         if not todo:
             breakable_sleep(2, exit_event)
             continue
@@ -183,7 +184,7 @@ def downloader(pile_medias, medias_dir, media_types, exit_event):
         for tweet in todo:
             for enum, media_id in enumerate(tweet["media_files"]):
                 if tweet["media_types"][enum] in media_types:
-                    done += download_media(tweet, media_id, tweet["media_urls"][enum], medias_dir)
+                    done += download_media(tweet, media_id, tweet["media_urls"][enum], media_dir)
         if done:
             log.debug("+%s files" % done)
     log.info("FINISHED downloader")
@@ -626,23 +627,23 @@ def main(conf):
     grab_conversations = "grab_conversations" in conf and conf["grab_conversations"]
     resolve_links = "resolve_redirected_links" in conf and conf["resolve_redirected_links"]
     no_rollback = "catchup_past_week" not in conf or not conf["catchup_past_week"]
-    dl_medias = "download_medias" in conf and conf["download_medias"] and any(conf["download_medias"].values())
-    if dl_medias:
-        medias_types = set([k for k in conf["download_medias"] if conf["download_medias"][k]])
-        medias_dir = conf.get("medias_directory", "medias")
-        if not os.path.exists(medias_dir):
-            os.makedirs(medias_dir)
+    dl_media = "download_media" in conf and conf["download_media"] and any(conf["download_media"].values())
+    if dl_media:
+        media_types = set([k for k in conf["download_media"] if conf["download_media"][k]])
+        media_dir = conf.get("media_directory", "media")
+        if not os.path.exists(media_dir):
+            os.makedirs(media_dir)
     pile = Queue()
     pile_deleted = Queue()
     pile_catchup = Queue() if grab_conversations else None
-    pile_medias = Queue() if dl_medias else None
+    pile_media = Queue() if dl_media else None
     default_handler = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     exit_event = Event()
     depile = Process(
         target=depiler,
-        args=(pile, pile_deleted, pile_catchup, pile_medias, conf, locale, exit_event),
+        args=(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_event),
         daemon=True,
         name="depiler   "
     )
@@ -663,10 +664,10 @@ def main(conf):
             name="resolver  "
         )
         resolve.start()
-    if dl_medias:
+    if dl_media:
         download = Process(
             target=downloader,
-            args=(pile_medias, medias_dir, medias_types, exit_event),
+            args=(pile_media, media_dir, media_types, exit_event),
             daemon=True,
             name="downloader"
         )

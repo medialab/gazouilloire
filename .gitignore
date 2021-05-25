@@ -10,7 +10,7 @@
 backups
 build
 dist
-medias
+media
 logs
 config.py
 config.json

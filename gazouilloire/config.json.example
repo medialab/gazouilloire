@@ -21,12 +21,12 @@
     "resolve_redirected_links": true,
     "grab_conversations": false,
     "catchup_past_week": true,
-    "download_medias": {
+    "download_media": {
         "photos": false,
         "videos": false,
         "animated_gifs": false
     },
-    "medias_directory": "medias",
+    "media_directory": "media",
     "timezone": "Europe/Paris",
     "verbose": false
 }
