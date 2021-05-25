@@ -245,22 +245,25 @@ def reset(path, yes, preserve, only):
         if index not in preserve:
             confirm_delete_index(es, db_name, index, yes)
     if "search_state" not in preserve:
-        if yes or click.confirm(".search_state.json will be erased, do you want to continue ?"):
-            try:
-                os.remove(os.path.join(path, ".search_state.json"))
-                log.info(".search_state.json successfully erased.")
-            except FileNotFoundError:
-                log.warning(".search_state.json does not exist and could not be erased.")
+        file_path = os.path.join(path, ".search_state.json")
+        if os.path.isfile(file_path) \
+                and (yes or click.confirm(".search_state.json will be erased, do you want to continue ?")):
+            os.remove(file_path)
+            log.info(".search_state.json successfully erased.")
+        elif not os.path.isdir(file_path):
+            log.warning(".search_state.json does not exist and could not be erased.")
+
     for folder in ["media", "logs", "piles"]:
         if folder not in preserve:
             if folder == "media":
                 folder = conf.get("media_directory", "media")
-            if yes or click.confirm("{} folder will be erased, do you want to continue ?".format(folder)):
-                try:
-                    shutil.rmtree(os.path.join(path, folder))
+            folder_path = os.path.join(path, folder)
+            if os.path.isdir(folder_path) \
+                and (yes or click.confirm("{} folder will be erased, do you want to continue ?".format(folder))):
+                    shutil.rmtree(folder_path)
                     log.info("{} folder successfully erased.".format(folder))
-                except FileNotFoundError:
-                    log.warning("{} folder does not exist and could not be erased.".format(folder))
+            elif not os.path.isdir(folder_path):
+                log.warning("{} folder does not exist and could not be erased.".format(folder_path))
 
 
 def confirm_delete_index(es, db_name, doc_type, yes):
