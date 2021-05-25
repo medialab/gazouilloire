@@ -8,6 +8,7 @@ from gazouilloire.run import main as main_run
 from gazouilloire.resolving_script import resolve_script
 from gazouilloire.exports.export_csv import export_csv, count_by_step
 from gazouilloire.database.elasticmanager import ElasticManager
+from elasticsearch import exceptions
 from twitwi.constants import TWEET_FIELDS
 import shutil
 
@@ -88,8 +89,18 @@ def status(path):
     conf = load_conf(path)["database"]
     running = "running" if os.path.exists(os.path.join(path, ".lock")) else "not running"
     es = ElasticManager(conf["host"], conf["port"], conf["db_name"])
-    tweets = es.client.cat.indices(index=es.tweets, format="json")[0]
-    links = es.client.cat.indices(index=es.links, format="json")[0]
+    try:
+        tweets = es.client.cat.indices(index=es.tweets, format="json")[0]
+        links = es.client.cat.indices(index=es.links, format="json")[0]
+    except exceptions.NotFoundError:
+        log.error(
+            "{} does not exist in Elasticsearch. Try 'gazou run' or 'gazou start' " \
+            "to start the collection.".format(conf["db_name"])
+        )
+        return
+    except exceptions.ConnectionError:
+        log.error("Connection to Elasticsearch failed. Is Elasticsearch started?")
+        return
     media_path = os.path.join(path, "medias")
     media_count = 0
     media_size = 0
