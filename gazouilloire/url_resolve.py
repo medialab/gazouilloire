@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import re
 from urllib3 import Timeout
 from datetime import datetime
 from elasticsearch import helpers
@@ -49,7 +50,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
         if u in alreadydone:
             continue
         if u.startswith("https://twitter.com/") and "/status/" in u:
-            alreadydone[u] = (u.replace("?s=19", ""), ["twitter.com", "com"])
+            alreadydone[u] = (re.sub(r"\?s=\d+", "", u), ["twitter.com", "com"])
             continue
         urls_to_clear.append(u)
     if urls_to_clear:
