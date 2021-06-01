@@ -6,10 +6,10 @@ import re
 from urllib3 import Timeout
 from datetime import datetime
 from elasticsearch import helpers
+from ural import get_normalized_hostname
 from minet import multithreaded_resolve
 from minet.exceptions import RedirectError
 from gazouilloire.database.elasticmanager import ElasticManager
-from ural import get_hostname
 from twitwi import custom_normalize_url
 from gazouilloire.config_format import log
 import logging
@@ -25,16 +25,6 @@ def count_and_log(db, batch_size, done=0, skip=0):
     return todo
 
 
-def get_domains(url):
-    result = []
-    domain = get_hostname(url)
-    if domain:
-        domain_parts = domain.split(".")
-        for enum, part in enumerate(domain_parts):
-            result.append(".".join(domain_parts[enum:]))
-    return result
-
-
 def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
     if verbose:
         log.setLevel(logging.DEBUG)
@@ -44,13 +34,13 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
         log.addHandler(fh)
     done = 0
     batch_urls = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
-    alreadydone = {l["link_id"]: (l["real"], get_domains(l["real"])) for l in db.find_links_in(batch_urls, batch_size)}
+    alreadydone = {l["link_id"]: (l["real"], get_normalized_hostname(l["real"])) for l in db.find_links_in(batch_urls, batch_size)}
     urls_to_clear = []
     for u in batch_urls:
         if u in alreadydone:
             continue
         if u.startswith("https://twitter.com/") and "/status/" in u:
-            alreadydone[u] = (re.sub(r"\?s=\d+", "", u), ["twitter.com", "com"])
+            alreadydone[u] = (re.sub(r"\?s=\d+", "", u), ["twitter.com"])
             continue
         urls_to_clear.append(u)
     if urls_to_clear:
@@ -72,7 +62,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
                 source = res.url
                 last = res.stack[-1]
                 normalized_url = custom_normalize_url(last.url)
-                domains = get_domains(normalized_url)
+                domain = get_normalized_hostname(normalized_url)
                 if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
                     log.debug("failed to resolve %s: %s (last url: %s)" % (source, res.error, last.url))
                     if not url_debug:
@@ -81,8 +71,8 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
                     #  Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
 
                 log.debug("{} {}: {} --> {}".format(last.status, last.type,  source, normalized_url))
-                links_to_save.append({'link_id': source, 'real': normalized_url, 'domains': domains})
-                alreadydone[source] = (normalized_url, domains)
+                links_to_save.append({'link_id': source, 'real': normalized_url, 'domains': domain})
+                alreadydone[source] = (normalized_url, domain)
                 if source != normalized_url:
                     done += 1
         except Exception as e:
@@ -91,9 +81,9 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
             if url_debug:
                 for url in urls_to_clear:
                     normalized_url = custom_normalize_url(url)
-                    domains = get_domains(normalized_url)
-                    links_to_save.append({'link_id': url, 'real': normalized_url, 'domains': domains})
-                    alreadydone[url] = (normalized_url, domains)
+                    domain = get_normalized_hostname(normalized_url)
+                    links_to_save.append({'link_id': url, 'real': normalized_url, 'domains': domain})
+                    alreadydone[url] = (normalized_url, domain)
                     if url != normalized_url:
                         done += 1
             else:
@@ -119,17 +109,15 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
         if tweetid in ids_done_in_batch:
             continue
         gdlinks = []
-        gddomains = set()
+        gddomains = []
         for link in tweet.get("links", []):
             if link not in alreadydone:
                 break
             gdlinks.append(alreadydone[link][0])
-            for domain in alreadydone[link][1]:
-                gddomains.add(domain)
+            gddomains.append(alreadydone[link][1])
         if len(gdlinks) != len(tweet.get("links", [])):
             skip += 1
             continue
-        gddomains = list(gddomains)
         if tweet.get("retweeted_id") is None:  # The tweet is an original tweet. No need to search for its id.
             to_update.append(
                 {'_id': tweet["_id"], "_source": {"doc": {
