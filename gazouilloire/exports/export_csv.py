@@ -3,10 +3,12 @@
 
 import sys
 import csv
+import json
 from datetime import datetime
 from dateutil import relativedelta
 from gazouilloire.database.elasticmanager import ElasticManager, helpers, DB_MAPPINGS
-from twitwi import transform_tweet_into_csv_dict, TWEET_FIELDS, FORMATTED_TWEET_DATETIME_FORMAT
+from twitwi import transform_tweet_into_csv_dict
+from twitwi.constants import TWEET_FIELDS
 from gazouilloire.config_format import log
 
 
@@ -62,7 +64,7 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None)
         query = query[0]
         if '{' in query:
             try:
-                query = eval(query)
+                query = json.loads(query)
             except Exception as e:
                 sys.stderr.write(
                     "WARNING: query wrongly formatted: %s\n" % query)
