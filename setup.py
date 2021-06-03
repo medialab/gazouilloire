@@ -25,7 +25,7 @@ setup(name='gazouilloire',
       include_package_data=True,
       install_requires=[
           "elasticsearch >= 7.10.1",
-          "twitwi >= 0.7.2",
+          "twitwi >= 0.8.0",
           "requests",
           "pytz",
           "psutil",
