@@ -32,6 +32,7 @@ from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 import shutil
 from twitwi import normalize_tweet
+from ural.get_domain_name import get_hostname_prefixes
 from gazouilloire.database.elasticmanager import ElasticManager, prepare_db
 from elasticsearch import helpers, exceptions
 from gazouilloire.url_resolve import resolve_loop, count_and_log
@@ -97,13 +98,21 @@ def load_pile(path, file_prefix, pile):
                 os.remove(file_path)
 
 
+def preprocess_tweet_for_indexing(normalized_tweet):
+    hostnames = []
+    for hostname in set(normalized_tweet["domains"]):
+        hostnames.extend(get_hostname_prefixes(hostname))
+    normalized_tweet["domains"] = hostnames
+    return normalized_tweet
+
+
 def prepare_tweets(tweets, locale):
     for tweet in tweets:
         if not isinstance(tweet, dict):
             continue
         if "collected_via" not in tweet:
             for subtweet in normalize_tweet(tweet, locale=locale, extract_referenced_tweets=True):
-                yield subtweet
+                yield preprocess_tweet_for_indexing(subtweet)
         else:
             yield tweet
 
@@ -363,7 +372,7 @@ def streamer(pile, pile_deleted, oauth, oauth2, keywords, urlpieces, timed_keywo
                                         break
                             if not keep:
                                 continue
-                        pile.put(tweet)
+                        pile.put(preprocess_tweet_for_indexing(tweet))
                         log.debug("+1 tweet")
                 else:
                     if 'delete' in msg and 'status' in msg['delete'] and 'id_str' in msg['delete']['status']:

@@ -6,11 +6,11 @@ import re
 from urllib3 import Timeout
 from datetime import datetime
 from elasticsearch import helpers
-from ural import get_normalized_hostname
 from minet import multithreaded_resolve
 from minet.exceptions import RedirectError
 from gazouilloire.database.elasticmanager import ElasticManager
-from twitwi import custom_normalize_url
+from ural.get_domain_name import get_hostname_prefixes
+from twitwi.utils import custom_get_normalized_hostname, custom_normalize_url
 from gazouilloire.config_format import log
 import logging
 
@@ -34,7 +34,12 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
         log.addHandler(fh)
     done = 0
     batch_urls = list(set([l for t in todo if not t.get("proper_links", []) for l in t.get('links', [])]))
-    alreadydone = {l["link_id"]: (l["real"], get_normalized_hostname(l["real"])) for l in db.find_links_in(batch_urls, batch_size)}
+    alreadydone = {
+        l["link_id"]: (
+            l["real"],
+            get_hostname_prefixes(custom_get_normalized_hostname(l["real"]))
+        ) for l in db.find_links_in(batch_urls, batch_size)
+    }
     urls_to_clear = []
     for u in batch_urls:
         if u in alreadydone:
@@ -62,7 +67,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
                 source = res.url
                 last = res.stack[-1]
                 normalized_url = custom_normalize_url(last.url)
-                domain = get_normalized_hostname(normalized_url)
+                domain = get_hostname_prefixes(custom_get_normalized_hostname(normalized_url))
                 if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
                     log.debug("failed to resolve %s: %s (last url: %s)" % (source, res.error, last.url))
                     if not url_debug:
@@ -81,7 +86,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
             if url_debug:
                 for url in urls_to_clear:
                     normalized_url = custom_normalize_url(url)
-                    domain = get_normalized_hostname(normalized_url)
+                    domain = get_hostname_prefixes(custom_get_normalized_hostname(normalized_url))
                     links_to_save.append({'link_id': url, 'real': normalized_url, 'domains': domain})
                     alreadydone[url] = (normalized_url, domain)
                     if url != normalized_url:

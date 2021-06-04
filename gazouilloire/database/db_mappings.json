@@ -17,13 +17,7 @@
             "type": "boolean"
           },
           "domains": {
-            "type": "text",
-            "analyzer": "tree_analyzer",
-            "fields": {
-              "keyword": {
-                "type":  "keyword"
-              }
-            }
+            "type": "keyword"
           },
           "hashtags": {
             "type": "keyword"
@@ -236,20 +230,6 @@
     "settings": {
       "index": {
         "refresh_interval": "60s"
-      },
-      "analysis": {
-        "analyzer": {
-          "tree_analyzer": {
-            "tokenizer": "tree_tokenizer"
-          }
-        },
-        "tokenizer": {
-          "tree_tokenizer": {
-            "type": "path_hierarchy",
-            "delimiter": ".",
-            "reverse": "true"
-          }
-        }
       }
     }
   },
@@ -263,33 +243,13 @@
             "type": "keyword"
           },
           "domains": {
-            "type": "text",
-            "analyzer": "tree_analyzer",
-            "fields": {
-              "keyword": {
-                "type":  "keyword"
-              }
-            }
+            "type": "keyword"
           }
       }
     },
     "settings": {
       "index": {
         "refresh_interval": "20s"
-      },
-      "analysis": {
-        "analyzer": {
-          "tree_analyzer": {
-            "tokenizer": "tree_tokenizer"
-          }
-        },
-        "tokenizer": {
-          "tree_tokenizer": {
-            "type": "path_hierarchy",
-            "delimiter": ".",
-            "reverse": "true"
-          }
-        }
       }
     }
   }
