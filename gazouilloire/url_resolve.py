@@ -45,7 +45,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
         if u in alreadydone:
             continue
         if u.startswith("https://twitter.com/") and "/status/" in u:
-            alreadydone[u] = (re.sub(r"\?s=\d+", "", u), ["twitter.com"])
+            alreadydone[u] = (re.sub(r"\?s=\d+", "", u), ["twitter.com", "com"])
             continue
         urls_to_clear.append(u)
     if urls_to_clear:
@@ -114,12 +114,12 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
         if tweetid in ids_done_in_batch:
             continue
         gdlinks = []
-        gddomains = []
+        gddomains = set()
         for link in tweet.get("links", []):
             if link not in alreadydone:
                 break
             gdlinks.append(alreadydone[link][0])
-            gddomains.append(alreadydone[link][1])
+            gddomains.update(set(alreadydone[link][1]))
         if len(gdlinks) != len(tweet.get("links", [])):
             skip += 1
             continue
@@ -128,9 +128,9 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
                 {'_id': tweet["_id"], "_source": {"doc": {
                     'proper_links': gdlinks,
                     'links_to_resolve': False,
-                    'domains': gddomains
+                    'domains': list(gddomains)
                 }}})
-        db.update_retweets_with_links(tweetid, gdlinks, gddomains)
+        db.update_retweets_with_links(tweetid, gdlinks, list(gddomains))
         ids_done_in_batch.add(tweetid)
 
         # # clear tweets potentially rediscovered

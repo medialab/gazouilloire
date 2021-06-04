@@ -99,10 +99,10 @@ def load_pile(path, file_prefix, pile):
 
 
 def preprocess_tweet_for_indexing(normalized_tweet):
-    hostnames = []
+    hostnames = set()
     for hostname in set(normalized_tweet["domains"]):
-        hostnames.extend(get_hostname_prefixes(hostname))
-    normalized_tweet["domains"] = hostnames
+        hostnames.update(set(get_hostname_prefixes(hostname)))
+    normalized_tweet["domains"] = list(hostnames)
     return normalized_tweet
 
 
