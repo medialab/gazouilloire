@@ -8,12 +8,19 @@ from datetime import datetime
 from dateutil import relativedelta
 from gazouilloire.database.elasticmanager import ElasticManager, helpers, DB_MAPPINGS
 from twitwi import transform_tweet_into_csv_dict
+from twitwi.utils import custom_get_normalized_hostname
 from twitwi.constants import TWEET_FIELDS
 from gazouilloire.config_format import log
 
 
 def date_to_timestamp(date):
     return str(date.timestamp())
+
+
+def post_process_tweet_from_elastic(source):
+    domains = [custom_get_normalized_hostname(l, normalize_amp=False, infer_redirection=False) for l in source["links"]]
+    source["domains"] = domains
+    return source
 
 
 def yield_csv(queryiterator):
@@ -26,7 +33,7 @@ def yield_csv(queryiterator):
                 continue
         # ignore tweets only caught on deletion missing most fields
         if len(source) >= 10:
-            transform_tweet_into_csv_dict(source, item_id=t["_id"])
+            transform_tweet_into_csv_dict(post_process_tweet_from_elastic(source), item_id=t["_id"])
             yield source
 
 
