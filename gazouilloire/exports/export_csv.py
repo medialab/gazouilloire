@@ -18,7 +18,11 @@ def date_to_timestamp(date):
 
 
 def post_process_tweet_from_elastic(source):
-    domains = [custom_get_normalized_hostname(l, normalize_amp=False, infer_redirection=False) for l in source["links"]]
+    domains = [
+        custom_get_normalized_hostname(l, normalize_amp=False, infer_redirection=False) for l in source.get(
+            "proper_links", source["links"]
+        )
+    ]
     source["domains"] = domains
     return source
 
