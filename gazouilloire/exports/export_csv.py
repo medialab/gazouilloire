@@ -80,6 +80,8 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None)
                 sys.stderr.write(
                     "WARNING: query wrongly formatted: %s\n" % query)
                 sys.exit("%s: %s\n" % (type(e), e))
+            if "id" in query:
+                query = {"_id": query["id"]}
             filter.append({"term": query})
         elif ' AND ' in query or ' OR ' in query:
             filter.append({
