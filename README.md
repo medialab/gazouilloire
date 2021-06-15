@@ -1,7 +1,14 @@
 # Gazouilloire
 
-Twitter stream + search API grabber handling various config options such as collecting only during specific time periods, or limiting the collection to some locations.
-Automatically goes back to "fill in the gaps" when there are cuts in the tweet collection.
+A command line tool for long-term tweets collection. Gazouilloire combines two methods to collect tweets from the 
+Twitter API ("search" and "filter") in order to maximize the number of collected tweets, and automatically fills the 
+gaps in the collection in case of connexion errors or reboots.It handles various config options such as:
+ * collecting only during specific time periods
+ * limiting the collection to some locations
+ * resolving redirected urls
+ * downloading only certain types of media contents (only photos and no videos, for example)
+ * unfolding Twitter conversations
+ 
 
 Python >= 3.7 compatible.
 
@@ -103,28 +110,21 @@ a `config.json` file is created. Open it to configure the collection parameters.
     ```
     gazouilloire status
     ```
-
 - Gazouilloire stores its current search state in the collection directory. This means that if you restart Gazouilloire,
 it will not search
 again for tweets that were already found. If you want a fresh start (e.g. if you modify the query
-terms in config.json), you can reset the search state with:
+terms in config.json), you can reset the search state, as well as everything that was saved on disk:
 
     ```bash
-    gazouilloire reset -i none
-    ```
-    The `--es-index/-i` option allows you to also remove the links or tweets Elasticsearch indices.
-    To remove only links and search state:
-    ```
-    gazouilloire reset -i links
-    ```
-    To remove only tweets and search state:
-    ```
-    gazouilloire reset -i tweets
-    ```
-    To remove links, tweets and search state:
-    ```
     gazouilloire reset
     ```
+
+- You can also choose to delete only some elements, e.g. the tweets stored in elasticsearch and the media files:
+    ```bash
+    gazouilloire reset --only tweets,media
+    ```
+    Possible values for the --only argument: tweets,links,logs,piles,search_state,media
+  
 
 - Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in csv format:
 
