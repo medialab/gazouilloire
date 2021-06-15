@@ -88,7 +88,15 @@ a `config.json` file is created. Open it to configure the collection parameters.
 
   - **timezone**: adjust the timezone within which tweets timestamps should be computed. Allowed values are proposed on Gazouilloire's startup when setting up an invalid one.
 
+## Starting the collection:
 
+Before starting the collection, you should make sure that you will have enough disk space.
+It takes about 1Go per million tweets collected (**without** images and other media contents).
+
+You should also plan to restart your collection in a new folder (i.e. open another elasticsearch index)
+if the current collection exceeds 150 million tweets.
+
+To start the collection:
 - Run with:
 
     ```bash
@@ -110,10 +118,10 @@ a `config.json` file is created. Open it to configure the collection parameters.
     ```
     gazouilloire status
     ```
-- Gazouilloire stores its current search state in the collection directory. This means that if you restart Gazouilloire,
-it will not search
-again for tweets that were already found. If you want a fresh start (e.g. if you modify the query
-terms in config.json), you can reset the search state, as well as everything that was saved on disk:
+- Gazouilloire stores its current search state in the collection directory. This means that if you restart Gazouilloire
+in the same directory, it will not search
+again for tweets that were already collected. If you want a fresh start, you can reset the search state, 
+as well as everything that was saved on disk, with:
 
     ```bash
     gazouilloire reset
