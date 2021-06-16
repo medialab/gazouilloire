@@ -37,7 +37,9 @@ def yield_csv(queryiterator):
                 continue
         # ignore tweets only caught on deletion missing most fields
         if len(source) >= 10:
-            transform_tweet_into_csv_dict(post_process_tweet_from_elastic(source), item_id=t["_id"])
+            transform_tweet_into_csv_dict(
+                post_process_tweet_from_elastic(source), item_id=t["_id"], allow_erroneous_plurals=True
+            )
             yield source
 
 
