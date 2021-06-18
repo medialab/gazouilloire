@@ -27,7 +27,7 @@ requests.packages.urllib3.disable_warnings()
 from multiprocessing import Process, Event
 from gazouilloire.multiprocessing import Queue
 import signal
-from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterHTTPError
+from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterError, TwitterHTTPError
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 import shutil
@@ -211,7 +211,7 @@ def catchupper(pile, pile_catchup, oauth, oauth2, exit_event, conf):
         if todo and not exit_event.is_set():
             try:
                 tweets = twitterco.statuses.lookup(_id=",".join(todo), tweet_mode="extended", _method="POST")
-            except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
+            except (TwitterError, TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
                 log.warning("API connection could not be established, retrying in 10 secs (%s: %s)" % (type(e), e))
                 for t in todo:
                     pile_catchup.put(t)
@@ -520,12 +520,12 @@ def searcher(pile, oauth, oauth2, keywords, urlpieces, timed_keywords, locale, l
                     args['since_id'] = str(queries_since_id[query])
                 try:
                     res = curco.search.tweets(**args)
-                except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
+                except (TwitterError, TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
                     curco = searchco if curco == searchco2 else searchco2
                     log.info("Switching search connexion to OAuth%s" % (2 if curco == searchco2 else ""))
                     try:
                         res = curco.search.tweets(**args)
-                    except (TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
+                    except (TwitterError, TwitterHTTPError, BadStatusLine, URLError, SSLError) as e:
                         log.warning("Search connection could not be established, retrying in 2 secs (%s: %s)" % (type(e), e))
                         breakable_sleep(2, exit_event)
                         continue
