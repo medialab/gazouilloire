@@ -2,6 +2,7 @@ import os
 import sys
 import json
 from elasticsearch import Elasticsearch, helpers, exceptions
+from datetime import datetime, timedelta
 import itertools
 
 
@@ -234,18 +235,22 @@ class ElasticManager:
 
     # resolver() methods
 
-    def find_tweets_with_unresolved_links(self, batch_size=600):
+    def find_tweets_with_unresolved_links(self, batch_size=600, retry_days=30):
         """Returns a list of tweets where 'links_to_resolve' field is True"""
+        query = {"bool": {"filter": [{"term": {"links_to_resolve": True}}]}}
+        if retry_days:
+            range_clause = {"range": {"timestamp_utc": {"gte":
+                                                            str((datetime.now() - timedelta(days=retry_days)).timestamp())
+                                                        }
+                                      }
+                            }
+            query["bool"]["filter"].append(range_clause)
         response = self.client.search(
             index=self.tweets,
             body={
                 "_source": ["links", "proper_links", "retweet_id"],
                 "size": batch_size,
-                "query": {
-                    "match": {
-                        "links_to_resolve": True
-                    }
-                }
+                "query": query
             }
         )
         return format_response(response)

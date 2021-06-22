@@ -15,9 +15,9 @@ from gazouilloire.config_format import log
 import logging
 
 
-def count_and_log(db, batch_size, done=0, skip=0):
+def count_and_log(db, batch_size, done=0, skip=0, retry_days=30):
     db.client.indices.refresh(index=db.tweets)
-    todo = list(db.find_tweets_with_unresolved_links(batch_size=batch_size))
+    todo = list(db.find_tweets_with_unresolved_links(batch_size=batch_size, retry_days=retry_days))
     left = db.count_tweets("links_to_resolve", True)
     if done:
         done = "(+%s actual redirections resolved out of %s)" % (done, len(todo))
@@ -25,7 +25,7 @@ def count_and_log(db, batch_size, done=0, skip=0):
     return todo
 
 
-def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
+def resolve_loop(batch_size, db, todo, skip, verbose, url_debug, retry_days=30):
     if verbose:
         log.setLevel(logging.DEBUG)
     if url_debug:
@@ -69,13 +69,16 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug):
                 normalized_url = custom_normalize_url(last.url)
                 domain = get_hostname_prefixes(custom_get_normalized_hostname(normalized_url))
                 if res.error and type(res.error) != RedirectError and not issubclass(type(res.error), RedirectError):
-                    log.debug("failed to resolve %s: %s (last url: %s)" % (source, res.error, last.url))
-                    if not url_debug:
+                    if not url_debug and retry_days:
+                        log.warning("failed to resolve (will retry) %s: %s (last url: %s)" % (source, res.error, last.url)
+                                  )
                         continue
                     # TODO:
                     #  Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
-
-                log.debug("{} {}: {} --> {}".format(last.status, last.type,  source, normalized_url))
+                if last.status == 200:
+                    log.debug("{} {}: {} --> {}".format(last.status, last.type,  source, normalized_url))
+                else:
+                    log.warning("{} {}: {} --> {}".format(last.status, last.type, source, normalized_url))
                 links_to_save.append({'link_id': source, 'real': normalized_url, 'domains': domain})
                 alreadydone[source] = (normalized_url, domain)
                 if source != normalized_url:
