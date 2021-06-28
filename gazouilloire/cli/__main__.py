@@ -75,6 +75,7 @@ def stop(path, timeout):
     stopped = daemon.stop(timeout)
     if stopped:
         log.info("Collection stopped")
+        log.info("Some urls may be unresolved. Run 'gazou resolve' if you want to resolve all urls.")
 
 
 def sizeof_fmt(num, suffix='B'):
