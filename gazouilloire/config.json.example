@@ -19,6 +19,7 @@
     "language": null,
     "geolocation": "",
     "resolve_redirected_links": true,
+    "resolving_delay": 30,
     "grab_conversations": false,
     "catchup_past_week": true,
     "download_media": {

@@ -229,13 +229,14 @@ def catchupper(pile, pile_catchup, oauth, oauth2, exit_event, conf):
     log.info("FINISHED catchupper")
 
 
-def resolver(batch_size, db_conf, exit_event, verbose=False, url_debug=False):
+def resolver(batch_size, db_conf, exit_event, verbose=False, url_debug=False, resolving_delay=30):
     db = prepare_db(**db_conf)
     skip = 0
     done = 0
     while not exit_event.is_set():
-        todo = count_and_log(db, batch_size, done=done, skip=skip)
-        done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose, url_debug=url_debug)
+        todo = count_and_log(db, batch_size, done=done, skip=skip, retry_days=resolving_delay)
+        done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose, url_debug=url_debug,
+                                  retry_days=resolving_delay)
         time.sleep(30)
     log.info("FINISHED resolver")
 
@@ -635,6 +636,7 @@ def main(conf):
                 sys.exit(1)
     grab_conversations = "grab_conversations" in conf and conf["grab_conversations"]
     resolve_links = "resolve_redirected_links" in conf and conf["resolve_redirected_links"]
+    resolving_delay = int(conf["resolving_delay"]) if "resolving_delay" in conf else 30
     no_rollback = "catchup_past_week" not in conf or not conf["catchup_past_week"]
     dl_media = "download_media" in conf and conf["download_media"] and any(conf["download_media"].values())
     if dl_media:
@@ -668,7 +670,7 @@ def main(conf):
     if resolve_links:
         resolve = Process(
             target=resolver,
-            args=(RESOLVER_BATCH_SIZE, conf['database'], exit_event),
+            args=(RESOLVER_BATCH_SIZE, conf['database'], exit_event, resolving_delay),
             daemon=True,
             name="resolver  "
         )
