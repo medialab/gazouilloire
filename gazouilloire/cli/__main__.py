@@ -6,7 +6,7 @@ from gazouilloire.config_format import create_conf_example, load_conf, log
 from gazouilloire.daemon import Daemon
 from gazouilloire.run import main as main_run
 from gazouilloire.resolving_script import resolve_script
-from gazouilloire.exports.export_csv import export_csv, count_by_step
+from gazouilloire.exports.export_csv import export_csv, count_by_step, call_database
 from gazouilloire.database.elasticmanager import ElasticManager
 from elasticsearch import exceptions
 from twitwi.constants import TWEET_FIELDS
@@ -75,7 +75,13 @@ def stop(path, timeout):
     stopped = daemon.stop(timeout)
     if stopped:
         log.info("Collection stopped")
-        log.info("Some urls may be unresolved. Run 'gazou resolve' if you want to resolve all urls.")
+        conf = load_conf(path)
+        db = call_database(conf)
+        unresolved_urls = db.count_tweets("links_to_resolve", True)
+        if unresolved_urls:
+            log.info("{} tweets contain unresolved urls. Run 'gazou resolve' if you want to resolve all urls.".format(
+                unresolved_urls
+            ))
 
 
 def sizeof_fmt(num, suffix='B'):
