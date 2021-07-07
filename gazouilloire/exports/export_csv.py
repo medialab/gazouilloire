@@ -12,6 +12,7 @@ from twitwi.utils import custom_get_normalized_hostname
 from twitwi.constants import TWEET_FIELDS
 from gazouilloire.config_format import log
 from casanova import reverse_reader
+from casanova.exceptions import MissingColumnError
 
 def date_to_timestamp(date):
     return str(date.timestamp())
@@ -126,14 +127,14 @@ def call_database(conf):
 
 
 def find_potential_duplicate_ids(outputfile):
-    """
-    if there is no timestamp in the initial file, error from the beginning?
-    what if the 2 files do not have the same number of columns?
-    @param outputfile:
-    @return: last_timestamp, last_ids
-    """
     last_ids = set()
-    last_time = reverse_reader.last_cell(outputfile, 'local_time')
+    try:
+        last_time = reverse_reader.last_cell(outputfile, 'local_time')
+    except MissingColumnError:
+        log.error("A 'local_time' column is missing in file {} in order to use the --resume/-r option".format(
+            outputfile
+        ))
+        sys.exit(1)
     with open(outputfile, "r") as f:
         rev_reader = reverse_reader(f)
         for row in rev_reader:
@@ -154,6 +155,16 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                             .format(field))
     else:
         SELECTION = TWEET_FIELDS
+    if resume:
+        with open(outputfile, "r") as f:
+            reader = csv.DictReader(f)
+            fieldnames = reader.fieldnames
+            if sorted(fieldnames) == sorted(SELECTION):
+                SELECTION = fieldnames
+            else:
+                log.error("The column names in the {} file do not match the export format".format(outputfile))
+                sys.exit(1)
+
 
     db = call_database(conf)
 
