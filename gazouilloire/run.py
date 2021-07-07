@@ -111,8 +111,12 @@ def prepare_tweets(tweets, locale):
         if not isinstance(tweet, dict):
             continue
         if "collected_via" not in tweet:
-            for subtweet in normalize_tweet(tweet, locale=locale, extract_referenced_tweets=True):
-                yield preprocess_tweet_for_indexing(subtweet)
+            try:
+                for subtweet in normalize_tweet(tweet, locale=locale, extract_referenced_tweets=True):
+                    yield preprocess_tweet_for_indexing(subtweet)
+            except KeyError as missing_field:
+                log.warning("Missing '{}' field in tweet: \n{}".format(missing_field, tweet))
+                continue
         else:
             yield tweet
 
@@ -348,33 +352,37 @@ def streamer(pile, pile_deleted, oauth, oauth2, keywords, urlpieces, timed_keywo
                     continue
                 if msg.get('id_str'):
                     msg["collection_source"] = "stream"
-                    for tweet in normalize_tweet(msg, locale=locale, extract_referenced_tweets=True):
-                        if geocode or (urlpieces and not keywords):
-                            tmptext = tweet["text"].lower()
-                            keep = False
-                            for k in filter_keywords:
-                                if " " in k:
-                                    keep2 = True
-                                    for k2 in k.split(" "):
-                                        if k2 not in tmptext:
-                                            keep2 = False
+                    try:
+                        for tweet in normalize_tweet(msg, locale=locale, extract_referenced_tweets=True):
+                            if geocode or (urlpieces and not keywords):
+                                tmptext = tweet["text"].lower()
+                                keep = False
+                                for k in filter_keywords:
+                                    if " " in k:
+                                        keep2 = True
+                                        for k2 in k.split(" "):
+                                            if k2 not in tmptext:
+                                                keep2 = False
+                                                break
+                                        if keep2:
+                                            keep = True
                                             break
-                                    if keep2:
+                                    elif k in tmptext:
                                         keep = True
                                         break
-                                elif k in tmptext:
-                                    keep = True
-                                    break
-                            if not keep and keep_users:
-                                tmpauthor = tweet['user_screen_name'].lower()
-                                for u in keep_users:
-                                    if "@%s" % u in tmptext or u == tmpauthor:
-                                        keep = True
-                                        break
-                            if not keep:
-                                continue
-                        pile.put(preprocess_tweet_for_indexing(tweet))
-                        log.debug("+1 tweet")
+                                if not keep and keep_users:
+                                    tmpauthor = tweet['user_screen_name'].lower()
+                                    for u in keep_users:
+                                        if "@%s" % u in tmptext or u == tmpauthor:
+                                            keep = True
+                                            break
+                                if not keep:
+                                    continue
+                            pile.put(preprocess_tweet_for_indexing(tweet))
+                            log.debug("+1 tweet")
+                    except KeyError as missing_field:
+                        log.warning("Missing '{}' field in tweet: \n{}".format(missing_field, msg))
+                        continue
                 else:
                     if 'delete' in msg and 'status' in msg['delete'] and 'id_str' in msg['delete']['status']:
                         pile_deleted.put(msg['delete']['status']['id_str'])
