@@ -177,15 +177,24 @@ def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
                                                                                      "and return the conversations "
                                                                                      "containing those tweets")
 @click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
+@click.option("--resume", "-r", is_flag=True, help="Restart the export from the last id specified in --output file")
 def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
-           columns, list_fields, output, since, until):
+           columns, list_fields, output, resume, since, until):
+    if resume and not output:
+        log.error("The --resume option requires to set a file name with --output")
+        sys.exit(1)
+
+    if resume and not os.path.isfile(output):
+        log.error("The file {} could not be found".format(output))
+        sys.exit(1)
+
     if list_fields:
         for field in TWEET_FIELDS:
             print(field)
     else:
         conf = load_conf(path)
         export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-                   verbose, export_threads_from_file, export_tweets_from_file, columns, output)
+                   verbose, export_threads_from_file, export_tweets_from_file, columns, output, resume)
 
 @main.command(help="Get a report about the number of tweets. Type 'gazou count' to get the number of collected tweets "
                    "or 'gazou count médialab' to get the number of tweets that contain médialab")

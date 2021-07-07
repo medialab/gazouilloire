@@ -32,7 +32,8 @@ setup(name='gazouilloire',
           "minet >= 0.52, < 0.53",
           "future",
           "click",
-          "progressbar2"
+          "progressbar2",
+          "casanova >= 0.15.5"
       ],
       entry_points={
         'console_scripts': [

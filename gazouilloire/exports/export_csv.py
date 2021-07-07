@@ -11,7 +11,7 @@ from twitwi import transform_tweet_into_csv_dict
 from twitwi.utils import custom_get_normalized_hostname
 from twitwi.constants import TWEET_FIELDS
 from gazouilloire.config_format import log
-
+from casanova import reverse_reader
 
 def date_to_timestamp(date):
     return str(date.timestamp())
@@ -27,7 +27,7 @@ def post_process_tweet_from_elastic(source):
     return source
 
 
-def yield_csv(queryiterator):
+def yield_csv(queryiterator, last_ids=set()):
     for t in queryiterator:
         try:
             source = t["_source"]
@@ -36,15 +36,15 @@ def yield_csv(queryiterator):
                 log.error(t["_id"] + " not found in database")
                 continue
         # ignore tweets only caught on deletion missing most fields
-        if len(source) >= 10:
+        if len(source) >= 10 and t["_id"] not in last_ids:
             transform_tweet_into_csv_dict(
                 post_process_tweet_from_elastic(source), item_id=t["_id"], allow_erroneous_plurals=True
             )
             yield source
 
 
-def build_body(query, exclude_threads, exclude_retweets, since=None, until=None):
-    if len(query) == 0 and not exclude_threads and not exclude_retweets and not since and not until:
+def build_body(query, exclude_threads, exclude_retweets, since=None, until=None, outputfile=None, resume=False):
+    if len(query) == 0 and not exclude_threads and not exclude_retweets and not since and not until and not resume:
         body = {
             "query": {
                 "match_all": {}
@@ -125,8 +125,25 @@ def call_database(conf):
         sys.exit(1)
 
 
+def find_potential_duplicate_ids(outputfile):
+    """
+    if there is no timestamp in the initial file, error from the beginning?
+    what if the 2 files do not have the same number of columns?
+    @param outputfile:
+    @return: last_timestamp, last_ids
+    """
+    last_ids = set()
+    last_time = reverse_reader.last_cell(outputfile, 'local_time')
+    with open(outputfile, "r") as f:
+        rev_reader = reverse_reader(f)
+        for row in rev_reader:
+            if row[rev_reader.headers.local_time] == last_time:
+                last_ids.add(row[rev_reader.headers.id])
+            else:
+                return last_time, last_ids
+
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-               verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile):
+               verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume):
     threads = conf.get('grab_conversations', False)
     if selection:
         SELECTION = selection.split(",")
@@ -160,24 +177,33 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         with open(export_tweets_from_file) as f:
             body = sorted([t.get("id", t.get("_id")) for t in csv.DictReader(f)])
 
-    else:
-        body = build_body(query, exclude_threads, exclude_retweets, since, until)
-
-    if isinstance(body, list):
+    if export_threads_from_file or export_tweets_from_file:
         count = len(body)
         iterator = yield_csv(db.multi_get(body))
     else:
+        last_ids = set()
+        if resume:
+            last_timestamp, last_ids = find_potential_duplicate_ids(outputfile)
+            since = datetime.fromisoformat(last_timestamp)
+        body = build_body(query, exclude_threads, exclude_retweets, since, until)
         count = db.client.count(index=db.tweets, body=body)['count']
         body["sort"] = ["timestamp_utc"]
-        iterator = yield_csv(helpers.scan(client=db.client, index=db.tweets, query=body, preserve_order=True))
+        iterator = yield_csv(
+            helpers.scan(client=db.client, index=db.tweets, query=body, preserve_order=True),
+            last_ids=last_ids
+        )
     if verbose:
         import progressbar
         bar = progressbar.ProgressBar(max_value=count)
         iterator = bar(iterator)
 
-    file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
+    if resume:
+        file = open(outputfile, 'a', newline='')
+    else:
+        file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
     writer = csv.DictWriter(file, fieldnames=SELECTION, restval='', quoting=csv.QUOTE_MINIMAL, extrasaction='ignore')
-    writer.writeheader()
+    if not resume:
+        writer.writeheader()
     for t in iterator:
         writer.writerow(t)
     file.close()
