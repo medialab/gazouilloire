@@ -76,7 +76,8 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug, retry_days=30):
                     # TODO:
                     #  Once redis db is effective, set a timeout on keys on error (https://redis.io/commands/expire)
                 if last.status == 200:
-                    log.debug("{} {}: {} --> {}".format(last.status, last.type,  source, normalized_url))
+                    if url_debug:
+                        log.debug("{} {}: {} --> {}".format(last.status, last.type, source, normalized_url))
                 else:
                     log.warning("{} {}: {} --> {}".format(last.status, last.type, source, normalized_url))
                 links_to_save.append({'link_id': source, 'real': normalized_url, 'domains': domain})
