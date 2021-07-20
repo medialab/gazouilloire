@@ -548,6 +548,9 @@ def searcher(pile, oauth, oauth2, keywords, urlpieces, timed_keywords, locale, l
                     breakable_sleep(2, exit_event)
                     continue
                 if not len(tweets):
+                    if not exit_event.is_set():
+                        queries_since_id[query] = since
+                        write_search_state(queries_since_id)
                     break
                 news = 0
                 for tw in tweets:
