@@ -67,3 +67,6 @@ class Queue():
     def empty(self):
         """ Reliable implementation of multiprocessing.Queue.empty() """
         return self.queue.empty()
+
+    def safe_empty(self):
+        return self.queue.empty() and not self.size.value

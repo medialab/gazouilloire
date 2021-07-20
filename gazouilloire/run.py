@@ -38,6 +38,7 @@ from elasticsearch import helpers, exceptions
 from gazouilloire.url_resolve import resolve_loop, count_and_log
 from gazouilloire.config_format import load_conf, log
 
+DEPILER_BATCH_SIZE = 1000
 RESOLVER_BATCH_SIZE = 5000
 
 
@@ -73,7 +74,7 @@ def breakable_sleep(delay, exit_event):
 
 def write_pile(pile, todo, file_prefix):
     store = []
-    while not pile.empty():
+    while not pile.safe_empty():
         store.append(pile.get())
     store.extend(todo)
     if store:
@@ -127,17 +128,18 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
     pile_dir = os.path.join(conf["path"], "piles")
     load_pile(pile_dir, "pile_main", pile)
     load_pile(pile_dir, "pile_deleted", pile_deleted)
-    while not exit_event.is_set() or not pile.empty() or not pile_deleted.empty():
+    while not exit_event.is_set() or not pile.safe_empty() or not pile_deleted.safe_empty():
         pilesize = pile.qsize()
         if pilesize:
             log.info("Pile length: " + str(pilesize))
         try:
-            while not pile_deleted.empty():
+            while not pile_deleted.safe_empty():
                 todelete = pile_deleted.get()
                 db.set_deleted(todelete)
             todo = []
-            while not pile.empty():
+            while pilesize and len(todo) < DEPILER_BATCH_SIZE:
                 todo.append(pile.get())
+                pilesize -= 1
             tweets_bulk = []
             for t in prepare_tweets(todo, locale):
                 if pile_media and t["media_files"]:
@@ -148,7 +150,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
                 tweets_bulk.append(t)
             helpers.bulk(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
             if tweets_bulk:
-                log.debug("Saved %s tweets in database" % len(tweets_bulk))
+                log.debug("Saved %s tweets in database (from %s collected tweets)" % (len(tweets_bulk), len(todo)))
         except exceptions.ConnectionError as e:
             log.error(e)
             log.error("Depiler can't connect to elasticsearch. Ending collection.".upper())
@@ -186,9 +188,9 @@ def download_media(tweet, media_id, media_url, media_dir="media"):
 
 
 def downloader(pile_media, media_dir, media_types, exit_event):
-    while not exit_event.is_set() or not pile_media.empty():
+    while not exit_event.is_set() or not pile_media.safe_empty():
         todo = []
-        while not pile_media.empty():
+        while not pile_media.safe_empty():
             todo.append(pile_media.get())
         if not todo:
             breakable_sleep(2, exit_event)
@@ -210,7 +212,7 @@ def catchupper(pile, pile_catchup, oauth, oauth2, exit_event, conf):
     load_pile(pile_dir, "pile_catchup", pile_catchup)
     todo = []
     while not exit_event.is_set():
-        while not pile_catchup.empty() and len(todo) < 100:
+        while not pile_catchup.safe_empty() and len(todo) < 100:
             todo.append(pile_catchup.get())
         if todo and not exit_event.is_set():
             try:
