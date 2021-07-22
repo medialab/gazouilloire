@@ -24,6 +24,7 @@ CORPUS=$1
 
 # Corpus directory assumed to be the same as the script's
 CORPUSDIR=$(dirname "$0")
+cd $CORPUSDIR
 
 # Corpus python environment assumed to be named gazou-CORPUSNAME
 CORPUSENV="gazou-$CORPUS"
