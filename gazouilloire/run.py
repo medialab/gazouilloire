@@ -270,7 +270,7 @@ def format_url_query(urlquery):
 
 def streamer(pile, pile_deleted, oauth, oauth2, conf, locale, language, geocode, exit_event):
     keywords = conf["keywords"]
-    urlpieces = conf["urlpieces"]
+    urlpieces = conf["url_pieces"]
     timed_keywords = conf["time_limited_keywords"]
 
     resco, _, streamco = instantiate_clients(oauth, oauth2)
@@ -444,7 +444,7 @@ def write_search_state(state, dir_path="."):
 
 def searcher(pile, oauth, oauth2, conf, locale, language, geocode, exit_event, no_rollback=False):
     keywords = conf["keywords"]
-    urlpieces = conf["urlpieces"]
+    urlpieces = conf["url_pieces"]
     timed_keywords = conf["time_limited_keywords"]
 
     searchco, searchco2, _ = instantiate_clients(oauth, oauth2)
