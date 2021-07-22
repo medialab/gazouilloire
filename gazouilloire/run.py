@@ -268,7 +268,11 @@ re_split_url_pieces = re.compile(r'[^a-z0-9]+', re.I)
 def format_url_query(urlquery):
     return " ".join([k for k in re_split_url_pieces.split(urlquery) if k.strip()])
 
-def streamer(pile, pile_deleted, oauth, oauth2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event):
+def streamer(pile, pile_deleted, oauth, oauth2, conf, locale, language, geocode, exit_event):
+    keywords = conf["keywords"]
+    urlpieces = conf["urlpieces"]
+    timed_keywords = conf["time_limited_keywords"]
+
     resco, _, streamco = instantiate_clients(oauth, oauth2)
 
     # Stream parameters reference: https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters
@@ -425,18 +429,24 @@ def stall_queries(next_reset, exit_event):
         log.info("Stalling search queries with rate exceeded for the next %s seconds" % delay)
     breakable_sleep(delay, exit_event)
 
-def read_search_state():
-    with open(".search_state.json") as f:
+def read_search_state(dir_path="."):
+    state_file = os.path.join(dir_path, ".search_state.json")
+    with open(state_file) as f:
         return {k: v for k, v in json.load(f).items()}
 
-def write_search_state(state):
-    with open(".search_state.json", "w") as f:
+def write_search_state(state, dir_path="."):
+    state_file = os.path.join(dir_path, ".search_state.json")
+    with open(state_file, "w") as f:
         json.dump(state, f)
 
 # TODO
 # - improve logs : add INFO on result of all queries on a keyword if new
 
-def searcher(pile, oauth, oauth2, keywords, urlpieces, timed_keywords, locale, language, geocode, exit_event, no_rollback=False):
+def searcher(pile, oauth, oauth2, conf, locale, language, geocode, exit_event, no_rollback=False):
+    keywords = conf["keywords"]
+    urlpieces = conf["urlpieces"]
+    timed_keywords = conf["time_limited_keywords"]
+
     searchco, searchco2, _ = instantiate_clients(oauth, oauth2)
 
     # Search operators reference: https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators
@@ -463,7 +473,7 @@ def searcher(pile, oauth, oauth2, keywords, urlpieces, timed_keywords, locale, l
     timed_queries = {}
     state = {q: 0 for q in queries + [format_keyword(k) for k in timed_keywords.keys()]}
     try:
-        queries_since_id = read_search_state()
+        queries_since_id = read_search_state(dir_path=conf["path"])
         assert queries_since_id and sorted(state.keys()) == sorted(queries_since_id.keys())
         log.info("Search queries restarting from previous state.")
     except Exception as e:
@@ -577,7 +587,7 @@ def searcher(pile, oauth, oauth2, keywords, urlpieces, timed_keywords, locale, l
                 if news < 25:
                     if not exit_event.is_set():
                         queries_since_id[query] = since
-                        write_search_state(queries_since_id)
+                        write_search_state(queries_since_id, dir_path=conf["path"])
                     break
 
         breakable_sleep(max(timegap, next_reset - time.time() - 1.5*left), exit_event)
@@ -697,14 +707,14 @@ def main(conf):
     signal.signal(signal.SIGINT, default_handler)
     stream = Process(
         target=streamer,
-        args=(pile, pile_deleted, oauth, oauth2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, streamgeocode, exit_event),
+        args=(pile, pile_deleted, oauth, oauth2, conf, locale, language, streamgeocode, exit_event),
         daemon=True,
         name="streamer  "
     )
     stream.start()
     search = Process(
         target=searcher,
-        args=(pile, oauth, oauth2, conf['keywords'], conf['url_pieces'], conf['time_limited_keywords'], locale, language, searchgeocode, exit_event, no_rollback),
+        args=(pile, oauth, oauth2, conf, locale, language, searchgeocode, exit_event, no_rollback),
         daemon=True,
         name="searcher  "
     )
