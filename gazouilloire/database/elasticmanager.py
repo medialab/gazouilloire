@@ -378,6 +378,22 @@ class ElasticManager:
             for tweet in batch["docs"]:
                 yield tweet
 
+def bulk_update(client, actions):
+    # Adapted code from elasticsearch's helpers.bulk method to return the
+    # details of new elements from bulk updates
+    success, created = 0, 0
+    errors = []
+
+    for ok, item in helpers.streaming_bulk(client, actions, yield_ok=True):
+        if not ok:
+            errors.append(item)
+        else:
+            if item["update"]["result"] == "created":
+                created += 1
+            success += 1
+
+    return success, created, errors
+
 if __name__ == "__main__":
     es = ElasticManager("localhost", 9200, "gazouilloire")
     es.prepare_indices()

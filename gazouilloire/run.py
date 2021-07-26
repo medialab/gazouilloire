@@ -33,7 +33,7 @@ from math import pi, sin, cos, acos
 import shutil
 from twitwi import normalize_tweet
 from ural.get_domain_name import get_hostname_prefixes
-from gazouilloire.database.elasticmanager import ElasticManager, prepare_db
+from gazouilloire.database.elasticmanager import ElasticManager, prepare_db, bulk_update
 from elasticsearch import helpers, exceptions
 from gazouilloire.url_resolve import resolve_loop, count_and_log
 from gazouilloire.config_format import load_conf, log
@@ -140,6 +140,8 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
             while pilesize and len(todo) < DEPILER_BATCH_SIZE:
                 todo.append(pile.get())
                 pilesize -= 1
+            if todo:
+                log.debug("Preparing to index %s collected tweets" % len(todo))
             tweets_bulk = []
             for t in prepare_tweets(todo, locale):
                 if pile_media and t["media_files"]:
@@ -148,9 +150,11 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
                     if not db.find_tweet(t["to_tweetid"]):
                         pile_catchup.put(t["to_tweetid"])
                 tweets_bulk.append(t)
-            helpers.bulk(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
             if tweets_bulk:
-                log.debug("Saved %s tweets in database (from %s collected tweets)" % (len(tweets_bulk), len(todo)))
+                updated, created, errors = bulk_update(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
+                log.debug("Saved %s tweets in database (including %s new ones)" % (updated, created))
+                if errors:
+                    log.error("Warning: %s tweets could not be updated properly in elasticsearch:\n - %s" % (len(errors), "\n -".join(json.dumps(e) for e in errors)))
         except exceptions.ConnectionError as e:
             log.error(e)
             log.error("Depiler can't connect to elasticsearch. Ending collection.".upper())
