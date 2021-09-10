@@ -3,6 +3,8 @@ import sys
 import json
 from elasticsearch import Elasticsearch, helpers, exceptions
 from datetime import datetime, timedelta
+import dateutil.relativedelta
+from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 import itertools
 
 
@@ -70,7 +72,7 @@ def format_tweet_fields(tweet):
 def prepare_db(host, port, db_name):
     try:
         db = ElasticManager(host, port, db_name)
-        db_exists = db.exists(db.tweets)
+        db_exists = db.exists(db.tweets + "*")
     except Exception as e:
         sys.stderr.write(
             "ERROR: Could not initiate connection to database: %s %s" % (type(e), e))
@@ -107,13 +109,19 @@ class ElasticManager:
         """
         return self.client.indices.exists(index=doc_type)
 
+    def get_index_name(self, day):
+        return self.tweets + datetime.strftime(day, "_%Y_%m")
+
     def prepare_indices(self):
         """
         Check if indices exist, if not, create them
         """
-        if not self.exists(self.tweets):
-            self.client.indices.create(
-                index=self.tweets, body=DB_MAPPINGS["tweets_mapping"])
+        current_day = datetime.now()
+        for day in [current_day, current_day - dateutil.relativedelta.relativedelta(months=1)]:
+            index_name = self.get_index_name(day)
+            if not self.exists(index_name):
+                self.client.indices.create(
+                    index=index_name, body=DB_MAPPINGS["tweets_mapping"])
         if not self.exists(self.links):
             self.client.indices.create(
                 index=self.links, body=DB_MAPPINGS["links_mapping"])
@@ -130,11 +138,11 @@ class ElasticManager:
 
     # depiler() methods
 
-    def update(self, tweet_id, new_value):
-        """Updates the given tweet to the content of 'new_value' argument"""
-        formatted_new_value = format_tweet_fields(new_value)
-        return self.client.update(index=self.tweets, id=tweet_id,
-                                  body={"doc": formatted_new_value, "doc_as_upsert": True})
+    # def update(self, tweet_id, new_value):
+    #     """Updates the given tweet to the content of 'new_value' argument"""
+    #     formatted_new_value = format_tweet_fields(new_value)
+    #     return self.client.update(index=self.tweets, id=tweet_id,
+    #                               body={"doc": formatted_new_value, "doc_as_upsert": True})
 
     def prepare_indexing_links(self, links):
         """Yields an indexing action for every link of a list"""
@@ -162,7 +170,7 @@ class ElasticManager:
                     ctx._source.favorite_count = params.favorite_count; \
                     if (!ctx._source.collected_via.contains(params.collected_via)){ctx._source.collected_via.add(params.collected_via)}"
             yield {
-                '_index': self.tweets,
+                '_index': self.get_index_name(datetime.strptime(t["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)),
                 "_op_type": "update",
                 "_id": t.pop("id"),
                 "script": {
@@ -184,43 +192,55 @@ class ElasticManager:
         """Yields an update action for the links of every tweet in the list"""
         for l in links:
             l.update({
-                "_index": self.tweets,
                 "_op_type": "update"
             })
             yield l
 
-    def stream_tweets_batch(self, tweets, upsert=False, common_update=None):
-        """Yields an update action for every tweet of a list"""
-        for tweet in tweets:
-            if common_update:
-                doc = common_update
-            else:
-                doc = format_tweet_fields(tweet)
-            yield {
-                "_id": tweet["_id"],
-                "_index": self.tweets,
-                "_op_type": "update",
-                "_source": {
-                    "doc": doc,
-                    "doc_as_upsert": upsert
-                }
-            }
+    # def stream_tweets_batch(self, tweets, upsert=False, common_update=None):
+    #     """Yields an update action for every tweet of a list"""
+    #     for tweet in tweets:
+    #         if common_update:
+    #             doc = common_update
+    #         else:
+    #             doc = format_tweet_fields(tweet)
+    #         yield {
+    #             "_id": tweet["_id"],
+    #             "_index": self.tweets,
+    #             "_op_type": "update",
+    #             "_source": {
+    #                 "doc": doc,
+    #                 "doc_as_upsert": upsert
+    #             }
+    #         }
 
     def set_deleted(self, tweet_id):
         """Sets the field 'deleted' of the given tweet to True"""
-        return self.client.update(index=self.tweets, id=tweet_id,
-                                  body={"doc": {"deleted": True}, "doc_as_upsert": True})
+
+        opened_indices = self.client.indices.get(self.tweets + "*")
+        for index in opened_indices:
+            try:
+                update_status = self.client.update(index=index, id=tweet_id,
+                                   body={"doc": {"deleted": True}, "doc_as_upsert": False})
+                break
+            except exceptions.NotFoundError:
+                # todo: what if the document has not been indexed yet (still in the queue)?
+                continue
+        return update_status
 
     def find_tweet(self, tweet_id):
         """Returns the tweet corresponding to the given id"""
-        try:
-            response = self.client.get(
-                index=self.tweets,
-                id=tweet_id
-            )
-        except exceptions.NotFoundError:
-            return None
-        return response
+        opened_indices = self.client.indices.get(self.tweets + "*")
+        for index in opened_indices:
+            try:
+                response = self.client.get(
+                    index=index,
+                    id=tweet_id
+                )
+                return response
+            except exceptions.NotFoundError:
+                continue
+        return None
+
 
     def get_urls(self, url_list):
         """Returns the urls corresponding to the given url_list.
@@ -246,9 +266,9 @@ class ElasticManager:
                             }
             query["bool"]["filter"].append(range_clause)
         response = self.client.search(
-            index=self.tweets,
+            index=self.tweets + "*",
             body={
-                "_source": ["links", "proper_links", "retweet_id"],
+                "_source": ["links", "proper_links", "retweet_id", "local_time"],
                 "size": batch_size,
                 "query": query
             }
@@ -287,7 +307,9 @@ class ElasticManager:
             t["_source"]["domains"] = domains
             t["_source"]["links_to_resolve"] = False
             yield {
-                '_index': self.tweets,
+                '_index': self.get_index_name(
+                    datetime.strptime(t["_source"]["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
+                ),
                 "_op_type": "index",
                 '_source': t["_source"],
                 "_id": t["_id"]
@@ -310,21 +332,21 @@ class ElasticManager:
 
     def count_tweets(self, key, value):
         """Counts the number of documents where the given key is equal to the given value"""
-        return self.client.count(index=self.tweets, body={"query": {"term": {key: value}}})['count']
+        return self.client.count(index=self.tweets + "*", body={"query": {"term": {key: value}}})['count']
 
-    def update_resolved_tweets(self, tweetsdone):
-        """Sets the "links_to_resolve" field of the tweets in tweetsdone to False"""
-        q = {
-            "script": {
-                "inline": "ctx._source.links_to_resolve=false",
-                "lang": "painless"
-            },
-            "query": {
-                "terms": {"_id": tweetsdone}
-            }
-        }
-        self.client.update_by_query(
-            body=q, index=self.tweets)
+    # def update_resolved_tweets(self, tweetsdone):
+    #     """Sets the "links_to_resolve" field of the tweets in tweetsdone to False"""
+    #     q = {
+    #         "script": {
+    #             "inline": "ctx._source.links_to_resolve=false",
+    #             "lang": "painless"
+    #         },
+    #         "query": {
+    #             "terms": {"_id": tweetsdone}
+    #         }
+    #     }
+    #     self.client.update_by_query(
+    #         body=q, index=self.tweets)
 
     # export methods
     def search_thread_elements(self, ids_list):
@@ -348,7 +370,7 @@ class ElasticManager:
         }
         response = helpers.scan(
             client=self.client,
-            index=self.tweets,
+            index=self.tweets + "*",
             query=body
         )
         return response
@@ -373,6 +395,7 @@ class ElasticManager:
         return list(all_ids)
 
     def multi_get(self, ids, batch_size=1000):
+        #todo: currently in error with multiindex
         for i in range(0, len(ids), batch_size):
             batch = self.client.mget(body={'ids': ids[i:i+batch_size]}, index=self.tweets)
             for tweet in batch["docs"]:

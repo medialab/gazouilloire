@@ -11,6 +11,7 @@ from minet.exceptions import RedirectError
 from gazouilloire.database.elasticmanager import ElasticManager
 from ural.get_domain_name import get_hostname_prefixes
 from twitwi.utils import custom_get_normalized_hostname, custom_normalize_url
+from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 from gazouilloire.config_format import log
 import logging
 
@@ -128,12 +129,20 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug, retry_days=30):
             skip += 1
             continue
         if tweet.get("retweeted_id") is None:  # The tweet is an original tweet. No need to search for its id.
-            to_update.append(
-                {'_id': tweet["_id"], "_source": {"doc": {
-                    'proper_links': gdlinks,
-                    'links_to_resolve': False,
-                    'domains': list(gddomains)
-                }}})
+            try:
+                to_update.append(
+                    {'_id': tweet["_id"],
+                     '_index': db.get_index_name(
+                         datetime.strptime(tweet["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
+                     ),
+                     "_source": {"doc": {
+                        'proper_links': gdlinks,
+                        'links_to_resolve': False,
+                        'domains': list(gddomains)
+                    }}})
+            except KeyError:
+                log.error(tweet)
+                sys.exit(1)
         db.update_retweets_with_links(tweetid, gdlinks, list(gddomains))
         ids_done_in_batch.add(tweetid)
 
