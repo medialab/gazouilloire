@@ -144,7 +144,7 @@ def find_potential_duplicate_ids(outputfile):
                 return last_time, last_ids
 
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-               verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume):
+               verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume, step=None):
     threads = conf.get('grab_conversations', False)
     if selection:
         SELECTION = selection.split(",")
@@ -197,11 +197,17 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
             since = datetime.fromisoformat(last_timestamp)
         body = build_body(query, exclude_threads, exclude_retweets, since, until)
         count = db.client.count(index=db.tweets, body=body)['count']
-        body["sort"] = ["timestamp_utc"]
-        iterator = yield_csv(
-            helpers.scan(client=db.client, index=db.tweets, query=body, preserve_order=True),
-            last_ids=last_ids
-        )
+        if step:
+            iterator = yield_csv(
+                yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets),
+                last_ids = last_ids
+            )
+        else:
+            body["sort"] = ["timestamp_utc"]
+            iterator = yield_csv(
+                helpers.scan(client=db.client, index=db.tweets, query=body, preserve_order=True),
+                last_ids=last_ids
+            )
     if verbose:
         import progressbar
         bar = progressbar.ProgressBar(max_value=count)
@@ -221,6 +227,14 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
 
 def increment_steps(start_date, step):
     return start_date + relativedelta.relativedelta(**{step: 1})
+
+
+def yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets):
+    for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets):
+        body["sort"] = ["timestamp_utc"]
+        for t in helpers.scan(client=db.client, index=db.tweets, query=body, preserve_order=True):
+            yield t
+
 
 
 def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets):
