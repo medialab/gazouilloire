@@ -165,7 +165,6 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                 log.error("The column names in the {} file do not match the export format".format(outputfile))
                 sys.exit(1)
 
-
     db = call_database(conf)
 
     if not threads:
@@ -224,27 +223,31 @@ def increment_steps(start_date, step):
     return start_date + relativedelta.relativedelta(**{step: 1})
 
 
+def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets):
+    if not until:
+        until = datetime.now()
+    if not since:
+        body = build_body(query, exclude_threads, exclude_retweets)
+        body["sort"] = ["timestamp_utc"]
+        body["size"] = 1
+        first_tweet = db.client.search(body=body, index=db.tweets)["hits"]["hits"][0]["_source"]
+        since = datetime.fromtimestamp(first_tweet["timestamp_utc"])
+    one_more_step = increment_steps(since, step)
+    while since < until:
+        body = build_body(query, exclude_threads, exclude_retweets, since, one_more_step)
+        yield since, body
+        since = increment_steps(since, step)
+        one_more_step = increment_steps(since, step)
+
+
 def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None):
     db = call_database(conf)
     file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
     writer = csv.writer(file)
-
     if step:
-        if not until:
-            until = datetime.now()
-        if not since:
-            body = build_body(query, exclude_threads, exclude_retweets)
-            body["sort"] = ["timestamp_utc"]
-            body["size"] = 1
-            first_tweet = db.client.search(body=body, index=db.tweets)["hits"]["hits"][0]["_source"]
-            since = datetime.fromtimestamp(first_tweet["timestamp_utc"])
-        one_more_step = increment_steps(since, step)
-        while since < until:
-            body = build_body(query, exclude_threads, exclude_retweets, since, one_more_step)
+        for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets):
             count = db.client.count(index=db.tweets, body=body)['count']
             writer.writerow([",".join(query), since, count] if query else [since, count])
-            since = increment_steps(since, step)
-            one_more_step = increment_steps(since, step)
     else:
         body = build_body(query, exclude_threads, exclude_retweets, since, until)
         count = db.client.count(index=db.tweets, body=body)['count']
