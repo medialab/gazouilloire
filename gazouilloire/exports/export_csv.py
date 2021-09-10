@@ -14,6 +14,7 @@ from gazouilloire.config_format import log
 from casanova import reverse_reader
 from casanova.exceptions import MissingColumnError
 
+
 def date_to_timestamp(date):
     return str(date.timestamp())
 
@@ -143,6 +144,7 @@ def find_potential_duplicate_ids(outputfile):
             else:
                 return last_time, last_ids
 
+
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume, step=None):
     threads = conf.get('grab_conversations', False)
@@ -234,7 +236,6 @@ def yield_step_scans(db, step, since, until, query, exclude_threads, exclude_ret
         body["sort"] = ["timestamp_utc"]
         for t in helpers.scan(client=db.client, index=db.tweets, query=body, preserve_order=True):
             yield t
-
 
 
 def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets):
