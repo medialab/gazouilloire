@@ -250,7 +250,7 @@ def resolver(batch_size, db_conf, exit_event, verbose=False, url_debug=False, re
         todo = count_and_log(db, batch_size, done=done, skip=skip, retry_days=resolving_delay)
         done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose, url_debug=url_debug,
                                   retry_days=resolving_delay)
-        time.sleep(30)
+        breakable_sleep(30, exit_event)
     log.info("FINISHED resolver")
 
 real_min = lambda x, y: min(x, y) if x else y
