@@ -118,6 +118,9 @@ def prepare_tweets(tweets, locale):
             except KeyError as missing_field:
                 log.warning("Missing '{}' field in tweet: \n{}".format(missing_field, tweet))
                 continue
+            except Exception as e:
+                log.error("LAST TWEET PROCESSED WAS: %s" % tweet)
+                raise e
         else:
             yield tweet
 
@@ -157,12 +160,12 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
                     log.error("Warning: %s tweets could not be updated properly in elasticsearch:\n - %s" % (len(errors), "\n -".join(json.dumps(e) for e in errors)))
         except exceptions.ConnectionError as e:
             log.error(e)
-            log.error("Depiler can't connect to elasticsearch. Ending collection.".upper())
+            log.error("DEPILER CAN'T CONNECT TO ELASTICSEARCH. ENDING COLLECTION.")
             exit_event.set()
             break
         except Exception as e:
             log.error(str(type(e)) + ": " + str(e))
-            log.error("Ending collection.".upper())
+            log.error("ENDING COLLECTION.")
             exit_event.set()
             break
         breakable_sleep(2, exit_event)
