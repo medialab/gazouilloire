@@ -133,10 +133,13 @@ class ElasticManager:
         Check if index exists, if so, delete it
         """
         index_name = getattr(self, doc_type)
-        if self.exists(index_name):
-            self.client.indices.delete(index=index_name)
+        opened_indices = self.client.indices.get(index_name + "*")
+        if len(opened_indices) > 0:
+            for index in opened_indices:
+                self.client.indices.delete(index=index)
             return True
         return False
+
 
     # depiler() methods
 
