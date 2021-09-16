@@ -84,11 +84,13 @@ def prepare_db(host, port, db_name):
             "ERROR: elasticsearch index %s does not exist" % db_name
         )
 
+
 class ElasticManager:
 
-    def __init__(self, host, port, db_name, links_index=None):
+    def __init__(self, host, port, db_name, nb_past_months=None, links_index=None):
         self.host = host
         self.port = port
+        self.nb_past_months = nb_past_months
         self.db_name = db_name.replace(" ", "_")
         self.client = Elasticsearch(
             host + ":" + str(port),
@@ -158,6 +160,10 @@ class ElasticManager:
         for tweet in tweets:
             t = tweet.copy()
             reply_count = t.get("reply_count", None)
+            tweet_date = tweet_date = datetime.strptime(t["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
+            if self.nb_past_months and self.tweet_is_too_old(tweet_date):
+                continue
+
             if reply_count is not None:
                 source = "ctx._source.match_query |= params.match_query; \
                     ctx._source.retweet_count = params.retweet_count; \
@@ -170,7 +176,7 @@ class ElasticManager:
                     ctx._source.favorite_count = params.favorite_count; \
                     if (!ctx._source.collected_via.contains(params.collected_via)){ctx._source.collected_via.add(params.collected_via)}"
             yield {
-                '_index': self.get_index_name(datetime.strptime(t["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)),
+                '_index': self.get_index_name(tweet_date),
                 "_op_type": "update",
                 "_id": t.pop("id"),
                 "script": {
@@ -241,6 +247,9 @@ class ElasticManager:
                 continue
         return None
 
+    def tweet_is_too_old(self, tweet_date):
+        min_date = datetime.now() - dateutil.relativedelta.relativedelta(months=self.nb_past_months)
+        return tweet_date < min_date
 
     def get_urls(self, url_list):
         """Returns the urls corresponding to the given url_list.
