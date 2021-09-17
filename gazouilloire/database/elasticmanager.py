@@ -119,14 +119,21 @@ class ElasticManager:
         Check if indices exist, if not, create them
         """
         current_day = datetime.now()
-        for day in [current_day, current_day - dateutil.relativedelta.relativedelta(months=1)]:
-            index_name = self.get_index_name(day)
+        if self.nb_past_months:
+            nb_past_months = self.nb_past_months + 1
+        else:
+            twitter_creation_date = datetime(2006,3,21)
+            time_diff_years = current_day.year - twitter_creation_date.year
+            time_diff_months = current_day.month - twitter_creation_date.month
+            nb_past_months = time_diff_years * 12 + time_diff_months + 1
+        for i in range(nb_past_months):
+            index_name = self.get_index_name(current_day - dateutil.relativedelta.relativedelta(months=i))
             if not self.exists(index_name):
-                self.client.indices.create(
-                    index=index_name, body=DB_MAPPINGS["tweets_mapping"])
+                self.client.indices.create(index=index_name, body=DB_MAPPINGS["tweets_mapping"])
         if not self.exists(self.links):
             self.client.indices.create(
-                index=self.links, body=DB_MAPPINGS["links_mapping"])
+                index=self.links, body=DB_MAPPINGS["links_mapping"]
+            )
 
     def delete_index(self, doc_type):
         """
@@ -232,7 +239,8 @@ class ElasticManager:
                                    body={"doc": {"deleted": True}, "doc_as_upsert": False})
                 break
             except exceptions.NotFoundError:
-                # todo: what if the document has not been indexed yet (still in the queue)?
+                # todo: log when tweet is not found
+                # todo: update_status must exist (or return must be deleted)
                 continue
         return update_status
 
