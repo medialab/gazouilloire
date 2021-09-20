@@ -247,9 +247,15 @@ def resolver(batch_size, db_conf, exit_event, verbose=False, url_debug=False, re
     skip = 0
     done = 0
     while not exit_event.is_set():
-        todo = count_and_log(db, batch_size, done=done, skip=skip, retry_days=resolving_delay)
-        done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose, url_debug=url_debug,
+        try:
+            todo = count_and_log(db, batch_size, done=done, skip=skip, retry_days=resolving_delay)
+            done, skip = resolve_loop(batch_size, db, todo, skip, verbose=verbose, url_debug=url_debug,
                                   retry_days=resolving_delay)
+        except exceptions.ConnectionError as e:
+            log.error(e)
+            log.error("RESOLVER CAN'T CONNECT TO ELASTICSEARCH. ENDING URLS RESOLUTION.")
+            exit_event.set()
+            break
         breakable_sleep(30, exit_event)
     log.info("FINISHED resolver")
 
