@@ -4,6 +4,9 @@
 # Place this script in your gazouilloire corpus directory
 # Run it by giving it the corpus name as argument, for instance:
 # ./restart.sh mycorpus
+# It will automatically try to use pyenv to activate a virtualenv
+# named 'gazou-mycorpus' but you can force another env name like this:
+# ./restart.sh mycorpus myenv
 #
 # - Prerequisites:
 # This script supposes gazouilloire was installed within a python environment using PyEnv:
@@ -22,12 +25,15 @@
 # Corpus name as argument 
 CORPUS=$1
 
+# Corpus python environment assumed to be named gazou-CORPUSNAME if not input
+CORPUSENV=$2
+if [ -z "$2" ]; then
+  CORPUSENV="gazou-$CORPUS"
+fi
+
 # Corpus directory assumed to be the same as the script's
 CORPUSDIR=$(dirname "$0")
 cd $CORPUSDIR
-
-# Corpus python environment assumed to be named gazou-CORPUSNAME
-CORPUSENV="gazou-$CORPUS"
 
 # Setup and activate Python environment using PyEnv
 export PYENV_ROOT="$HOME/.pyenv"
