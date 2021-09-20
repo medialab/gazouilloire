@@ -74,3 +74,12 @@ gazou restart "$CORPUSDIR" --timeout 300
 # Display quick stats on the corpus as of now
 gazou status "$CORPUSDIR"
 
+# Warn explicitly if tweets data in ES reached more than 100Go
+if gazou status "$CORPUSDIR" 2>&1 | grep "disk space tweets: .\{3,\}GB" > /dev/null; then
+  echo
+  echo
+  echo "!!! WARNING !!!"
+  echo "---------------"
+  echo "Tweets data in ElasticSearch consumes more than 100Go, you should restart your corpus on a fresh new index"
+fi
+
