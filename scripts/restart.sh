@@ -75,7 +75,7 @@ gazou restart "$CORPUSDIR" --timeout 300
 gazou status "$CORPUSDIR"
 
 # Warn explicitly if tweets data in ES reached more than 100Go
-if gazou status "$CORPUSDIR" 2>&1 | grep "disk space tweets: .\{3,\}GB" > /dev/null; then
+if gazou status "$CORPUSDIR" 2>&1 | grep "disk space tweets: [0-9]\{3,\}[0-9\.]*GB" > /dev/null; then
   echo
   echo
   echo "!!! WARNING !!!"
