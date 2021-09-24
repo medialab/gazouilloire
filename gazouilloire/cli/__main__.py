@@ -141,11 +141,7 @@ def status(path):
 def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
     if url_debug:
         verbose = False
-
-    if db_name is None:
-        db_name = load_conf(path)["database"]["db_name"]
-
-    resolve_script(batch_size, host, port, db_name, verbose=verbose, url_debug=url_debug)
+    resolve_script(**load_conf(path)["database"], batch_size=batch_size, verbose=verbose, url_debug=url_debug)
 
 
 @main.command(help="Export tweets in csv format. Type 'gazou export' to get all collected tweets, or 'gazou export "

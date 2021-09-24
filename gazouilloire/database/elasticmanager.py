@@ -69,10 +69,13 @@ def format_tweet_fields(tweet):
     return elastic_tweet
 
 
-def prepare_db(host, port, db_name):
+def prepare_db(host, port, db_name, multi_index=False):
     try:
-        db = ElasticManager(host, port, db_name)
-        db_exists = db.exists(db.tweets + "*")
+        db = ElasticManager(host, port, db_name, multi_index=multi_index)
+        if multi_index:
+            db_exists = db.exists(db.tweets + "*")
+        else:
+            db_exists = db.exists(db.tweets)
     except Exception as e:
         sys.stderr.write(
             "ERROR: Could not initiate connection to database: %s %s" % (type(e), e))
@@ -84,14 +87,17 @@ def prepare_db(host, port, db_name):
             "ERROR: elasticsearch index %s does not exist" % db_name
         )
 
+
 def get_month(day):
     return datetime.strftime(day, "_%Y_%m")
 
+
 class ElasticManager:
 
-    def __init__(self, host, port, db_name, nb_past_months=None, links_index=None):
+    def __init__(self, host, port, db_name, multi_index=False, nb_past_months=None, links_index=None):
         self.host = host
         self.port = port
+        self.multi_index = multi_index
         self.nb_past_months = nb_past_months
         self.current_month = get_month(datetime.now())
         self.db_name = db_name.replace(" ", "_")
@@ -115,26 +121,30 @@ class ElasticManager:
     def get_index_name(self, day):
         return self.tweets + get_month(day)
 
+    def create_index(self, index_name, mapping):
+        if not self.exists(index_name):
+            self.client.indices.create(index=index_name, body=mapping)
+
     def prepare_indices(self):
         """
         Check if indices exist, if not, create them
         """
-        one_month_in_advance = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
-        if self.nb_past_months:
-            nb_past_months = self.nb_past_months + 2
+        if self.multi_index:
+            one_month_in_advance = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
+            if self.nb_past_months:
+                nb_past_months = self.nb_past_months + 2
+            else:
+                twitter_creation_date = datetime(2006,3,21)
+                time_diff_years = one_month_in_advance.year - twitter_creation_date.year
+                time_diff_months = one_month_in_advance.month - twitter_creation_date.month
+                nb_past_months = time_diff_years * 12 + time_diff_months + 1
+            for i in range(nb_past_months):
+                index_name = self.get_index_name(one_month_in_advance - dateutil.relativedelta.relativedelta(months=i))
+                self.create_index(index_name, DB_MAPPINGS["tweets_mapping"])
         else:
-            twitter_creation_date = datetime(2006,3,21)
-            time_diff_years = one_month_in_advance.year - twitter_creation_date.year
-            time_diff_months = one_month_in_advance.month - twitter_creation_date.month
-            nb_past_months = time_diff_years * 12 + time_diff_months + 1
-        for i in range(nb_past_months):
-            index_name = self.get_index_name(one_month_in_advance - dateutil.relativedelta.relativedelta(months=i))
-            if not self.exists(index_name):
-                self.client.indices.create(index=index_name, body=DB_MAPPINGS["tweets_mapping"])
-        if not self.exists(self.links):
-            self.client.indices.create(
-                index=self.links, body=DB_MAPPINGS["links_mapping"]
-            )
+            self.create_index(self.tweets, DB_MAPPINGS["tweets_mapping"])
+
+        self.create_index(self.links, DB_MAPPINGS["links_mapping"])
 
     def delete_index(self, doc_type):
         """
@@ -159,16 +169,18 @@ class ElasticManager:
 
     def prepare_indexing_tweets(self, tweets):
         """Yields an indexing action for every tweet of a list. For existing tweets, only some fields are updated."""
-        if get_month(datetime.now()) != self.current_month:
+        if self.multi_index and get_month(datetime.now()) != self.current_month:
             self.prepare_indices()
             self.current_month = get_month(datetime.now())
+        index = self.tweets
         for tweet in tweets:
             t = tweet.copy()
             reply_count = t.get("reply_count", None)
-            tweet_date = tweet_date = datetime.strptime(t["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
-            if self.nb_past_months and self.tweet_is_too_old(tweet_date):
-                continue
-
+            if self.multi_index:
+                tweet_date = tweet_date = datetime.strptime(t["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
+                if self.nb_past_months and self.tweet_is_too_old(tweet_date):
+                    continue
+                index = self.get_index_name(tweet_date)
             if reply_count is not None:
                 source = "ctx._source.match_query |= params.match_query; \
                     ctx._source.retweet_count = params.retweet_count; \
@@ -181,7 +193,7 @@ class ElasticManager:
                     ctx._source.favorite_count = params.favorite_count; \
                     if (!ctx._source.collected_via.contains(params.collected_via)){ctx._source.collected_via.add(params.collected_via)}"
             yield {
-                '_index': self.get_index_name(tweet_date),
+                '_index': index,
                 "_op_type": "update",
                 "_id": t.pop("id"),
                 "script": {
@@ -298,14 +310,18 @@ class ElasticManager:
                           body={"link_id": link, "real": resolved_link})
 
     def prepare_indexing_tweets_with_new_links(self, tweets, links, domains):
+        index = self.tweets
         for t in tweets:
+            if self.multi_index:
+                index = self.get_index_name(
+                    datetime.strptime(t["_source"]["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
+                )
+            print(index)
             t["_source"]["proper_links"] = links
             t["_source"]["domains"] = domains
             t["_source"]["links_to_resolve"] = False
             yield {
-                '_index': self.get_index_name(
-                    datetime.strptime(t["_source"]["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
-                ),
+                '_index': index,
                 "_op_type": "index",
                 '_source': t["_source"],
                 "_id": t["_id"]
@@ -320,7 +336,7 @@ class ElasticManager:
         }
         response = helpers.scan(
             client=self.client,
-            index=self.tweets,
+            index=self.tweets + "*",
             query={"query": query}
         )
 
@@ -381,6 +397,7 @@ class ElasticManager:
             batch = self.client.mget(body={'ids': ids[i:i+batch_size]}, index=self.tweets)
             for tweet in batch["docs"]:
                 yield tweet
+
 
 def bulk_update(client, actions):
     # Adapted code from elasticsearch's helpers.bulk method to return the

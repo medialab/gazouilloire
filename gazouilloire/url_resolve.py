@@ -17,7 +17,7 @@ import logging
 
 
 def count_and_log(db, batch_size, done=0, skip=0, retry_days=30):
-    db.client.indices.refresh(index=db.tweets)
+    db.client.indices.refresh(index=db.tweets + "*")
     todo = list(db.find_tweets_with_unresolved_links(batch_size=batch_size, retry_days=retry_days))
     left = db.count_tweets("links_to_resolve", True)
     if done:
@@ -111,6 +111,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug, retry_days=30):
     tweets_already_done = []
     ids_done_in_batch = set()
     to_update = []
+    index = db.tweets
     for tweet in todo:
         if tweet.get("proper_links", []):
             tweets_already_done.append(tweet["_id"])
@@ -129,12 +130,12 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug, retry_days=30):
             skip += 1
             continue
         if tweet.get("retweeted_id") is None:  # The tweet is an original tweet. No need to search for its id.
+            if db.multi_index:
+                index = db.get_index_name(datetime.strptime(tweet["local_time"], FORMATTED_TWEET_DATETIME_FORMAT))
             try:
                 to_update.append(
                     {'_id': tweet["_id"],
-                     '_index': db.get_index_name(
-                         datetime.strptime(tweet["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
-                     ),
+                     '_index': index,
                      "_source": {"doc": {
                         'proper_links': gdlinks,
                         'links_to_resolve': False,
