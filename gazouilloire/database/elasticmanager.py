@@ -84,6 +84,8 @@ def prepare_db(host, port, db_name):
             "ERROR: elasticsearch index %s does not exist" % db_name
         )
 
+def get_month(day):
+    return datetime.strftime(day, "_%Y_%m")
 
 class ElasticManager:
 
@@ -91,6 +93,7 @@ class ElasticManager:
         self.host = host
         self.port = port
         self.nb_past_months = nb_past_months
+        self.current_month = get_month(datetime.now())
         self.db_name = db_name.replace(" ", "_")
         self.client = Elasticsearch(
             host + ":" + str(port),
@@ -112,22 +115,22 @@ class ElasticManager:
         return self.client.indices.exists(index=doc_type)
 
     def get_index_name(self, day):
-        return self.tweets + datetime.strftime(day, "_%Y_%m")
+        return self.tweets + get_month(day)
 
     def prepare_indices(self):
         """
         Check if indices exist, if not, create them
         """
-        current_day = datetime.now()
+        one_month_in_advance = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
         if self.nb_past_months:
-            nb_past_months = self.nb_past_months + 1
+            nb_past_months = self.nb_past_months + 2
         else:
             twitter_creation_date = datetime(2006,3,21)
-            time_diff_years = current_day.year - twitter_creation_date.year
-            time_diff_months = current_day.month - twitter_creation_date.month
+            time_diff_years = one_month_in_advance.year - twitter_creation_date.year
+            time_diff_months = one_month_in_advance.month - twitter_creation_date.month
             nb_past_months = time_diff_years * 12 + time_diff_months + 1
         for i in range(nb_past_months):
-            index_name = self.get_index_name(current_day - dateutil.relativedelta.relativedelta(months=i))
+            index_name = self.get_index_name(one_month_in_advance - dateutil.relativedelta.relativedelta(months=i))
             if not self.exists(index_name):
                 self.client.indices.create(index=index_name, body=DB_MAPPINGS["tweets_mapping"])
         if not self.exists(self.links):
@@ -167,6 +170,9 @@ class ElasticManager:
 
     def prepare_indexing_tweets(self, tweets):
         """Yields an indexing action for every tweet of a list. For existing tweets, only some fields are updated."""
+        if get_month(datetime.now()) != self.current_month:
+            self.prepare_indices()
+            self.current_month = get_month(datetime.now())
         for tweet in tweets:
             t = tweet.copy()
             reply_count = t.get("reply_count", None)
