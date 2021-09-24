@@ -106,8 +106,6 @@ class ElasticManager:
         else:
             self.links = self.db_name + "_links"
 
-    # main() methods
-
     def exists(self, doc_type):
         """
         Check if index already exists in elasticsearch
@@ -149,15 +147,6 @@ class ElasticManager:
                 self.client.indices.delete(index=index)
             return True
         return False
-
-
-    # depiler() methods
-
-    # def update(self, tweet_id, new_value):
-    #     """Updates the given tweet to the content of 'new_value' argument"""
-    #     formatted_new_value = format_tweet_fields(new_value)
-    #     return self.client.update(index=self.tweets, id=tweet_id,
-    #                               body={"doc": formatted_new_value, "doc_as_upsert": True})
 
     def prepare_indexing_links(self, links):
         """Yields an indexing action for every link of a list"""
@@ -218,23 +207,6 @@ class ElasticManager:
             })
             yield l
 
-    # def stream_tweets_batch(self, tweets, upsert=False, common_update=None):
-    #     """Yields an update action for every tweet of a list"""
-    #     for tweet in tweets:
-    #         if common_update:
-    #             doc = common_update
-    #         else:
-    #             doc = format_tweet_fields(tweet)
-    #         yield {
-    #             "_id": tweet["_id"],
-    #             "_index": self.tweets,
-    #             "_op_type": "update",
-    #             "_source": {
-    #                 "doc": doc,
-    #                 "doc_as_upsert": upsert
-    #             }
-    #         }
-
     def set_deleted(self, tweet_id):
         """Sets the field 'deleted' of the given tweet to True"""
 
@@ -278,8 +250,6 @@ class ElasticManager:
             body={'ids': url_list}
         )
         return response
-
-    # resolver() methods
 
     def find_tweets_with_unresolved_links(self, batch_size=600, retry_days=30):
         """Returns a list of tweets where 'links_to_resolve' field is True"""
@@ -360,21 +330,6 @@ class ElasticManager:
         """Counts the number of documents where the given key is equal to the given value"""
         return self.client.count(index=self.tweets + "*", body={"query": {"term": {key: value}}})['count']
 
-    # def update_resolved_tweets(self, tweetsdone):
-    #     """Sets the "links_to_resolve" field of the tweets in tweetsdone to False"""
-    #     q = {
-    #         "script": {
-    #             "inline": "ctx._source.links_to_resolve=false",
-    #             "lang": "painless"
-    #         },
-    #         "query": {
-    #             "terms": {"_id": tweetsdone}
-    #         }
-    #     }
-    #     self.client.update_by_query(
-    #         body=q, index=self.tweets)
-
-    # export methods
     def search_thread_elements(self, ids_list):
         """
         Elasticsearch query on which get_thread_ids_from_ids is based
@@ -447,15 +402,3 @@ if __name__ == "__main__":
     es = ElasticManager("localhost", 9200, "gazouilloire")
     es.prepare_indices()
     print(es.tweets)
-    # todo = es.find_tweets_with_unresolved_links()
-    # print(">> todo : ", todo[:10])
-    # urlstoclear = list(set([l for t in todo if not t.get(
-    #     "proper_links", []) for l in t.get("links", [])]))
-    # print(">> urlstoclear : ", urlstoclear[:10])
-    # alreadydone = [{l["_id"]: l["real"]
-    #                 for l in es.find_links_in(urlstoclear)}]
-    # print(">> alreadydone : ", alreadydone[:10])
-    # # es.update_tweets_with_links(
-    # #     1057377903506325506, ["goodlink3", "goodlink4"])
-    # print(es.count_tweets("retweet_id", "1057377903506325506"))
-    # es.update_resolved_tweets([1057223967893729280, 1057223975032373249])
