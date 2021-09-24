@@ -126,22 +126,29 @@ def status(path):
 
 
 @main.command(help="Resolve urls contained in a given Elasticsearch database. Usage: 'gazou resolve'")
-@click.option('--host', default="localhost")
 @click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
                                                                               "be found. By default, looks in the"
                                                                               "current directory. Usage: gazou resolve "
                                                                               "-p /path/to/directory/")
-@click.option('--port', default=9200)
 @click.option('--batch-size', default=5000)
 @click.option('--verbose/--silent', default=False)
 @click.option('--url-debug/--url-retry', default=False)
+@click.option('--host')
+@click.option('--port')
 @click.option('--db-name', help="Name of the ElasticSearch database containing the tweets. "
                                 "Will take precedence over --path if also given. "
                                 "Usage: gazou resolve --db-name mydb")
-def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
+def resolve(path, batch_size, verbose, url_debug, host, port, db_name):
     if url_debug:
         verbose = False
-    resolve_script(**load_conf(path)["database"], batch_size=batch_size, verbose=verbose, url_debug=url_debug)
+    database_params = load_conf(path)["database"]
+    if host:
+        database_params["host"] = host
+    if port:
+        database_params["port"] = port
+    if db_name:
+        database_params["db_name"] = db_name
+    resolve_script(**database_params, batch_size=batch_size, verbose=verbose, url_debug=url_debug)
 
 
 @main.command(help="Export tweets in csv format. Type 'gazou export' to get all collected tweets, or 'gazou export "
