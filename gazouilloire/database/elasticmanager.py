@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import calendar
 from elasticsearch import Elasticsearch, helpers, exceptions
 from datetime import datetime, timedelta
 import dateutil.relativedelta
@@ -158,28 +159,45 @@ class ElasticManager:
             return True
         return False
 
-    def close_indices(self, index, delete=False, force=False):
+    def close_index(self, index_name, last_day_of_month, force, delete, log_message):
+        if self.is_too_old(last_day_of_month) or force == True:
+            if self.exists(index_name):
+                if delete:
+                    deleted = self.client.indices.delete(index_name)
+                    print(deleted)
+                else:
+                    self.client.indices.close(index_name)
+                log.info("{} successfully {}d".format(index_name, log_message))
+            else:
+                log.warning("{} does not exist and could not be {}d".format(index_name, log_message))
+        else:
+            log.warning("{} may contain tweets posted less than {} months ago, use --force option if you want "
+                        "to {} it anyway.".format(index_name, self.nb_past_months, log_message))
+
+    def close_indices(self, indices, delete=False, force=False):
         """
         "Close all indices older than self.nb_past_months or close specific indices"
         """
         log_message = "delete" if delete else "close"
-        if index is not None:
-            now = datetime.now()
-            for year_month_date in index:
-                last_day_of_month = datetime(*year_month_date, now.hour, now.minute, now.second)
-                index_name = self.get_index_name(last_day_of_month)
-                if self.is_too_old(last_day_of_month) or force == True:
-                    if self.exists(index_name):
-                        if delete:
-                            self.client.indices.delete(index_name)
-                        else:
-                            self.client.indices.close(index_name)
-                        log.info("{} successfully {}d".format(index_name, log_message))
-                    else:
-                        log.warning("{} does not exist and could not be {}d".format(index_name, log_message))
-                else:
-                    log.warning("{} may contain tweets posted less than {} months ago, use --force option if you want "
-                                "to {} it anyway.".format(index_name, self.nb_past_months, log_message))
+        now = datetime.now()
+        for index in indices:
+            print(index)
+            try:
+                year, month = index.replace(self.db_name + "_tweets_", "").split("_")
+                last_day_of_month = datetime(
+                    int(year),
+                    int(month),
+                    calendar.monthrange(int(year), int(month))[1],
+                    now.hour,
+                    now.minute,
+                    now.second
+                )
+            except ValueError:
+                log.error("indices should be in format YYYY-MM")
+                sys.exit(1)
+
+            index_name = self.get_index_name(last_day_of_month)
+            self.close_index(index_name, last_day_of_month, force, delete, log_message)
 
     def prepare_indexing_links(self, links):
         """Yields an indexing action for every link of a list"""

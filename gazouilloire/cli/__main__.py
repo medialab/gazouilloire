@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import click
 import os
-import calendar
 from gazouilloire.__version__ import __version__
 from gazouilloire.config_format import create_conf_example, load_conf, log
 from gazouilloire.daemon import Daemon
@@ -311,19 +310,8 @@ def close(path, delete, force, index):
     multi_index = conf["database"].get("multi_index", False)
     if multi_index:
         es = ElasticManager(**conf["database"])
-        indices = []
-        if index:
-            for i in index.split(","):
-                year, month = i.split("-")
-                try:
-                    indices.append(
-                        (
-                            int(year),
-                            int(month),
-                            calendar.monthrange(int(year), int(month))[1]
-                        )
-                    )
-                except ValueError:
-                    log.error("indices should be in format YYYY-MM")
-                    sys.exit(1)
+        if index is not None:
+            indices = [es.db_name + "_tweets_" + i.replace("-", "_") for i in index.split(",")]
+        else:
+            indices = [i for i in es.client.indices.get(es.tweets + "_*", expand_wildcards="all")]
         es.close_indices(indices, delete, force)
