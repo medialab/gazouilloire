@@ -25,15 +25,12 @@ setup(name='gazouilloire',
       include_package_data=True,
       install_requires=[
           "elasticsearch >= 7.10.1",
-          "twitwi >= 0.9.1",
           "requests",
-          "pytz",
           "psutil",
-          "minet >= 0.52, < 0.53",
+          "minet >= 0.53.8",
           "future",
           "click",
-          "progressbar2",
-          "casanova >= 0.15.5"
+          "progressbar2"
       ],
       entry_points={
         'console_scripts': [
