@@ -91,14 +91,13 @@ def required_format(conf):
     if "multi_index" not in conf["database"] and "nb_past_months" in conf["database"]:
         log.error(
             'if "multi_index" is absent from config.json, "nb_past_months" is not supported. '
-            'Please delete it from the config file or set "multi_index" to true.'
+            'Please delete "nb_past_months" from the config file or set "multi_index" to true.'
         )
         sys.exit(1)
-    if "multi_index" in conf["database"] and not conf["database"]["multi_index"] \
-            and "nb_past_months" in conf["database"]:
+    if not conf["database"].get("multi_index", False) and "nb_past_months" in conf["database"]:
         log.error(
             'if "multi_index" is set to false in config.json, "nb_past_months" is not supported. '
-            'Please delete it from the config file.'
+            'Please delete "nb_past_months" from the config file or set "multi_index" to true.'
         )
         sys.exit(1)
     if conf["verbose"]:
