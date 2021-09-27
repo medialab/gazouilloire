@@ -295,7 +295,7 @@ def confirm_delete_index(es, db_name, doc_type, yes):
 
 
 @main.command(help="Close all indices older than 'nb_past_months' or close specific indices")
-@click.option('--index', '-i', help="Months to close in format YYYY-MM, separated by comma. Run gazou close "
+@click.option('--index', '-i', help="Months to close in format YYYY-MM, separated by comma. Run gazou status "
                                                         "--list-indices to see the full list of opened indices. "
                                                         "Usage: gazou close -i 2018-08,2021-09")
 @click.option('--delete/--close', '-d/-c', default=False, help="Delete indices instead of closing them.")
@@ -307,11 +307,24 @@ def confirm_delete_index(es, db_name, doc_type, yes):
                                                                               "-p /path/to/directory/")
 def close(path, delete, force, index):
     conf = load_conf(path)
-    multi_index = conf["database"].get("multi_index", False)
-    if multi_index:
-        es = ElasticManager(**conf["database"])
-        if index is not None:
-            indices = [es.db_name + "_tweets_" + i.replace("-", "_") for i in index.split(",")]
-        else:
+    es = ElasticManager(**conf["database"])
+
+    if es.multi_index:
+        if index is None:
             indices = [i for i in es.client.indices.get(es.tweets + "_*", expand_wildcards="all")]
-        es.close_indices(indices, delete, force)
+        else:
+            indices = [es.db_name + "_tweets_" + i.replace("-", "_") for i in index.split(",")]
+
+    else:
+        if index is None:
+            if force:
+                indices = es.tweets
+            else:
+                log.error("{} is currently the only index since multi-index is not activated. Use --force option if "
+                          "you want to {} this index anyway.".format(es.tweets, "delete" if delete else "close"))
+                sys.exit(1)
+        else:
+            log.error("multi-index is not set in config.json, there should be no --index parameter")
+            sys.exit(1)
+
+    es.close_indices(indices, delete, force)

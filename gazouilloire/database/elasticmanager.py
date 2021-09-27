@@ -159,20 +159,15 @@ class ElasticManager:
             return True
         return False
 
-    def close_index(self, index_name, last_day_of_month, force, delete, log_message):
-        if self.is_too_old(last_day_of_month) or force == True:
+    def close_index(self, index_name, delete, log_message):
             if self.exists(index_name):
                 if delete:
                     deleted = self.client.indices.delete(index_name)
-                    print(deleted)
                 else:
                     self.client.indices.close(index_name)
                 log.info("{} successfully {}d".format(index_name, log_message))
             else:
                 log.warning("{} does not exist and could not be {}d".format(index_name, log_message))
-        else:
-            log.warning("{} may contain tweets posted less than {} months ago, use --force option if you want "
-                        "to {} it anyway.".format(index_name, self.nb_past_months, log_message))
 
     def close_indices(self, indices, delete=False, force=False):
         """
@@ -180,24 +175,30 @@ class ElasticManager:
         """
         log_message = "delete" if delete else "close"
         now = datetime.now()
-        for index in indices:
-            print(index)
-            try:
-                year, month = index.replace(self.db_name + "_tweets_", "").split("_")
-                last_day_of_month = datetime(
-                    int(year),
-                    int(month),
-                    calendar.monthrange(int(year), int(month))[1],
-                    now.hour,
-                    now.minute,
-                    now.second
-                )
-            except ValueError:
-                log.error("indices should be in format YYYY-MM")
-                sys.exit(1)
+        if self.multi_index:
+            for index in indices:
+                try:
+                    year, month = index.replace(self.db_name + "_tweets_", "").split("_")
+                    last_day_of_month = datetime(
+                        int(year),
+                        int(month),
+                        calendar.monthrange(int(year), int(month))[1],
+                        now.hour,
+                        now.minute,
+                        now.second
+                    )
+                except ValueError:
+                    log.error("indices should be in format YYYY-MM")
+                    sys.exit(1)
 
-            index_name = self.get_index_name(last_day_of_month)
-            self.close_index(index_name, last_day_of_month, force, delete, log_message)
+                index_name = self.get_index_name(last_day_of_month)
+                if self.is_too_old(last_day_of_month) or force == True:
+                    self.close_index(index_name, delete, log_message)
+                else:
+                    log.warning("{} may contain tweets posted less than {} months ago, use --force option if you want "
+                                "to {} it anyway.".format(index_name, self.nb_past_months, log_message))
+        else:
+            self.close_index(indices, delete, log_message)
 
     def prepare_indexing_links(self, links):
         """Yields an indexing action for every link of a list"""
@@ -358,7 +359,6 @@ class ElasticManager:
                 index = self.get_index_name(
                     datetime.strptime(t["_source"]["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
                 )
-            print(index)
             t["_source"]["proper_links"] = links
             t["_source"]["domains"] = domains
             t["_source"]["links_to_resolve"] = False
