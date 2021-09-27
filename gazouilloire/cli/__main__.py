@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import click
 import os
+import calendar
 from gazouilloire.__version__ import __version__
 from gazouilloire.config_format import create_conf_example, load_conf, log
 from gazouilloire.daemon import Daemon
@@ -292,3 +293,37 @@ def confirm_delete_index(es, db_name, doc_type, yes):
             log.info("{}_{} successfully erased".format(db_name, doc_type))
         else:
             log.warning("{}_{} does not exist and could not be erased".format(db_name, doc_type))
+
+
+@main.command(help="Close all indices older than 'nb_past_months' or close specific indices")
+@click.option('--index', '-i', help="Months to close in format YYYY-MM, separated by comma. Run gazou close "
+                                                        "--list-indices to see the full list of opened indices. "
+                                                        "Usage: gazou close -i 2018-08,2021-09")
+@click.option('--delete/--close', '-d/-c', default=False, help="Delete indices instead of closing them.")
+@click.option('--force/--', '-f/-', default=False, help="Force the closure/deletion even if some indices are newer than the "
+                                                   "'nb_past_months' limit")
+@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
+                                                                              "be found. By default, looks in the "
+                                                                              "current directory. Usage: gazou reset "
+                                                                              "-p /path/to/directory/")
+def close(path, delete, force, index):
+    conf = load_conf(path)
+    multi_index = conf["database"].get("multi_index", False)
+    if multi_index:
+        es = ElasticManager(**conf["database"])
+        indices = []
+        if index:
+            for i in index.split(","):
+                year, month = i.split("-")
+                try:
+                    indices.append(
+                        (
+                            int(year),
+                            int(month),
+                            calendar.monthrange(int(year), int(month))[1]
+                        )
+                    )
+                except ValueError:
+                    log.error("indices should be in format YYYY-MM")
+                    sys.exit(1)
+        es.close_indices(indices, delete, force)

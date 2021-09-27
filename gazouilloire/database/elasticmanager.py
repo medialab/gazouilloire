@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import dateutil.relativedelta
 from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 import itertools
+from gazouilloire.config_format import log
 
 
 try:
@@ -158,6 +159,29 @@ class ElasticManager:
             return True
         return False
 
+    def close_indices(self, index, delete=False, force=False):
+        """
+        "Close all indices older than self.nb_past_months or close specific indices"
+        """
+        if index is not None:
+            now = datetime.now()
+            for year_month_date in index:
+                last_day_of_month = datetime(*year_month_date, now.hour, now.minute, now.second)
+                index_name = self.get_index_name(last_day_of_month)
+                if self.is_too_old(last_day_of_month) or force==True:
+                    if self.exists(index_name):
+                        self.client.indices.close(index_name)
+                        log.info("{} successfully closed".format(index_name))
+                    else:
+                        log.warning("{} does not exist and could not be closed".format(index_name))
+                else:
+                    log.warning("{} may contain tweets posted less than {} months ago, use --force option if you want "
+                                "to close it anyway.".format(index_name, self.nb_past_months))
+
+
+
+
+
     def prepare_indexing_links(self, links):
         """Yields an indexing action for every link of a list"""
         for l in links:
@@ -178,7 +202,7 @@ class ElasticManager:
             reply_count = t.get("reply_count", None)
             if self.multi_index:
                 tweet_date = tweet_date = datetime.strptime(t["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
-                if self.nb_past_months and self.tweet_is_too_old(tweet_date):
+                if self.nb_past_months and self.is_too_old(tweet_date):
                     continue
                 index = self.get_index_name(tweet_date)
             if reply_count is not None:
@@ -248,9 +272,9 @@ class ElasticManager:
                 continue
         return None
 
-    def tweet_is_too_old(self, tweet_date):
+    def is_too_old(self, date):
         min_date = datetime.now() - dateutil.relativedelta.relativedelta(months=self.nb_past_months)
-        return tweet_date < min_date
+        return date < min_date
 
     def get_urls(self, url_list):
         """Returns the urls corresponding to the given url_list.
