@@ -8,7 +8,6 @@ from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 import itertools
 from gazouilloire.config_format import log
 
-
 try:
     with open(os.path.join(os.path.dirname(__file__), "db_mappings.json"), "r") as db_mappings:
         DB_MAPPINGS = json.loads(db_mappings.read())
@@ -135,7 +134,7 @@ class ElasticManager:
             if self.nb_past_months:
                 nb_past_months = self.nb_past_months + 2
             else:
-                twitter_creation_date = datetime(2006,3,21)
+                twitter_creation_date = datetime(2006, 3, 21)
                 time_diff_years = one_month_in_advance.year - twitter_creation_date.year
                 time_diff_months = one_month_in_advance.month - twitter_creation_date.month
                 nb_past_months = time_diff_years * 12 + time_diff_months + 1
@@ -163,24 +162,24 @@ class ElasticManager:
         """
         "Close all indices older than self.nb_past_months or close specific indices"
         """
+        log_message = "delete" if delete else "close"
         if index is not None:
             now = datetime.now()
             for year_month_date in index:
                 last_day_of_month = datetime(*year_month_date, now.hour, now.minute, now.second)
                 index_name = self.get_index_name(last_day_of_month)
-                if self.is_too_old(last_day_of_month) or force==True:
+                if self.is_too_old(last_day_of_month) or force == True:
                     if self.exists(index_name):
-                        self.client.indices.close(index_name)
-                        log.info("{} successfully closed".format(index_name))
+                        if delete:
+                            self.client.indices.delete(index_name)
+                        else:
+                            self.client.indices.close(index_name)
+                        log.info("{} successfully {}d".format(index_name, log_message))
                     else:
-                        log.warning("{} does not exist and could not be closed".format(index_name))
+                        log.warning("{} does not exist and could not be {}d".format(index_name, log_message))
                 else:
                     log.warning("{} may contain tweets posted less than {} months ago, use --force option if you want "
-                                "to close it anyway.".format(index_name, self.nb_past_months))
-
-
-
-
+                                "to {} it anyway.".format(index_name, self.nb_past_months, log_message))
 
     def prepare_indexing_links(self, links):
         """Yields an indexing action for every link of a list"""
@@ -250,7 +249,7 @@ class ElasticManager:
         for index in opened_indices:
             try:
                 update_status = self.client.update(index=index, id=tweet_id,
-                                   body={"doc": {"deleted": True}, "doc_as_upsert": False})
+                                                   body={"doc": {"deleted": True}, "doc_as_upsert": False})
                 break
             except exceptions.NotFoundError:
                 # todo: log when tweet is not found
@@ -292,7 +291,8 @@ class ElasticManager:
         query = {"bool": {"filter": [{"term": {"links_to_resolve": True}}]}}
         if retry_days:
             range_clause = {"range": {"timestamp_utc": {"gte":
-                                                            str((datetime.now() - timedelta(days=retry_days)).timestamp())
+                                                            str((datetime.now() - timedelta(
+                                                                days=retry_days)).timestamp())
                                                         }
                                       }
                             }
@@ -313,16 +313,16 @@ class ElasticManager:
             index=self.links,
             size=batch_size,
             body={
-              "query": {
-                "bool": {
-                  "filter": {
-                    "terms": {
-                      "link_id": urls_list
+                "query": {
+                    "bool": {
+                        "filter": {
+                            "terms": {
+                                "link_id": urls_list
 
+                            }
+                        }
                     }
-                  }
                 }
-              }
             }
         )
 
@@ -416,9 +416,9 @@ class ElasticManager:
         return list(all_ids)
 
     def multi_get(self, ids, batch_size=1000):
-        #todo: currently in error with multiindex
+        # todo: currently in error with multiindex
         for i in range(0, len(ids), batch_size):
-            batch = self.client.mget(body={'ids': ids[i:i+batch_size]}, index=self.tweets)
+            batch = self.client.mget(body={'ids': ids[i:i + batch_size]}, index=self.tweets)
             for tweet in batch["docs"]:
                 yield tweet
 
@@ -438,6 +438,7 @@ def bulk_update(client, actions):
             success += 1
 
     return success, created, errors
+
 
 if __name__ == "__main__":
     es = ElasticManager("localhost", 9200, "gazouilloire")
