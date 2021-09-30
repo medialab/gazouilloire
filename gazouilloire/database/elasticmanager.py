@@ -122,6 +122,36 @@ class ElasticManager:
     def get_index_name(self, day):
         return self.tweets + get_month(day)
 
+    def get_positional_index(self, position):
+        if not self.multi_index:
+            log.error("Multi-index is not activated, you should not use the --index option")
+            sys.exit(1)
+
+        opened_indices = sorted([
+            index["index"] for index in self.client.cat.indices(
+                index=self.tweets + "_*", format="json"
+            ) if int(index["docs.count"]) > 0 and index["status"] == "open"
+        ])
+
+        if position == "last":
+            return opened_indices[-1]
+
+        if position == "first":
+            return opened_indices[0]
+
+        if position == "inactive":
+            if self.nb_past_months is None:
+                log.error("since 'nb_past_months' is not parametered in config.json, all indices are active")
+                sys.exit(1)
+            else:
+                last_inactive = datetime.now() - dateutil.relativedelta.relativedelta(months=self.nb_past_months+1)
+                last_inactive = self.get_index_name(last_inactive)
+                if last_inactive in opened_indices:
+                    return last_inactive
+                else:
+                    log.error("Index is already closed or deleted")
+                    sys.exit(1)
+
     def create_index(self, index_name, mapping):
         if not self.exists(index_name):
             self.client.indices.create(index=index_name, body=mapping)

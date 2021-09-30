@@ -117,11 +117,14 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None,
 def call_database(conf):
     try:
         db = ElasticManager(**conf['database'])
-        if db.exists(db.tweets):
-            return db
+        if db.multi_index:
+            if db.exists(db.tweets + "_*"):
+                return db
         else:
-            log.error("Elasticsearch database does not exist")
-            sys.exit(1)
+            if db.exists(db.tweets):
+                return db
+        log.error("Elasticsearch database does not exist")
+        sys.exit(1)
     except Exception as e:
         log.error("Could not initiate connection to database: %s %s" % (type(e), e))
         sys.exit(1)
@@ -146,7 +149,10 @@ def find_potential_duplicate_ids(outputfile):
 
 
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-               verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume, step=None):
+               verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume,
+               step=None,
+               index=None
+               ):
     threads = conf.get('grab_conversations', False)
     if selection:
         SELECTION = selection.split(",")
@@ -168,7 +174,13 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                 sys.exit(1)
 
     db = call_database(conf)
-
+    if index:
+        index_name = db.get_positional_index(index)
+    else:
+        if db.multi_index:
+            index_name = db.tweets + "_*"
+        else:
+            index_name = db.tweets
     if not threads:
         exclude_threads = False
 
@@ -198,16 +210,16 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
             last_timestamp, last_ids = find_potential_duplicate_ids(outputfile)
             since = datetime.fromisoformat(last_timestamp)
         body = build_body(query, exclude_threads, exclude_retweets, since, until)
-        count = db.client.count(index=db.tweets, body=body)['count']
+        count = db.client.count(index=index_name, body=body)['count']
         if step:
             iterator = yield_csv(
-                yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets),
+                yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index_name),
                 last_ids = last_ids
             )
         else:
             body["sort"] = ["timestamp_utc"]
             iterator = yield_csv(
-                helpers.scan(client=db.client, index=db.tweets, query=body, preserve_order=True),
+                helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True),
                 last_ids=last_ids
             )
     if verbose:
@@ -231,21 +243,21 @@ def increment_steps(start_date, step):
     return start_date + relativedelta.relativedelta(**{step: 1})
 
 
-def yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets):
-    for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets):
+def yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index_name):
+    for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index_name):
         body["sort"] = ["timestamp_utc"]
-        for t in helpers.scan(client=db.client, index=db.tweets, query=body, preserve_order=True):
+        for t in helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True):
             yield t
 
 
-def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets):
+def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index_name):
     if not until:
         until = datetime.now()
     if not since:
         body = build_body(query, exclude_threads, exclude_retweets)
         body["sort"] = ["timestamp_utc"]
         body["size"] = 1
-        first_tweet = db.client.search(body=body, index=db.tweets)["hits"]["hits"][0]["_source"]
+        first_tweet = db.client.search(body=body, index=index_name)["hits"]["hits"][0]["_source"]
         since = datetime.fromtimestamp(first_tweet["timestamp_utc"])
     one_more_step = increment_steps(since, step)
     while since < until:
@@ -255,12 +267,19 @@ def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_r
         one_more_step = increment_steps(since, step)
 
 
-def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None):
+def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None, index=None):
     db = call_database(conf)
+    if index:
+        index_name = db.get_positional_index(index)
+    else:
+        if db.multi_index:
+            index_name = db.tweets + "_*"
+        else:
+            index_name = db.tweets
     file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
     writer = csv.writer(file)
     if step:
-        for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets):
+        for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index_name):
             count = db.client.count(index=db.tweets, body=body)['count']
             writer.writerow([",".join(query), since, count] if query else [since, count])
     else:

@@ -161,6 +161,7 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name):
                                                      "in isoformat")
 @click.option('--since', type=click.DateTime(), help="Export tweets published after the given date (included), "
                                                      "in isoformat")
+@click.option('--step', type=click.Choice(['seconds', 'minutes', 'hours', 'days', 'months', 'years']))
 @click.option('--output', '-o', type=click.Path(exists=False), help="File to write the tweets in. By default, "
                                                                     "'export' writes in stdout. Usage: gazou export -o "
                                                                     "my_tweet_file.csv")
@@ -181,8 +182,12 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name):
                                                                                      "containing those tweets")
 @click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
 @click.option("--resume", "-r", is_flag=True, help="Restart the export from the last id specified in --output file")
+@click.option('--index', '-i', type=click.Choice(["first", "last", "inactive"]),
+              help="In case of multi-index, specify the index that should be exported. Use `--index inactive` "
+                   "to export from the last inactive index (not used any more for indexing). By default, export from "
+                   "all opened indices.")
 def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
-           columns, list_fields, output, resume, since, until):
+           columns, list_fields, output, resume, since, until, step, index):
     if resume and not output:
         log.error("The --resume option requires to set a file name with --output")
         sys.exit(1)
@@ -197,7 +202,7 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
     else:
         conf = load_conf(path)
         export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-                   verbose, export_threads_from_file, export_tweets_from_file, columns, output, resume)
+                   verbose, export_threads_from_file, export_tweets_from_file, columns, output, resume, step, index)
 
 @main.command(help="Get a report about the number of tweets. Type 'gazou count' to get the number of collected tweets "
                    "or 'gazou count médialab' to get the number of tweets that contain médialab")
