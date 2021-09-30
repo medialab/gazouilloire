@@ -149,25 +149,41 @@ class ElasticManager:
 
     def delete_index(self, doc_type):
         """
-        Check if index exists, if so, delete it
+        Check if index exists, if so, delete it.
+        In case of multi_index, delete all indices with the name prefix.
         """
         index_name = getattr(self, doc_type)
         opened_indices = self.client.indices.get(index_name + "*")
+        success = []
         if len(opened_indices) > 0:
             for index in opened_indices:
-                self.client.indices.delete(index=index)
-            return True
+                success.append(self.client.indices.delete(index=index))
+            if all(success):
+                log.info("{} successfully deleted".format(index_name))
+                return True
+            else:
+                for status, index_name in zip(success, opened_indices):
+                    if not status:
+                        log.error("failed to delete {}".format(index_name))
+                return False
+        log.warning("{} does not exist and could not be deleted".format(index_name))
         return False
 
     def close_index(self, index_name, delete, log_message):
-            if self.exists(index_name):
-                if delete:
-                    deleted = self.client.indices.delete(index_name)
-                else:
-                    self.client.indices.close(index_name)
+        """
+        Close or delete one specific index (with the month suffix).
+        """
+        if self.exists(index_name):
+            if delete:
+                success = self.client.indices.delete(index_name).get("acknowledged", False)
+            else:
+                success = self.client.indices.close(index_name).get("acknowledged", False)
+            if success:
                 log.info("{} successfully {}d".format(index_name, log_message))
             else:
-                log.warning("{} does not exist and could not be {}d".format(index_name, log_message))
+                log.error("failed to {} {}".format(log_message, index_name))
+        else:
+            log.warning("{} does not exist and could not be {}d".format(index_name, log_message))
 
     def close_indices(self, indices, delete=False, force=False):
         """

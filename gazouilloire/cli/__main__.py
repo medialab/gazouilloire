@@ -288,10 +288,7 @@ def reset(path, yes, preserve, only):
 def confirm_delete_index(es, db_name, doc_type, yes):
     if yes or click.confirm("Elasticsearch index {}_{} will be erased, do you want to continue?".format(
             db_name, doc_type)):
-        if es.delete_index(doc_type):
-            log.info("{}_{} successfully erased".format(db_name, doc_type))
-        else:
-            log.warning("{}_{} does not exist and could not be erased".format(db_name, doc_type))
+        es.delete_index(doc_type)
 
 
 @main.command(help="Close all indices older than 'nb_past_months' or close specific indices")
