@@ -281,16 +281,18 @@ class ElasticManager:
         """Sets the field 'deleted' of the given tweet to True"""
 
         opened_indices = self.client.indices.get(self.tweets + "*")
+        success = []
         for index in opened_indices:
             try:
-                update_status = self.client.update(index=index, id=tweet_id,
+                self.client.update(index=index, id=tweet_id,
                                                    body={"doc": {"deleted": True}, "doc_as_upsert": False})
+                success.append(True)
                 break
             except exceptions.NotFoundError:
-                # todo: log when tweet is not found
-                # todo: update_status must exist (or return must be deleted)
+                success.append(False)
                 continue
-        return update_status
+        if not any(success):
+            log.debug("tweet {} was not found while trying to mark it as deleted".format(tweet_id))
 
     def find_tweet(self, tweet_id):
         """Returns the tweet corresponding to the given id"""
