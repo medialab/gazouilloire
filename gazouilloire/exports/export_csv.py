@@ -278,11 +278,11 @@ def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, 
     if step:
         for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets,
                                               index_name):
-            count = db.client.count(index=db.tweets, body=body)['count']
+            count = db.client.count(index=index_name, body=body)['count']
             writer.writerow([",".join(query), since, count] if query else [since, count])
     else:
         body = build_body(query, exclude_threads, exclude_retweets, since, until)
-        count = db.client.count(index=db.tweets, body=body)['count']
+        count = db.client.count(index=index_name, body=body)['count']
         writer.writerow([",".join(query), count] if query else [count])
 
     file.close()

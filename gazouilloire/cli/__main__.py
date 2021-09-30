@@ -184,8 +184,8 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name):
 @click.option("--resume", "-r", is_flag=True, help="Restart the export from the last id specified in --output file")
 @click.option('--index', '-i', type=click.Choice(["first", "last", "inactive"]),
               help="In case of multi-index, specify the index that should be exported. Use `--index inactive` "
-                   "to export from the last inactive index (not used any more for indexing). By default, export from "
-                   "all opened indices.")
+                   "to export from the last inactive index (i. e. not used any more for indexing). By default, "
+                   "export from all opened indices.")
 def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
            columns, list_fields, output, resume, since, until, step, index):
     if resume and not output:
@@ -203,6 +203,7 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
         conf = load_conf(path)
         export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                    verbose, export_threads_from_file, export_tweets_from_file, columns, output, resume, step, index)
+
 
 @main.command(help="Get a report about the number of tweets. Type 'gazou count' to get the number of collected tweets "
                    "or 'gazou count médialab' to get the number of tweets that contain médialab")
@@ -224,9 +225,13 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
                                                                          "defined in config.json). By default, threads "
                                                                          "are included.")
 @click.option('--exclude-retweets/--include-retweets', default=False, help="Exclude retweets from the counted tweets")
-def count(path, query, exclude_threads, exclude_retweets, output, since, until, step):
+@click.option('--index', '-i', type=click.Choice(["first", "last", "inactive"]),
+              help="In case of multi-index, specify the index to count from. Use `--index inactive` "
+                   "to count tweets from the last inactive index (i. e. not used any more for indexing). "
+                   "By default, count from all opened indices.")
+def count(path, query, exclude_threads, exclude_retweets, output, since, until, step, index):
     conf = load_conf(path)
-    count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, output, step)
+    count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, output, step, index)
 
 def check_valid_reset_option(element_list):
     element_list = element_list.split(",")
