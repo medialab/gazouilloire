@@ -148,6 +148,14 @@ def find_potential_duplicate_ids(outputfile):
                 return last_time, last_ids
 
 
+def get_mono_or_multi_index_name(db, index):
+    if index:
+        return db.get_positional_index(index)
+    if db.multi_index:
+        return db.tweets + "_*"
+    return db.tweets
+
+
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume,
                step=None,
@@ -174,13 +182,8 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                 sys.exit(1)
 
     db = call_database(conf)
-    if index:
-        index_name = db.get_positional_index(index)
-    else:
-        if db.multi_index:
-            index_name = db.tweets + "_*"
-        else:
-            index_name = db.tweets
+    index_name = get_mono_or_multi_index_name(db, index)
+
     if not threads:
         exclude_threads = False
 
@@ -269,17 +272,12 @@ def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_r
 
 def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None, index=None):
     db = call_database(conf)
-    if index:
-        index_name = db.get_positional_index(index)
-    else:
-        if db.multi_index:
-            index_name = db.tweets + "_*"
-        else:
-            index_name = db.tweets
+    index_name = get_mono_or_multi_index_name(db, index)
     file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
     writer = csv.writer(file)
     if step:
-        for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index_name):
+        for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets,
+                                              index_name):
             count = db.client.count(index=db.tweets, body=body)['count']
             writer.writerow([",".join(query), since, count] if query else [since, count])
     else:
