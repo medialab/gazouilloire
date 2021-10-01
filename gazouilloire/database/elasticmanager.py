@@ -126,7 +126,7 @@ class ElasticManager:
         return sorted([
             index["index"] for index in self.client.cat.indices(
                 index=self.tweets + "_*", format="json"
-            ) if int(index["docs.count"]) > 0 and index["status"] == "open"
+            ) if index["status"] == "open" and int(index["docs.count"]) > 0
         ])
 
     def get_positional_index(self, position):

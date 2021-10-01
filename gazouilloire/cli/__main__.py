@@ -92,18 +92,26 @@ def sizeof_fmt(num, suffix='B'):
     return "%.1f%s%s" % (num, 'Y', suffix)
 
 
+def print_index_status(index_name, index_info):
+    print("name: {}\ntweets: {}\ndisk space tweets: {}\n".format(
+        index_name,
+        index_info["docs.count"],
+        sizeof_fmt(int(index_info["store.size"])).upper()
+    ))
+
+
 @main.command(help="Get current status.")
 @click.argument('path', type=click.Path(exists=True), default=".")
 @click.option('--index', '-i', type=click.Choice(["first", "last", "inactive"]),
               help="In case of multi-index, specify the index to count from. Use `--index inactive` "
                    "to count tweets from the last inactive index (i. e. not used any more for indexing). "
                    "By default, count from all opened indices.")
-def status(path, index):
+@click.option('--list-indices', is_flag=True, help="print the detailed list of indices")
+def status(path, index, list_indices):
     conf = load_conf(path)
     running = "running" if os.path.exists(os.path.join(path, ".lock")) else "not running"
     es = ElasticManager(**conf["database"])
     try:
-        tweets = es.client.cat.indices(index=es.tweets, format="json")[0]
         links = es.client.cat.indices(index=es.links, format="json")[0]
     except exceptions.NotFoundError:
         log.error(
@@ -123,10 +131,39 @@ def status(path, index):
                 media_size += os.path.getsize(os.path.join(path, f))
                 media_count += 1
     media_size = sizeof_fmt(media_size)
-    print("name: {}\nstatus: {}\ntweets: {}\nlinks: {}\nmedia: {}\ndisk space tweets: {}\n"
-          "disk space links: {}\ndisk space media: {}"
-          .format(conf["database"]["db_name"], running, tweets["docs.count"], links["docs.count"], media_count,
-                  tweets["store.size"].upper(), links["store.size"].upper(), media_size))
+
+    print("status: {}\nlinks: {}\ndisk space links: {}\nmedia: {}\ndisk space media: {}\n"
+          .format(running, links["docs.count"], links["store.size"].upper(), media_count, media_size))
+
+    if es.multi_index:
+        if index:
+            index_name = es.get_positional_index(index)
+            index_info = es.client.cat.indices(index=index_name, format="json", bytes="b")[0]
+            print_index_status(index_name, index_info)
+        else:
+            summed_info = {"docs.count": 0, "store.size": 0}
+            indices = es.client.cat.indices(index=es.tweets + "_*", format="json", bytes="b")
+            for index_info in sorted(indices, key=lambda x: x["index"]):
+                if index_info["status"] == "open":
+                    summed_info["docs.count"] += int(index_info["docs.count"])
+                    summed_info["store.size"] += int(index_info["store.size"])
+                    if list_indices:
+                        print("*" * 10)
+                        print_index_status(index_info["index"], index_info)
+                else:
+                    if list_indices:
+                        print("*" * 10)
+                        print("name: {}\nclosed\n".format(index_info["index"]))
+
+            if list_indices:
+                print("*" * 10)
+                print_index_status("TOTAL", summed_info)
+            else:
+                print_index_status(es.tweets, summed_info)
+
+    else:
+        index_info = es.client.cat.indices(index=es.tweets, format="json", bytes="b")[0]
+        print_index_status(es.tweets, index_info)
 
 
 @main.command(help="Resolve urls contained in a given Elasticsearch database. Usage: 'gazou resolve'")
