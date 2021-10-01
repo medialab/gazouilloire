@@ -147,15 +147,6 @@ def find_potential_duplicate_ids(outputfile):
             else:
                 return last_time, last_ids
 
-
-def get_mono_or_multi_index_name(db, index):
-    if index:
-        return db.get_positional_index(index)
-    if db.multi_index:
-        return db.tweets + "_*"
-    return db.tweets
-
-
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume,
                step=None,
@@ -182,7 +173,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                 sys.exit(1)
 
     db = call_database(conf)
-    index_name = get_mono_or_multi_index_name(db, index)
+    index_name = db.get_mono_or_multi_index_name(index)
 
     if not threads:
         exclude_threads = False
@@ -249,7 +240,7 @@ def increment_steps(start_date, step):
 def get_relevant_indices(db, selected_index, since, until):
     if db.multi_index:
         if selected_index:
-            return [get_mono_or_multi_index_name(db, selected_index)]
+            return [db.get_mono_or_multi_index_name(selected_index)]
 
         relevant_indices = db.get_sorted_indices()
         min_index = relevant_indices[0]
@@ -296,7 +287,7 @@ def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_r
 
 def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None, index=None):
     db = call_database(conf)
-    index_name = get_mono_or_multi_index_name(db, index)
+    index_name = db.get_mono_or_multi_index_name(index)
     file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
     writer = csv.writer(file)
     if step:

@@ -155,6 +155,13 @@ class ElasticManager:
                     log.error("Index is already closed or deleted")
                     sys.exit(1)
 
+    def get_mono_or_multi_index_name(self, index):
+        if index:
+            return self.get_positional_index(index)
+        if self.multi_index:
+            return self.tweets + "_*"
+        return self.tweets
+
     def create_index(self, index_name, mapping):
         if not self.exists(index_name):
             self.client.indices.create(index=index_name, body=mapping)
