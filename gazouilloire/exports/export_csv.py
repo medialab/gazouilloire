@@ -216,13 +216,13 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         count = db.client.count(index=index_name, body=body)['count']
         if step:
             iterator = yield_csv(
-                yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index_name),
+                yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index),
                 last_ids = last_ids
             )
         else:
             body["sort"] = ["timestamp_utc"]
             iterator = yield_csv(
-                helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True),
+                yield_scans(db, body, since, until, index),
                 last_ids=last_ids
             )
     if verbose:
@@ -246,9 +246,33 @@ def increment_steps(start_date, step):
     return start_date + relativedelta.relativedelta(**{step: 1})
 
 
-def yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index_name):
-    for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index_name):
-        body["sort"] = ["timestamp_utc"]
+def get_relevant_indices(db, selected_index, since, until):
+    if db.multi_index:
+        if selected_index:
+            return [get_mono_or_multi_index_name(db, selected_index)]
+
+        relevant_indices = db.get_sorted_indices()
+        min_index = relevant_indices[0]
+        max_index = relevant_indices[-1]
+        if since:
+            min_index = db.get_index_name(since)
+        if until:
+            max_index = db.get_index_name(until)
+        return [index for index in relevant_indices if min_index <= index <= max_index]
+    return [db.tweets]
+
+
+def yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, selected_index):
+    for index_name in get_relevant_indices(db, selected_index, since, until):
+        for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets,
+                                              index_name):
+            body["sort"] = ["timestamp_utc"]
+            for t in helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True):
+                yield t
+
+
+def yield_scans(db, body, since, until, selected_index):
+    for index_name in get_relevant_indices(db, selected_index, since, until):
         for t in helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True):
             yield t
 

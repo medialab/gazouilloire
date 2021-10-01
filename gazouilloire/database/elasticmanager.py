@@ -122,16 +122,19 @@ class ElasticManager:
     def get_index_name(self, day):
         return self.tweets + get_month(day)
 
+    def get_sorted_indices(self):
+        return sorted([
+            index["index"] for index in self.client.cat.indices(
+                index=self.tweets + "_*", format="json"
+            ) if int(index["docs.count"]) > 0 and index["status"] == "open"
+        ])
+
     def get_positional_index(self, position):
         if not self.multi_index:
             log.error("Multi-index is not activated, you should not use the --index option")
             sys.exit(1)
 
-        opened_indices = sorted([
-            index["index"] for index in self.client.cat.indices(
-                index=self.tweets + "_*", format="json"
-            ) if int(index["docs.count"]) > 0 and index["status"] == "open"
-        ])
+        opened_indices = self.get_sorted_indices()
 
         if position == "last":
             return opened_indices[-1]

@@ -94,10 +94,14 @@ def sizeof_fmt(num, suffix='B'):
 
 @main.command(help="Get current status.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-def status(path):
+@click.option('--index', '-i', type=click.Choice(["first", "last", "inactive"]),
+              help="In case of multi-index, specify the index to count from. Use `--index inactive` "
+                   "to count tweets from the last inactive index (i. e. not used any more for indexing). "
+                   "By default, count from all opened indices.")
+def status(path, index):
     conf = load_conf(path)
     running = "running" if os.path.exists(os.path.join(path, ".lock")) else "not running"
-    es = ElasticManager(conf["database"]["host"], conf["database"]["port"], conf["database"]["db_name"])
+    es = ElasticManager(**conf["database"])
     try:
         tweets = es.client.cat.indices(index=es.tweets, format="json")[0]
         links = es.client.cat.indices(index=es.links, format="json")[0]
