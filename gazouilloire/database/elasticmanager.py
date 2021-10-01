@@ -70,7 +70,7 @@ def format_tweet_fields(tweet):
     return elastic_tweet
 
 
-def prepare_db(host, port, db_name, multi_index=False):
+def prepare_db(host, port, db_name, multi_index=False, nb_past_months=None):
     try:
         db = ElasticManager(host, port, db_name, multi_index=multi_index)
         if multi_index:
