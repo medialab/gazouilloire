@@ -193,19 +193,20 @@ class ElasticManager:
         In case of multi_index, delete all indices with the name prefix.
         """
         index_name = getattr(self, doc_type)
-        opened_indices = self.client.indices.get(index_name + "*")
+        indices = self.client.cat.indices(index=index_name + "_*", format="json")
+        # opened_indices = self.client.indices.get(index_name + "*")
         success = []
-        if len(opened_indices) > 0:
-            for index in opened_indices:
-                success.append(self.client.indices.delete(index=index))
-            if all(success):
-                log.info("{} successfully deleted".format(index_name))
-                return True
-            else:
-                for status, index_name in zip(success, opened_indices):
-                    if not status:
-                        log.error("failed to delete {}".format(index_name))
-                return False
+        if len(indices) > 0:
+            for index_info in indices:
+                success.append(self.client.indices.delete(index=index_info["index"]))
+        if all(success):
+            log.info("{} successfully deleted".format(index_name))
+            return True
+        else:
+            for status, index_info in zip(success, indices):
+                if not status:
+                    log.error("failed to delete {}".format(index_info["index"]))
+            return False
         log.warning("{} does not exist and could not be deleted".format(index_name))
         return False
 
