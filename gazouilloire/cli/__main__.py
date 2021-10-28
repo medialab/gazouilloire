@@ -107,7 +107,7 @@ def print_index_status(index_name, index_info, message=None):
               help="In case of multi-index, specify the index to count from. Use `--index inactive` "
                    "to count tweets from the last inactive index (i. e. not used any more for indexing). "
                    "By default, count from all opened indices.")
-@click.option('--list-indices', is_flag=True, help="print the detailed list of indices")
+@click.option('--list-indices', '-l', is_flag=True, help="print the detailed list of indices")
 def status(path, index, list_indices):
     conf = load_conf(path)
     running = "running" if os.path.exists(os.path.join(path, ".lock")) else "not running"
@@ -349,8 +349,8 @@ def confirm_delete_index(es, db_name, doc_type, yes):
 
 
 @main.command(help="Close all indices older than 'nb_past_months' or close specific indices")
-@click.option('--index', '-i', help="Months to close in format YYYY-MM, separated by comma. Run gazou status "
-                                                        "--list-indices to see the full list of opened indices. "
+@click.option('--index', '-i', help="Months to close in format YYYY-MM, separated by comma. Run gazou status -l "
+                                                        "to see the full list of opened indices. "
                                                         "Usage: gazou close -i 2018-08,2021-09")
 @click.option('--delete/--close', '-d/-c', default=False, help="Delete indices instead of closing them.")
 @click.option('--force/--', '-f/-', default=False, help="Force the closure/deletion even if some indices are newer than the "
