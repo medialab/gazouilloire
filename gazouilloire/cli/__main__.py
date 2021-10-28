@@ -7,7 +7,7 @@ from gazouilloire.daemon import Daemon
 from gazouilloire.run import main as main_run
 from gazouilloire.resolving_script import resolve_script
 from gazouilloire.exports.export_csv import export_csv, count_by_step, call_database
-from gazouilloire.database.elasticmanager import ElasticManager
+from gazouilloire.database.elasticmanager import ElasticManager, INDEX_QUERIES
 from elasticsearch import exceptions
 from twitwi.constants import TWEET_FIELDS
 import shutil
@@ -103,9 +103,9 @@ def print_index_status(index_name, index_info, message=None):
 
 @main.command(help="Get current status.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-@click.option('--index', '-i', type=click.Choice(["first", "last", "inactive"]),
+@click.option('--index', '-i', type=click.Choice(INDEX_QUERIES),
               help="In case of multi-index, specify the index to count from. Use `--index inactive` "
-                   "to count tweets from the last inactive index (i. e. not used any more for indexing). "
+                   "to count tweets in the last inactive index (i. e. not used any more for indexing). "
                    "By default, count from all opened indices.")
 @click.option('--list-indices', '-l', is_flag=True, help="print the detailed list of indices")
 def status(path, index, list_indices):
@@ -137,7 +137,7 @@ def status(path, index, list_indices):
 
     if es.multi_index:
         if index:
-            index_name = es.get_positional_index(index)
+            index_name = es.get_positional_index(index, open=False)
             index_info = es.client.cat.indices(index=index_name, format="json", bytes="b")[0]
             print_index_status(index_name, index_info)
         else:
@@ -229,7 +229,7 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name):
                                                                                      "containing those tweets")
 @click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
 @click.option("--resume", "-r", is_flag=True, help="Restart the export from the last id specified in --output file")
-@click.option('--index', '-i', type=click.Choice(["first", "last", "inactive"]),
+@click.option('--index', '-i', type=click.Choice(INDEX_QUERIES),
               help="In case of multi-index, specify the index that should be exported. Use `--index inactive` "
                    "to export from the last inactive index (i. e. not used any more for indexing). By default, "
                    "export from all opened indices.")
@@ -272,7 +272,7 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
                                                                          "defined in config.json). By default, threads "
                                                                          "are included.")
 @click.option('--exclude-retweets/--include-retweets', default=False, help="Exclude retweets from the counted tweets")
-@click.option('--index', '-i', type=click.Choice(["first", "last", "inactive"]),
+@click.option('--index', '-i', type=click.Choice(INDEX_QUERIES),
               help="In case of multi-index, specify the index to count from. Use `--index inactive` "
                    "to count tweets from the last inactive index (i. e. not used any more for indexing). "
                    "By default, count from all opened indices.")
@@ -348,13 +348,15 @@ def confirm_delete_index(es, db_name, doc_type, yes):
         es.delete_index(doc_type)
 
 
-@main.command(help="Close all indices older than 'nb_past_months' or close specific indices")
-@click.option('--index', '-i', help="Months to close in format YYYY-MM, separated by comma. Run gazou status -l "
-                                                        "to see the full list of opened indices. "
-                                                        "Usage: gazou close -i 2018-08,2021-09")
+@main.command(help="Close/delete indices")
+@click.option('--index', '-i', help="Months to close in format YYYY-MM, or relative positions such as 'last' or first',"
+                                    "separated by comma. Use `--index inactive` to close all inactive indices. "
+                                    "Run gazou status -l to see the list of existing indices. "
+                                    "Usage: 'gazou close -i 2018-08,2021-09' "
+                                    "or 'gazou close -i inactive'")
 @click.option('--delete/--close', '-d/-c', default=False, help="Delete indices instead of closing them.")
-@click.option('--force/--', '-f/-', default=False, help="Force the closure/deletion even if some indices are newer than the "
-                                                   "'nb_past_months' limit")
+@click.option('--force/--', '-f/-', default=False, help="Force the closure/deletion even if some indices are newer "
+                                                        "than the 'nb_past_months' limit")
 @click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
                                                                               "be found. By default, looks in the "
                                                                               "current directory. Usage: gazou reset "
@@ -367,7 +369,11 @@ def close(path, delete, force, index):
         if index is None:
             indices = [i for i in es.client.indices.get(es.tweets + "_*", expand_wildcards="all")]
         else:
-            indices = [es.db_name + "_tweets_" + i.replace("-", "_") for i in index.split(",")]
+            indices = set()
+            for param in index.split(","):
+                for i in es.get_valid_index_names(param, include_closed_indices=delete):
+                    indices.add(i)
+            indices = list(indices)
 
     else:
         if index is None:
@@ -378,7 +384,7 @@ def close(path, delete, force, index):
                           "you want to {} this index anyway.".format(es.tweets, "delete" if delete else "close"))
                 sys.exit(1)
         else:
-            log.error("multi-index is not set in config.json, there should be no --index parameter")
+            log.error("multi-index is not set in config.json, there should be no --index/-i parameter")
             sys.exit(1)
 
     es.close_indices(indices, delete, force)

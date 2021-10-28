@@ -9,6 +9,8 @@ from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 import itertools
 from gazouilloire.config_format import log
 
+INDEX_QUERIES = ["first", "last", "inactive"]
+
 try:
     with open(os.path.join(os.path.dirname(__file__), "db_mappings.json"), "r") as db_mappings:
         DB_MAPPINGS = json.loads(db_mappings.read())
@@ -122,42 +124,66 @@ class ElasticManager:
     def get_index_name(self, day):
         return self.tweets + get_month(day)
 
-    def get_sorted_indices(self):
-        return sorted([
-            index["index"] for index in self.client.cat.indices(
-                index=self.tweets + "_*", format="json"
-            ) if index["status"] == "open" and int(index["docs.count"]) > 0
-        ])
+    def get_last_index_day(self, index):
+        splited_index = index.split("_")
+        month = splited_index[-1]
+        year = splited_index[-2]
+        now = datetime.now()
+        return datetime(
+            int(year),
+            int(month),
+            calendar.monthrange(int(year), int(month))[1],
+            now.hour,
+            now.minute,
+            now.second
+        )
 
-    def get_positional_index(self, position):
+    def get_sorted_indices(self, include_closed_indices=False):
+        indices = self.client.cat.indices(index=self.tweets + "_*", format="json")
+
+        if include_closed_indices:
+            return sorted([index["index"] for index in indices])
+
+        return sorted(
+            [index["index"] for index in indices if index["status"] == "open"]
+        )
+
+    def get_valid_index_names(self, expr, include_closed_indices):
         if not self.multi_index:
-            log.error("Multi-index is not activated, you should not use the --index option")
+            log.error("Multi-index is not activated in config.json, you should not use the --index/-i option")
             sys.exit(1)
+        if expr in INDEX_QUERIES:
+            return [i for i in self.get_positional_index(expr, include_closed_indices)]
+        try:
+            index_name = datetime.strptime(expr + "-01", "%Y-%m-%d").strftime(self.db_name + "_tweets_%Y_%m")
+        except ValueError:
+            log.error("indices should be in format YYYY-MM")
+            sys.exit(1)
+        if self.exists(index_name):
+            return [index_name]
+        else:
+            log.error("{} does not exist. Use 'gazou status -l' to see the list of existing indices.")
 
-        opened_indices = self.get_sorted_indices()
-
+    def get_positional_index(self, position, include_closed_indices):
+        indices = self.get_sorted_indices(include_closed_indices)
         if position == "last":
-            return opened_indices[-1]
+            yield indices[-1]
 
-        if position == "first":
-            return opened_indices[0]
+        elif position == "first":
+            yield indices[0]
 
-        if position == "inactive":
+        elif position == "inactive":
             if self.nb_past_months is None:
                 log.error("since 'nb_past_months' is not parametered in config.json, all indices are active")
                 sys.exit(1)
             else:
-                last_inactive = datetime.now() - dateutil.relativedelta.relativedelta(months=self.nb_past_months+1)
-                last_inactive = self.get_index_name(last_inactive)
-                if last_inactive in opened_indices:
-                    return last_inactive
-                else:
-                    log.error("Index is already closed or deleted")
-                    sys.exit(1)
+                for index in indices:
+                    if self.is_too_old(self.get_last_index_day(index)):
+                        yield index
 
     def get_mono_or_multi_index_name(self, index):
         if index:
-            return self.get_positional_index(index)
+            return next(self.get_positional_index(index, include_closed_indices=False))
         if self.multi_index:
             return self.tweets + "_*"
         return self.tweets
@@ -231,29 +257,14 @@ class ElasticManager:
         "Close all indices older than self.nb_past_months or close specific indices"
         """
         log_message = "delete" if delete else "close"
-        now = datetime.now()
         if self.multi_index:
             for index in indices:
-                try:
-                    year, month = index.replace(self.db_name + "_tweets_", "").split("_")
-                    last_day_of_month = datetime(
-                        int(year),
-                        int(month),
-                        calendar.monthrange(int(year), int(month))[1],
-                        now.hour,
-                        now.minute,
-                        now.second
-                    )
-                except ValueError:
-                    log.error("indices should be in format YYYY-MM")
-                    sys.exit(1)
-
-                index_name = self.get_index_name(last_day_of_month)
+                last_day_of_month = self.get_last_index_day(index)
                 if self.is_too_old(last_day_of_month) or force == True:
-                    self.close_index(index_name, delete, log_message)
+                    self.close_index(index, delete, log_message)
                 else:
                     log.warning("{} may contain tweets posted less than {} months ago, use --force option if you want "
-                                "to {} it anyway.".format(index_name, self.nb_past_months, log_message))
+                                "to {} it anyway.".format(index, self.nb_past_months, log_message))
         else:
             self.close_index(indices, delete, log_message)
 
