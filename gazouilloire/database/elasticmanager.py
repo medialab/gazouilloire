@@ -162,7 +162,9 @@ class ElasticManager:
         if self.exists(index_name):
             return [index_name]
         else:
-            log.error("{} does not exist. Use 'gazou status -l' to see the list of existing indices.")
+            log.error("{} does not exist. Use 'gazou status -l' to see the list of existing indices."
+                      .format(index_name))
+            sys.exit(1)
 
     def get_positional_index(self, position, include_closed_indices):
         indices = self.get_sorted_indices(include_closed_indices)
