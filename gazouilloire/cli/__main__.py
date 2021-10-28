@@ -92,9 +92,10 @@ def sizeof_fmt(num, suffix='B'):
     return "%.1f%s%s" % (num, 'Y', suffix)
 
 
-def print_index_status(index_name, index_info):
-    print("name: {}\ntweets: {}\ndisk space tweets: {}\n".format(
-        index_name,
+def print_index_status(index_name, index_info, message=None):
+    print("{}{}\ntweets: {}\ndisk space tweets: {}\n".format(
+        index_name if message else "name: ",
+        message if message else index_name,
         index_info["docs.count"],
         sizeof_fmt(int(index_info["store.size"])).upper()
     ))
@@ -132,8 +133,7 @@ def status(path, index, list_indices):
                 media_count += 1
     media_size = sizeof_fmt(media_size)
 
-    print("status: {}\nlinks: {}\ndisk space links: {}\nmedia: {}\ndisk space media: {}\n"
-          .format(running, links["docs.count"], links["store.size"].upper(), media_count, media_size))
+    print("status: {}\n".format(running))
 
     if es.multi_index:
         if index:
@@ -148,22 +148,28 @@ def status(path, index, list_indices):
                     summed_info["docs.count"] += int(index_info["docs.count"])
                     summed_info["store.size"] += int(index_info["store.size"])
                     if list_indices:
-                        print("*" * 10)
                         print_index_status(index_info["index"], index_info)
+                        print("*" * 10)
                 else:
                     if list_indices:
-                        print("*" * 10)
                         print("name: {}\nclosed\n".format(index_info["index"]))
+                        print("*" * 10)
 
             if list_indices:
-                print("*" * 10)
-                print_index_status("TOTAL", summed_info)
+                if indices:
+                    print_index_status("", summed_info, message="TOTAL")
+                    print("*" * 10)
+                else:
+                    print_index_status(es.tweets, summed_info, message=" does not exist")
             else:
                 print_index_status(es.tweets, summed_info)
 
     else:
         index_info = es.client.cat.indices(index=es.tweets, format="json", bytes="b")[0]
-        print_index_status(es.tweets, index_info)
+        print_index_status(es.tweets, index_info, message="")
+
+    print("links: {}\ndisk space links: {}\n\nmedia: {}\ndisk space media: {}\n"
+          .format(links["docs.count"], links["store.size"].upper(), media_count, media_size))
 
 
 @main.command(help="Resolve urls contained in a given Elasticsearch database. Usage: 'gazou resolve'")
