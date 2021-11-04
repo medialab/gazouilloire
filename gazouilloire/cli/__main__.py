@@ -101,12 +101,17 @@ def print_index_status(index_name, index_info, message=None):
     ))
 
 
+def get_bytes_index_info(es, index_name):
+    return es.client.cat.indices(index=index_name, format="json", bytes="b")
+
+
 @main.command(help="Get current status.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-@click.option('--index', '-i', type=click.Choice(INDEX_QUERIES),
-              help="In case of multi-index, specify the index to count from. Use `--index inactive` "
-                   "to count tweets in the last inactive index (i. e. not used any more for indexing). "
-                   "By default, count from all opened indices.")
+@click.option('--index', '-i',
+              help="In case of multi-index, months to consider in format YYYY-MM, or relative positions such as "
+                   "'last' or first', separated by comma. Use `--index inactive` to get the status of all inactive "
+                   "indices. Usage: "
+                   "'gazou status -i 2018-08,2021-09' or 'gazou status -i inactive'")
 @click.option('--list-indices', '-l', is_flag=True, help="print the detailed list of indices")
 def status(path, index, list_indices):
     conf = load_conf(path)
@@ -136,36 +141,52 @@ def status(path, index, list_indices):
     print("status: {}\n".format(running))
 
     if es.multi_index:
+        queried_indices = []
         if index:
-            index_name = es.get_positional_index(index, open=False)
-            index_info = es.client.cat.indices(index=index_name, format="json", bytes="b")[0]
-            print_index_status(index_name, index_info)
+            queried_indices = set()
+            for param in index.split(","):
+                for i in es.get_valid_index_names(param, include_closed_indices=True):
+                    queried_indices.add(i)
+            queried_indices = list(queried_indices)
+            if len(queried_indices) == 1:
+                index_name = queried_indices[0]
+                index_info = es.client.cat.indices(index=index_name, format="json", bytes="b")[0]
+                print_index_status(index_name, index_info)
+                print("links: {}\ndisk space links: {}\n\nmedia: {}\ndisk space media: {}\n"
+                      .format(links["docs.count"], links["store.size"].upper(), media_count, media_size))
+                return
+        summed_info = {"docs.count": 0, "store.size": 0}
+        if len(queried_indices) > 1:
+            indices = []
+            for queried in queried_indices:
+                for index in get_bytes_index_info(es, queried):
+                    indices.append(index)
         else:
-            summed_info = {"docs.count": 0, "store.size": 0}
-            indices = es.client.cat.indices(index=es.tweets + "_*", format="json", bytes="b")
-            for index_info in sorted(indices, key=lambda x: x["index"]):
-                if index_info["status"] == "open":
-                    summed_info["docs.count"] += int(index_info["docs.count"])
-                    summed_info["store.size"] += int(index_info["store.size"])
-                    if list_indices:
-                        print_index_status(index_info["index"], index_info)
-                        print("*" * 10)
-                else:
-                    if list_indices:
-                        print("name: {}\nclosed\n".format(index_info["index"]))
-                        print("*" * 10)
+            indices = get_bytes_index_info(es, es.tweets + "_*")
 
-            if list_indices:
-                if indices:
-                    print_index_status("", summed_info, message="TOTAL")
+        for index_info in sorted(indices, key=lambda x: x["index"]):
+            if index_info["status"] == "open":
+                summed_info["docs.count"] += int(index_info["docs.count"])
+                summed_info["store.size"] += int(index_info["store.size"])
+                if list_indices or index:
+                    print_index_status(index_info["index"], index_info)
                     print("*" * 10)
-                else:
-                    print_index_status(es.tweets, summed_info, message=" does not exist")
             else:
-                print_index_status(es.tweets, summed_info)
+                if list_indices or index:
+                    print("name: {}\nclosed\n".format(index_info["index"]))
+                    print("*" * 10)
+
+        if list_indices or index:
+            if indices:
+                print_index_status("", summed_info, message="TOTAL")
+                print("*" * 10)
+            else:
+                print_index_status(es.tweets, summed_info, message=" does not exist")
+        else:
+            print_index_status(es.tweets, summed_info)
 
     else:
-        index_info = es.client.cat.indices(index=es.tweets, format="json", bytes="b")[0]
+        index_info = get_bytes_index_info(es, es.tweets)[0]
         print_index_status(es.tweets, index_info, message="")
 
     print("links: {}\ndisk space links: {}\n\nmedia: {}\ndisk space media: {}\n"
@@ -231,7 +252,7 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name):
 @click.option("--resume", "-r", is_flag=True, help="Restart the export from the last id specified in --output file")
 @click.option('--index', '-i', type=click.Choice(INDEX_QUERIES),
               help="In case of multi-index, specify the index that should be exported. Use `--index inactive` "
-                   "to export from the last inactive index (i. e. not used any more for indexing). By default, "
+                   "to export from the inactive indices (i. e. not used any more for indexing). By default, "
                    "export from all opened indices.")
 def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
            columns, list_fields, output, resume, since, until, step, index):
@@ -274,7 +295,7 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
 @click.option('--exclude-retweets/--include-retweets', default=False, help="Exclude retweets from the counted tweets")
 @click.option('--index', '-i', type=click.Choice(INDEX_QUERIES),
               help="In case of multi-index, specify the index to count from. Use `--index inactive` "
-                   "to count tweets from the last inactive index (i. e. not used any more for indexing). "
+                   "to count tweets from the inactive indices (i. e. not used any more for indexing). "
                    "By default, count from all opened indices.")
 def count(path, query, exclude_threads, exclude_retweets, output, since, until, step, index):
     conf = load_conf(path)
