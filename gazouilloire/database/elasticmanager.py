@@ -193,10 +193,13 @@ class ElasticManager:
     def create_index(self, index_name, mapping):
         if not self.exists(index_name):
             self.client.indices.create(index=index_name, body=mapping)
+        elif self.client.cat.indices(index=index_name, format="json")[0]["status"] == "close":
+            self.client.indices.open(index=index_name)
+
 
     def prepare_indices(self):
         """
-        Check if indices exist, if not, create them
+        Check if indices exist and are open, if not, create/open them
         """
         if self.multi_index:
             one_month_in_advance = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
