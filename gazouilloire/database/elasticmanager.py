@@ -189,12 +189,12 @@ class ElasticManager:
                     if self.is_too_old(self.get_last_index_day(index)):
                         yield index
 
-    def get_mono_or_multi_index_name(self, index):
-        if index:
-            return next(self.get_positional_index(index, include_closed_indices=False))
-        if self.multi_index:
-            return self.tweets + "_*"
-        return self.tweets
+    # def get_mono_or_multi_index_name(self, index):
+    #     if index:
+    #         return next(self.get_positional_index(index, include_closed_indices=False))
+    #     if self.multi_index:
+    #         return self.tweets + "_*"
+    #     return self.tweets
 
     def create_index(self, index_name, mapping):
         if not self.exists(index_name):

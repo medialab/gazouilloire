@@ -173,7 +173,6 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                 sys.exit(1)
 
     db = call_database(conf)
-    index_name = db.get_mono_or_multi_index_name(index)
 
     if not threads:
         exclude_threads = False
@@ -204,7 +203,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
             last_timestamp, last_ids = find_potential_duplicate_ids(outputfile)
             since = datetime.fromisoformat(last_timestamp)
         body = build_body(query, exclude_threads, exclude_retweets, since, until)
-        count = db.client.count(index=index_name, body=body)['count']
+        count = multiindex_count(db, body, index, since, until)
         if step:
             iterator = yield_csv(
                 yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index),
@@ -237,12 +236,17 @@ def increment_steps(start_date, step):
     return start_date + relativedelta.relativedelta(**{step: 1})
 
 
-def get_relevant_indices(db, selected_index, since, until):
+def get_relevant_indices(db, index_param, since, until):
+    """
+    return all open indices between since and until
+    """
     if db.multi_index:
-        if selected_index:
-            return [db.get_mono_or_multi_index_name(selected_index)]
-
-        relevant_indices = db.get_sorted_indices()
+        if index_param:
+            relevant_indices = db.get_valid_index_names(index_param, include_closed_indices=False)
+        else:
+            relevant_indices = db.get_sorted_indices()
+        if len(relevant_indices) == 0:
+            return []
         min_index = relevant_indices[0]
         max_index = relevant_indices[-1]
         if since:
@@ -253,8 +257,8 @@ def get_relevant_indices(db, selected_index, since, until):
     return [db.tweets]
 
 
-def yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, selected_index):
-    for index_name in get_relevant_indices(db, selected_index, since, until):
+def yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index_param):
+    for index_name in get_relevant_indices(db, index_param, since, until):
         for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets,
                                               index_name):
             body["sort"] = ["timestamp_utc"]
@@ -262,8 +266,8 @@ def yield_step_scans(db, step, since, until, query, exclude_threads, exclude_ret
                 yield t
 
 
-def yield_scans(db, body, since, until, selected_index):
-    for index_name in get_relevant_indices(db, selected_index, since, until):
+def yield_scans(db, body, since, until, index_param):
+    for index_name in get_relevant_indices(db, index_param, since, until):
         for t in helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True):
             yield t
 
@@ -283,6 +287,13 @@ def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_r
         yield since, body
         since = increment_steps(since, step)
         one_more_step = increment_steps(since, step)
+
+
+def multiindex_count(db, body, index_param, since, until):
+    count = 0
+    for index_name in get_relevant_indices(db, index_param, since, until):
+        count += db.client.count(index=index_name, body=body)['count']
+    return count
 
 
 def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None, index=None):
