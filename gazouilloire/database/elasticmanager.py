@@ -152,19 +152,25 @@ class ElasticManager:
         if not self.multi_index:
             log.error("Multi-index is not activated in config.json, you should not use the --index/-i option")
             sys.exit(1)
-        if expr in INDEX_QUERIES:
-            return [i for i in self.get_positional_index(expr, include_closed_indices)]
-        try:
-            index_name = datetime.strptime(expr + "-01", "%Y-%m-%d").strftime(self.db_name + "_tweets_%Y_%m")
-        except ValueError:
-            log.error("indices should be in format YYYY-MM")
-            sys.exit(1)
-        if self.exists(index_name):
-            return [index_name]
-        else:
-            log.error("{} does not exist. Use 'gazou status -l' to see the list of existing indices."
-                      .format(index_name))
-            sys.exit(1)
+
+        indices = set()
+
+        for param in expr.split(","):
+            if param in INDEX_QUERIES:
+                indices.update(i for i in self.get_positional_index(param, include_closed_indices))
+            else:
+                try:
+                    index_name = datetime.strptime(param + "-01", "%Y-%m-%d").strftime(self.db_name + "_tweets_%Y_%m")
+                except ValueError:
+                    log.error("indices should be in format YYYY-MM")
+                    sys.exit(1)
+                if self.exists(index_name):
+                    indices.add(index_name)
+                else:
+                    log.error("{} does not exist. Use 'gazou status -l' to list existing indices."
+                              .format(index_name))
+                    sys.exit(1)
+        return sorted(indices)
 
     def get_positional_index(self, position, include_closed_indices):
         indices = self.get_sorted_indices(include_closed_indices)

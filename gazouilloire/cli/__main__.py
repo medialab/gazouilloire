@@ -143,11 +143,7 @@ def status(path, index, list_indices):
     if es.multi_index:
         queried_indices = []
         if index:
-            queried_indices = set()
-            for param in index.split(","):
-                for i in es.get_valid_index_names(param, include_closed_indices=True):
-                    queried_indices.add(i)
-            queried_indices = list(queried_indices)
+            queried_indices = es.get_valid_index_names(index, include_closed_indices=True)
             if len(queried_indices) == 1:
                 index_name = queried_indices[0]
                 index_info = es.client.cat.indices(index=index_name, format="json", bytes="b")[0]
@@ -250,10 +246,10 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name):
                                                                                      "containing those tweets")
 @click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
 @click.option("--resume", "-r", is_flag=True, help="Restart the export from the last id specified in --output file")
-@click.option('--index', '-i', type=click.Choice(INDEX_QUERIES),
-              help="In case of multi-index, specify the index that should be exported. Use `--index inactive` "
-                   "to export from the inactive indices (i. e. not used any more for indexing). By default, "
-                   "export from all opened indices.")
+@click.option('--index', '-i',
+              help="In case of multi-index, monthly indices to export in format YYYY-MM, or relative positions such as "
+                   "'last', 'first', 'inactive', separated by comma. Use `--index inactive` to export all inactive"
+                   "indices (i. e. not used any more for indexing). By default, export from all opened indices.")
 def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
            columns, list_fields, output, resume, since, until, step, index):
     if resume and not output:
@@ -293,7 +289,7 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
                                                                          "defined in config.json). By default, threads "
                                                                          "are included.")
 @click.option('--exclude-retweets/--include-retweets', default=False, help="Exclude retweets from the counted tweets")
-@click.option('--index', '-i', type=click.Choice(INDEX_QUERIES),
+@click.option('--index', '-i',
               help="In case of multi-index, specify the index to count from. Use `--index inactive` "
                    "to count tweets from the inactive indices (i. e. not used any more for indexing). "
                    "By default, count from all opened indices.")
@@ -390,11 +386,7 @@ def close(path, delete, force, index):
         if index is None:
             indices = [i for i in es.client.indices.get(es.tweets + "_*", expand_wildcards="all")]
         else:
-            indices = set()
-            for param in index.split(","):
-                for i in es.get_valid_index_names(param, include_closed_indices=delete):
-                    indices.add(i)
-            indices = list(indices)
+            indices = es.get_valid_index_names(index, include_closed_indices=delete)
 
     else:
         if index is None:
