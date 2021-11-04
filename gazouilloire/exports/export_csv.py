@@ -244,7 +244,7 @@ def get_relevant_indices(db, index_param, since, until):
         if index_param:
             relevant_indices = db.get_valid_index_names(index_param, include_closed_indices=False)
         else:
-            relevant_indices = db.get_sorted_indices()
+            relevant_indices = db.get_sorted_indices(include_closed_indices=False)
         if len(relevant_indices) == 0:
             return []
         min_index = relevant_indices[0]
@@ -272,15 +272,27 @@ def yield_scans(db, body, since, until, index_param):
             yield t
 
 
-def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index_name):
+def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index_param):
     if not until:
         until = datetime.now()
     if not since:
         body = build_body(query, exclude_threads, exclude_retweets)
         body["sort"] = ["timestamp_utc"]
         body["size"] = 1
-        first_tweet = db.client.search(body=body, index=index_name)["hits"]["hits"][0]["_source"]
-        since = datetime.fromtimestamp(first_tweet["timestamp_utc"])
+        if index_param:
+            indices = db.get_valid_index_names(index_param, include_closed_indices=False)
+        else:
+            indices = [db.tweets + "*"]
+        if len(indices) == 0:
+            since = datetime.now()
+        else:
+            first_index = indices[0]
+            first_tweet = db.client.search(body=body, index=first_index, size=1)["hits"]["hits"]
+            if len(first_tweet) == 0:
+                since = datetime.now()
+            else:
+                first_tweet = first_tweet[0]["_source"]
+                since = datetime.fromtimestamp(first_tweet["timestamp_utc"])
     one_more_step = increment_steps(since, step)
     while since < until:
         body = build_body(query, exclude_threads, exclude_retweets, since, one_more_step)
@@ -298,17 +310,15 @@ def multiindex_count(db, body, index_param, since, until):
 
 def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None, index=None):
     db = call_database(conf)
-    index_name = db.get_mono_or_multi_index_name(index)
     file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
     writer = csv.writer(file)
     if step:
-        for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets,
-                                              index_name):
-            count = db.client.count(index=index_name, body=body)['count']
+        for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index):
+            count = multiindex_count(db, body, index, since, until)
             writer.writerow([",".join(query), since, count] if query else [since, count])
     else:
         body = build_body(query, exclude_threads, exclude_retweets, since, until)
-        count = db.client.count(index=index_name, body=body)['count']
+        count = multiindex_count(db, body, index, since, until)
         writer.writerow([",".join(query), count] if query else [count])
 
     file.close()
