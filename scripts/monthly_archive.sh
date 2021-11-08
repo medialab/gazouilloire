@@ -22,25 +22,20 @@
 # So a typical crontab would look something like the following:
 #
 # m  h dom mon dow   command
-# 00 4  1   *   *    bash /data/gazouilloire/monthly_export.sh CORPUSNAME CORPUSENV delete
+# 00 4  1   *   *    bash /data/gazouilloire/monthly_export.sh CORPUSENV delete
 
-
-# Corpus name as argument
-CORPUS=$1
+TODAY=$(date --iso)
 
 # Corpus directory assumed to be the same as the script's
 CORPUSDIR=$(dirname "$0")
 cd $CORPUSDIR
 
 # Corpus python environment assumed to be named gazou-CORPUSNAME if not input
-CORPUSENV=$2
-if [ -z "$2" ]; then
-  CORPUSENV="gazou-$CORPUS"
-fi
+CORPUSENV=$1
 
 # Old indices will stay open if no input.
-CLOSE=$3
-if [ -z "$3" ]; then
+CLOSE=$2
+if [ -z "$2" ]; then
   CLOSE=""
 fi
 
@@ -54,12 +49,12 @@ eval "$(pyenv virtualenv-init -)"
 pyenv activate "$CORPUSENV"
 
 # Export inactive indices (older than the value of nb_past_months set in config.json)
-gazou export --index inactive --step hours >
+gazou export --index inactive > "monthly_export_${TODAY}.csv"
 
 # Close or delete inactive indices
-if [$CLOSE == "close"]; then
+if [[ $CLOSE == "close" ]]; then
   gazou close --index inactive
-elif [$CLOSE == "delete"]; then
+elif [[ $CLOSE == "delete" ]]; then
   gazou close --index inactive --delete
 fi
 
