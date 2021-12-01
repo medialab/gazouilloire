@@ -1,4 +1,4 @@
-elasticsearch >= 7.10.1
+elasticsearch >= 7.10.1, < 8.0
 twitwi >= 0.9.1
 requests
 urllib3[secure]
