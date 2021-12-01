@@ -24,11 +24,13 @@
 #
 # - Typical cronjobs:
 # The main use of this script is to automate restarts at server reboot
-# and every day in case of unexpected crashes.
+# and every day in case of unexpected crashes (but ES autorestarts at reboot should not be
+# enabled if multiple gazouilloire are set on the same machine, otherwise it might try to
+# restart it in parallel multiple times which sounds like a bad idea.
 # So a typical crontab would look something like the following:
 #
 # m  h dom mon dow   command
-# @reboot            bash /data/gazouilloire/restart.sh CORPUSNAME CORPUSENV TIMEOUT_ES
+# @reboot            bash /data/gazouilloire/restart.sh CORPUSNAME CORPUSENV
 # 00 4  *   *   *    bash /data/gazouilloire/restart.sh CORPUSNAME CORPUSENV TIMEOUT_ES
 
 
