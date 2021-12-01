@@ -1,11 +1,8 @@
 elasticsearch >= 7.10.1, < 8.0
-twitwi >= 0.9.1
 requests
 urllib3[secure]
-pytz
 psutil
-ural >= 0.30, < 0.31
-minet >= 0.52.1, < 0.53
+minet >= 0.53.8
 future
 click
 progressbar2
