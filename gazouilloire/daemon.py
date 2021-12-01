@@ -87,8 +87,12 @@ class Daemon:
             pid = None
 
         if pid:
-            message = "pidfile %s already exist. Daemon already running?\n"
+            message = "pidfile %s already exists. Daemon already running?\n"
             log.error(message % self.pidfile)
+            sys.exit(1)
+        if os.path.exists(self.stoplock):
+            log.error("Gazouilloire is currently stopping. Please wait for the daemon to stop before running a new "
+                      "collection process.")
             sys.exit(1)
 
         # Start the daemon
@@ -104,29 +108,37 @@ class Daemon:
         open(self.stoplock, 'w').close()
         # Get the pid from the pidfile
         try:
-            pf = open(self.pidfile,'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
+            try:
+                pf = open(self.pidfile,'r')
+                pid = int(pf.read().strip())
+                pf.close()
+            except IOError:
+                pid = None
 
-        if not pid:
-            message = "pidfile %s does not exist. Daemon not running?\n"
-            log.warning(message % self.pidfile)
+            if not pid:
+                message = "pidfile %s does not exist. Daemon not running?\n"
+                log.warning(message % self.pidfile)
+                os.remove(self.stoplock)
+                return False
+
+            # Kill the daemon process
+            parent = psutil.Process(pid)
+            children = parent.children(recursive=True)
+            parent.terminate()
+            gone, alive = psutil.wait_procs(children, timeout=timeout)
+            for p in alive:
+                p.kill()
+            if os.path.exists(self.pidfile):
+                os.remove(self.pidfile)
+            os.remove(self.stoplock)
+            return True
+
+        # remove .stoplock file in case of crash
+        except Exception as error:
+            message = "Some error occurred while stopping: %s\n"
+            log.error(message % error)
             os.remove(self.stoplock)
             return False
-
-        # Kill the daemon process
-        parent = psutil.Process(pid)
-        children = parent.children(recursive=True)
-        parent.terminate()
-        gone, alive = psutil.wait_procs(children, timeout=timeout)
-        for p in alive:
-            p.kill()
-        if os.path.exists(self.pidfile):
-            os.remove(self.pidfile)
-        os.remove(self.stoplock)
-        return True
 
     def restart(self, conf, timeout):
         """
