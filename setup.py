@@ -24,7 +24,7 @@ setup(name='gazouilloire',
       packages=find_packages(exclude=["collect*", "dist", "build"]),
       include_package_data=True,
       install_requires=[
-          "elasticsearch >= 7.10.1",
+          "elasticsearch >= 7.10.1, < 8.0",
           "requests",
           "psutil",
           "minet >= 0.53.8",
