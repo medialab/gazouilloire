@@ -40,6 +40,8 @@ def init(path):
 @click.argument('path', type=click.Path(exists=True), default=".")
 def start(path):
     conf = load_conf(path)
+    es = ElasticManager(**conf["database"])
+    es.prepare_indices()
     daemon = Daemon(path=path)
     log.info("Tweet collection will start in daemon mode")
     daemon.start(conf)
@@ -50,6 +52,8 @@ def start(path):
 @click.option('--timeout', '-t', type=int, default=15, help="Time (in seconds) before killing the process.")
 def restart(path, timeout):
     conf = load_conf(path)
+    es = ElasticManager(**conf["database"])
+    es.prepare_indices()
     daemon = Daemon(path=path)
     log.info("Restarting...")
     daemon.restart(conf, timeout)
