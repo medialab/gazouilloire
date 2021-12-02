@@ -115,11 +115,13 @@ class ElasticManager:
         else:
             self.links = self.db_name + "_links"
 
-    def exists(self, doc_type):
+    def exists(self, doc_type, include_closed_indices=True):
         """
         Check if index already exists in elasticsearch
         """
-        return self.client.indices.exists(index=doc_type)
+        if include_closed_indices:
+            return self.client.indices.exists(index=doc_type)
+        return self.client.indices.exists(index=doc_type+"*", allow_no_indices=False)
 
     def get_index_name(self, day):
         return self.tweets + get_month(day)
@@ -164,11 +166,11 @@ class ElasticManager:
                 except ValueError:
                     log.error("indices should be in format YYYY-MM")
                     sys.exit(1)
-                if self.exists(index_name):
+                if self.exists(index_name, include_closed_indices=include_closed_indices):
                     indices.add(index_name)
                 else:
-                    log.error("{} does not exist. Use 'gazou status -l' to list existing indices."
-                              .format(index_name))
+                    log.error("{} does not exist{}. Use 'gazou status -l' to list existing indices."
+                              .format(index_name, "" if include_closed_indices else " or is closed"))
                     sys.exit(1)
         return sorted(indices)
 
