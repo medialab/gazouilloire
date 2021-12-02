@@ -141,7 +141,6 @@ def status(path, index, list_indices):
     print("status: {}\n".format(running))
 
     if es.multi_index:
-        queried_indices = []
         if index:
             queried_indices = es.get_valid_index_names(index, include_closed_indices=True)
             if len(queried_indices) == 1:
@@ -154,15 +153,18 @@ def status(path, index, list_indices):
                 print("links: {}\ndisk space links: {}\n\nmedia: {}\ndisk space media: {}\n"
                       .format(links["docs.count"], links["store.size"].upper(), media_count, media_size))
                 return
-        summed_info = {"docs.count": 0, "store.size": 0}
-        if len(queried_indices) > 1:
-            indices = []
-            for queried in queried_indices:
-                for index in get_bytes_index_info(es, queried):
-                    indices.append(index)
+            if len(queried_indices) > 1:
+                indices = []
+                for queried in queried_indices:
+                    for index in get_bytes_index_info(es, queried):
+                        indices.append(index)
+            else:
+                log.error("There is no index corresponding to your query. Use 'gazou status -l' to list all indices")
+                sys.exit(1)
         else:
             indices = get_bytes_index_info(es, es.tweets + "_*")
 
+        summed_info = {"docs.count": 0, "store.size": 0}
         for index_info in sorted(indices, key=lambda x: x["index"]):
             if index_info["status"] == "open":
                 summed_info["docs.count"] += int(index_info["docs.count"])
