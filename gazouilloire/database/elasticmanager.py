@@ -8,6 +8,7 @@ import dateutil.relativedelta
 from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 import itertools
 from gazouilloire.config_format import log
+import click
 
 INDEX_QUERIES = ["first", "last", "inactive"]
 
@@ -191,19 +192,11 @@ class ElasticManager:
                     if self.is_too_old(self.get_last_index_day(index)):
                         yield index
 
-    # def get_mono_or_multi_index_name(self, index):
-    #     if index:
-    #         return next(self.get_positional_index(index, include_closed_indices=False))
-    #     if self.multi_index:
-    #         return self.tweets + "_*"
-    #     return self.tweets
-
     def create_index(self, index_name, mapping):
         if not self.exists(index_name):
             self.client.indices.create(index=index_name, body=mapping)
         elif self.client.cat.indices(index=index_name, format="json")[0]["status"] == "close":
             self.client.indices.open(index=index_name)
-
 
     def prepare_indices(self):
         """
@@ -226,36 +219,43 @@ class ElasticManager:
 
         self.create_index(self.links, DB_MAPPINGS["links_mapping"])
 
-    def delete_index(self, doc_type):
+    def delete_index(self, doc_type, yes=False):
         """
         Check if index exists, if so, delete it.
         In case of multi_index, delete all indices with the name prefix.
         """
         index_name = getattr(self, doc_type)
-        indices = self.client.cat.indices(index=index_name + "_*", format="json")
-        # opened_indices = self.client.indices.get(index_name + "*")
-        success = []
-        if len(indices) > 0:
-            for index_info in indices:
-                success.append(self.client.indices.delete(index=index_info["index"]))
-        if all(success):
-            log.info("{} successfully deleted".format(index_name))
-            return True
-        else:
-            for status, index_info in zip(success, indices):
-                if not status:
-                    log.error("failed to delete {}".format(index_info["index"]))
+        if yes or click.confirm("Elasticsearch index {} will be erased, do you want to continue?".format(index_name)):
+
+            indices = self.client.cat.indices(index=index_name + "*", format="json")
+
+            success = []
+            if len(indices) > 0:
+                for index_info in indices:
+                    success.append(self.client.indices.delete(index=index_info["index"]))
+            if all(success):
+                log.info("{} successfully deleted".format(index_name))
+                return True
+            else:
+                for status, index_info in zip(success, indices):
+                    if not status:
+                        log.error("failed to delete {}".format(index_info["index"]))
+                return False
+            log.warning("{} does not exist and could not be deleted".format(index_name))
             return False
-        log.warning("{} does not exist and could not be deleted".format(index_name))
         return False
 
-    def close_index(self, index_name, delete, log_message):
+    def close_index(self, index_name, delete, log_message, yes=False):
         """
         Close or delete one specific index (with the month suffix).
         """
         if self.exists(index_name):
             if delete:
-                success = self.client.indices.delete(index_name).get("acknowledged", False)
+                if yes or click.confirm(
+                        "Elasticsearch index {} will be erased, do you want to continue?".format(index_name)):
+                    success = self.client.indices.delete(index_name).get("acknowledged", False)
+                else:
+                    return
             else:
                 success = self.client.indices.close(index_name).get("acknowledged", False)
             if success:
@@ -274,7 +274,7 @@ class ElasticManager:
             for index in indices:
                 last_day_of_month = self.get_last_index_day(index)
                 if self.is_too_old(last_day_of_month) or force == True:
-                    self.close_index(index, delete, log_message)
+                    self.close_index(index, delete, log_message, force)
                 else:
                     log.warning("{} may contain tweets posted less than {} months ago, use --force option if you want "
                                 "to {} it anyway.".format(index, self.nb_past_months, log_message))

@@ -345,7 +345,7 @@ def reset(path, yes, preserve, only):
     es = ElasticManager(conf["database"]["host"], conf["database"]["port"], db_name)
     for index in ["tweets", "links"]:
         if index not in preserve:
-            confirm_delete_index(es, db_name, index, yes)
+            es.delete_index(index, yes)
     if "search_state" not in preserve:
         file_path = os.path.join(path, ".search_state.json")
         if os.path.isfile(file_path) \
@@ -368,10 +368,10 @@ def reset(path, yes, preserve, only):
                 log.warning("{} folder does not exist and could not be erased.".format(folder_path))
 
 
-def confirm_delete_index(es, db_name, doc_type, yes):
-    if yes or click.confirm("Elasticsearch index {}_{} will be erased, do you want to continue?".format(
-            db_name, doc_type)):
-        es.delete_index(doc_type)
+# def confirm_delete_index(es, db_name, doc_type, yes):
+#     if yes or click.confirm("Elasticsearch index {}_{} will be erased, do you want to continue?".format(
+#             db_name, doc_type)):
+#         es.delete_index(doc_type)
 
 
 @main.command(help="Close/delete indices")
