@@ -386,7 +386,7 @@ class ElasticManager:
         )
         return response
 
-    def find_tweets_with_unresolved_links(self, batch_size=600, retry_days=30):
+    def find_tweets_with_unresolved_links(self, batch_size=600, retry_days=30, indices=None):
         """Returns a list of tweets where 'links_to_resolve' field is True"""
         query = {"bool": {"filter": [{"term": {"links_to_resolve": True}}]}}
         if retry_days:
@@ -398,7 +398,7 @@ class ElasticManager:
                             }
             query["bool"]["filter"].append(range_clause)
         response = self.client.search(
-            index=self.tweets + "*",
+            index=indices if indices else self.tweets + "*",
             body={
                 "_source": ["links", "proper_links", "retweet_id", "local_time"],
                 "size": batch_size,
@@ -465,9 +465,12 @@ class ElasticManager:
 
         helpers.bulk(self.client, actions=self.prepare_indexing_tweets_with_new_links(response, links, domains))
 
-    def count_tweets(self, key, value):
+    def count_tweets(self, key, value, indices=None):
         """Counts the number of documents where the given key is equal to the given value"""
-        return self.client.count(index=self.tweets + "*", body={"query": {"term": {key: value}}})['count']
+        return self.client.count(
+            index=indices if indices else self.tweets + "*",
+            body={"query": {"term": {key: value}}}
+        )['count']
 
     def search_thread_elements(self, ids_list):
         """

@@ -200,9 +200,13 @@ def status(path, index, list_indices):
 @click.option('--host')
 @click.option('--port')
 @click.option('--db-name', help="Name of the ElasticSearch database containing the tweets. "
-                                "Will take precedence over --path if also given. "
+                                "Will take precedence over the config file in --path if also given. "
                                 "Usage: gazou resolve --db-name mydb")
-def resolve(path, batch_size, verbose, url_debug, host, port, db_name):
+@click.option('--index', '-i',
+              help="In case of multi-index, specify the index to count from. Use `--index inactive` "
+                   "to count tweets from the inactive indices (i. e. not used any more for indexing). "
+                   "By default, count from all opened indices.")
+def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
     if url_debug:
         verbose = False
     database_params = load_conf(path)["database"]
@@ -212,7 +216,7 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name):
         database_params["port"] = port
     if db_name:
         database_params["db_name"] = db_name
-    resolve_script(**database_params, batch_size=batch_size, verbose=verbose, url_debug=url_debug)
+    resolve_script(**database_params, batch_size=batch_size, verbose=verbose, url_debug=url_debug, index=index)
 
 
 @main.command(help="Export tweets in csv format. Type 'gazou export' to get all collected tweets, or 'gazou export "

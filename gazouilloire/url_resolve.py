@@ -16,10 +16,13 @@ from gazouilloire.config_format import log
 import logging
 
 
-def count_and_log(db, batch_size, done=0, skip=0, retry_days=30):
-    db.client.indices.refresh(index=db.tweets + "*")
-    todo = list(db.find_tweets_with_unresolved_links(batch_size=batch_size, retry_days=retry_days))
-    left = db.count_tweets("links_to_resolve", True)
+def count_and_log(db, batch_size, done=0, skip=0, retry_days=30, indices=None):
+    if indices:
+        db.client.indices.refresh(index=indices)
+    else:
+        db.client.indices.refresh(index=db.tweets + "*")
+    todo = list(db.find_tweets_with_unresolved_links(batch_size=batch_size, retry_days=retry_days, indices=indices))
+    left = db.count_tweets("links_to_resolve", True, indices)
     if done:
         done = "(+%s actual redirections resolved out of %s)" % (done, len(todo))
     log.info("RESOLVING LINKS: %s waiting (done:%s skipped:%s)\n" % (left, done or "", skip))
