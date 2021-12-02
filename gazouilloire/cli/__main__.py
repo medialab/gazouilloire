@@ -147,7 +147,10 @@ def status(path, index, list_indices):
             if len(queried_indices) == 1:
                 index_name = queried_indices[0]
                 index_info = es.client.cat.indices(index=index_name, format="json", bytes="b")[0]
-                print_index_status(index_name, index_info)
+                if index_info["status"] == "open":
+                    print_index_status(index_name, index_info)
+                else:
+                    print("name: {}\nclosed\n".format(index_info["index"]))
                 print("links: {}\ndisk space links: {}\n\nmedia: {}\ndisk space media: {}\n"
                       .format(links["docs.count"], links["store.size"].upper(), media_count, media_size))
                 return
