@@ -257,10 +257,11 @@ def get_relevant_indices(db, index_param, since, until):
     return [db.tweets]
 
 
-def yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index_param):
-    for index_name in get_relevant_indices(db, index_param, since, until):
-        for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets,
-                                              index_name):
+def yield_step_scans(db, step, global_since, until, query, exclude_threads, exclude_retweets, index_param):
+    for index_name in get_relevant_indices(db, index_param, global_since, until):
+        index_expression = datetime.strptime(index_name, db.tweets + "_%Y_%m").strftime("%Y-%m")
+        for since, body in time_step_iterator(db, step, global_since, until, query, exclude_threads, exclude_retweets,
+                                              index_expression):
             body["sort"] = ["timestamp_utc"]
             for t in helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True):
                 yield t
