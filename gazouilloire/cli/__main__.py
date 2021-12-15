@@ -362,7 +362,10 @@ def reset(path, yes, preserve, only):
     for folder in ["media", "logs", "piles"]:
         if folder not in preserve:
             if folder == "media":
-                folder = conf.get("media_directory", "media")
+                if "download_media" in conf:
+                    folder = conf["download_media"].get("media_directory", "media")
+                else:
+                    folder = "media"
             folder_path = os.path.join(path, folder)
             if os.path.isdir(folder_path) \
                 and (yes or click.confirm("{} folder will be erased, do you want to continue ?".format(folder))):

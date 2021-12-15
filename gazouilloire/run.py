@@ -672,10 +672,16 @@ def main(conf):
     resolve_links = "resolve_redirected_links" in conf and conf["resolve_redirected_links"]
     resolving_delay = int(conf["resolving_delay"]) if "resolving_delay" in conf else 30
     no_rollback = "catchup_past_week" not in conf or not conf["catchup_past_week"]
-    dl_media = "download_media" in conf and conf["download_media"] and any(conf["download_media"].values())
+    if "download_media" in conf and conf["download_media"]:
+        try:
+            media_dir = conf["download_media"].pop("media_directory")
+        except KeyError:
+            media_dir = "media"
+        dl_media = any(conf["download_media"].values())
+    else:
+        dl_media = False
     if dl_media:
         media_types = set([k for k in conf["download_media"] if conf["download_media"][k]])
-        media_dir = conf.get("media_directory", "media")
         if not os.path.exists(media_dir):
             os.makedirs(media_dir)
     pile = Queue()

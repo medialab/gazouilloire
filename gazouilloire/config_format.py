@@ -88,6 +88,7 @@ def required_format(conf):
             'in config.json '
         )
         sys.exit(1)
+
     if "multi_index" not in conf["database"] and "nb_past_months" in conf["database"]:
         log.error(
             'if "multi_index" is absent from config.json, "nb_past_months" is not supported. '
@@ -100,6 +101,15 @@ def required_format(conf):
             'Please delete "nb_past_months" from the config file or set "multi_index" to true.'
         )
         sys.exit(1)
+
+    if "download_media" in conf:
+        for subfield in ["photos", "videos", "animated_gifs"]:
+            if type(conf["download_media"][subfield]) != bool:
+                log.error(
+                    "The '{}' parameter in config.json should be set to either true or false".format(subfield)
+                )
+                sys.exit(1)
+
     if conf["verbose"]:
         log.setLevel(logging.DEBUG)
     return conf

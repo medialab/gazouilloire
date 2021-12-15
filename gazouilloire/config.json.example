@@ -25,9 +25,9 @@
     "download_media": {
         "photos": false,
         "videos": false,
-        "animated_gifs": false
+        "animated_gifs": false,
+        "media_directory": "media"
     },
-    "media_directory": "media",
     "timezone": "Europe/Paris",
     "verbose": false
 }
