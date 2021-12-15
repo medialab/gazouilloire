@@ -88,6 +88,13 @@ def required_format(conf):
             'in config.json '
         )
         sys.exit(1)
+    if "download_media" in conf:
+        for subfield in ["photos", "videos", "animated_gifs"]:
+            if type(conf["download_media"][subfield]) != bool:
+                log.error(
+                    "The '{}' parameter in config.json should be set to either true or false".format(subfield)
+                )
+                sys.exit(1)
     if conf["verbose"]:
         log.setLevel(logging.DEBUG)
     return conf
