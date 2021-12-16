@@ -29,16 +29,17 @@ def post_process_tweet_from_elastic(source):
     return source
 
 
-def yield_csv(queryiterator, last_ids=set()):
+def yield_csv(queryiterator, last_ids=set(), export_list=False):
     for t in queryiterator:
         try:
             source = t["_source"]
         except KeyError:
             if not t["found"]:
-                log.error(t["_id"] + " not found in database")
-                continue
+                log.warning(t["_id"] + " not found in database")
+                source = {"_id": t["_id"]}
+
         # ignore tweets only caught on deletion missing most fields
-        if len(source) >= 10 and t["_id"] not in last_ids:
+        if export_list or (len(source) >= 10 and t["_id"] not in last_ids):
             transform_tweet_into_csv_dict(
                 post_process_tweet_from_elastic(source), item_id=t["_id"], allow_erroneous_plurals=True
             )
@@ -196,7 +197,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
 
     if export_threads_from_file or export_tweets_from_file:
         count = len(body)
-        iterator = yield_csv(db.multi_get(body, index))
+        iterator = yield_csv(db.multi_get(body, index), export_list=True)
     else:
         last_ids = set()
         if resume:
