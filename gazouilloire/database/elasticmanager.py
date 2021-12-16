@@ -306,7 +306,9 @@ class ElasticManager:
             if self.multi_index:
                 tweet_date = tweet_date = datetime.strptime(t["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
                 if self.nb_past_months and self.is_too_old(tweet_date):
-                    log.warning("Tweet {} was posted ")
+                    log.debug("Tweet {} is older than {} month{} and will not be saved.".format(
+                        t["id"], self.nb_past_months, "s" if self.nb_past_months > 1 else ""
+                    ))
                     continue
                 index = self.get_index_name(tweet_date)
             if reply_count is not None:
