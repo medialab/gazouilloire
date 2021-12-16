@@ -196,7 +196,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
 
     if export_threads_from_file or export_tweets_from_file:
         count = len(body)
-        iterator = yield_csv(db.multi_get(body))
+        iterator = yield_csv(db.multi_get(body, index))
     else:
         last_ids = set()
         if resume:

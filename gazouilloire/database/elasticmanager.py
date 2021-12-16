@@ -530,12 +530,34 @@ class ElasticManager:
             ids_list = list(todo_ids)
         return list(all_ids)
 
-    def multi_get(self, ids, batch_size=1000):
-        # todo: currently in error with multiindex
+    def multi_get(self, ids, index_param, batch_size=1000):
+        indices = [self.tweets]
+        if self.multi_index:
+            ids = sorted(ids)
+            if index_param:
+                indices = self.get_valid_index_names(index_param, include_closed_indices=False)
+            else:
+                indices = self.get_sorted_indices(include_closed_indices=False)
         for i in range(0, len(ids), batch_size):
-            batch = self.client.mget(body={'ids': ids[i:i + batch_size]}, index=self.tweets)
-            for tweet in batch["docs"]:
-                yield tweet
+            if self.multi_index and len(indices) > 1:
+                body = {
+                  "query": {
+                    "ids" : {
+                      "values": ids[i:i + batch_size]
+                    }
+                  }
+                }
+                # Avoid duplicates while dealing with historical mono-index
+                batch = {t["_id"]: t for t in helpers.scan(query=body, index=self.tweets + "*", client=self.client)}
+                for tweet_id in ids[i:i + batch_size]:
+                    if tweet_id in batch:
+                        yield batch[tweet_id]
+                    else:
+                        yield {"_id": tweet_id, "found": False}
+            else:
+                batch = self.client.mget(body={'ids': ids[i:i + batch_size]}, index=indices[0])["docs"]
+                for tweet in batch:
+                    yield tweet
 
 
 def bulk_update(client, actions):
