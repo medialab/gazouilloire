@@ -98,7 +98,7 @@ def get_month(day):
 
 class ElasticManager:
 
-    def __init__(self, host, port, db_name, multi_index=False, nb_past_months=None, links_index=None):
+    def __init__(self, host, port, db_name, multi_index=False, nb_past_months=12, links_index=None):
         self.host = host
         self.port = port
         self.multi_index = multi_index
@@ -184,13 +184,9 @@ class ElasticManager:
             yield indices[0]
 
         elif position == "inactive":
-            if self.nb_past_months is None:
-                log.error("since 'nb_past_months' is not parametered in config.json, all indices are active")
-                sys.exit(1)
-            else:
-                for index in indices:
-                    if self.is_too_old(self.get_last_index_day(index)):
-                        yield index
+            for index in indices:
+                if self.is_too_old(self.get_last_index_day(index)):
+                    yield index
 
     def create_index(self, index_name, mapping):
         if not self.exists(index_name):
@@ -205,24 +201,21 @@ class ElasticManager:
         try:
             if self.multi_index:
                 if self.client.indices.exists(index=self.tweets):
-                    log.warning("You set multi_index to true in the config file but there is an existing mono-index. "
-                                "Gazouilloire will ignore the tweets stored in this previous index.")
+                    log.warning('You set "multi_index" to true in the config file but there is an existing mono-index. '
+                                'Gazouilloire will ignore the tweets stored in this previous index.')
 
                 one_month_in_advance = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
-                if self.nb_past_months:
-                    nb_past_months = self.nb_past_months + 2
-                else:
-                    twitter_creation_date = datetime(2006, 3, 21)
-                    time_diff_years = one_month_in_advance.year - twitter_creation_date.year
-                    time_diff_months = one_month_in_advance.month - twitter_creation_date.month
-                    nb_past_months = time_diff_years * 12 + time_diff_months + 1
+                nb_past_months = self.nb_past_months + 2
                 for i in range(nb_past_months):
-                    index_name = self.get_index_name(one_month_in_advance - dateutil.relativedelta.relativedelta(months=i))
+                    index_name = self.get_index_name(
+                        one_month_in_advance - dateutil.relativedelta.relativedelta(months=i)
+                    )
                     self.create_index(index_name, DB_MAPPINGS["tweets_mapping"])
             else:
                 if len(self.client.cat.indices(index=self.tweets + "_*", format="json")) > 0:
-                    log.warning("You set multi_index to false in the config file but there is an existing multi-index. "
-                                "Gazouilloire will ignore the tweets stored in these previous indices.")
+                    log.warning('You set "multi_index" to false in the config file but there is an existing '
+                                'multi-index. '
+                                'Gazouilloire will ignore the tweets stored in these previous indices.')
                 self.create_index(self.tweets, DB_MAPPINGS["tweets_mapping"])
 
             self.create_index(self.links, DB_MAPPINGS["links_mapping"])
