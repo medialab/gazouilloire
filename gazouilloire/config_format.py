@@ -103,14 +103,16 @@ def required_format(conf):
                 '"multi_index" is set to true in config.json but "nb_past_months" is not indicated. '
                 'Setting "nb_past_months" to 12.'
             )
+            conf["database"]["nb_past_months"] = 12
 
         if conf["database"]["nb_past_months"] > 12:
-            log.warning(
+            log.error(
                 'When using "multi_index", "nb_past_months" is limited to 12 months max. '
-                'Setting "nb_past_months" to 12.'
+                'Please set "nb_past_months" to 12 or less in the config file.'
             )
+            sys.exit(1)
 
-        conf["database"]["nb_past_months"] = 12
+
 
     if "download_media" in conf:
         for subfield in ["photos", "videos", "animated_gifs"]:
