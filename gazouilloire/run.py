@@ -32,13 +32,14 @@ from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 import shutil
 from twitwi import normalize_tweet
+from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 from ural.get_domain_name import get_hostname_prefixes
 from gazouilloire.database.elasticmanager import ElasticManager, prepare_db, bulk_update
 from elasticsearch import helpers, exceptions
 from gazouilloire.url_resolve import resolve_loop, count_and_log
 from gazouilloire.config_format import load_conf, log
 
-DEPILER_BATCH_SIZE = 1000
+DEPILER_BATCH_SIZE = 5000
 RESOLVER_BATCH_SIZE = 5000
 
 
@@ -147,13 +148,21 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
                 log.debug("Preparing to index %s collected tweets" % len(todo))
             tweets_bulk = []
             for t in prepare_tweets(todo, locale):
-                if pile_media and t["media_files"]:
-                    pile_media.put(t)
+                if db.multi_index and db.nb_past_months:
+                    tweet_date = datetime.strptime(t["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
+                    if db.is_too_old(tweet_date):
+                        log.debug("Prepared tweet {} is older than {} month{} and will not be saved.".format(
+                            t["id"], db.nb_past_months, "s" if db.nb_past_months > 1 else ""
+                        ))
+                        continue
                 if pile_catchup and t["to_tweetid"]:
+                    if pile_media and t["media_files"]:
+                        pile_media.put(t)
                     if not db.find_tweet(t["to_tweetid"]):
                         pile_catchup.put(t["to_tweetid"])
                 tweets_bulk.append(t)
             if tweets_bulk:
+                log.info(len(tweets_bulk))
                 updated, created, errors = bulk_update(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
                 log.debug("Saved %s tweets in database (including %s new ones)" % (updated, created))
                 if errors:
