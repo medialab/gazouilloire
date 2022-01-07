@@ -162,7 +162,6 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
                         pile_catchup.put(t["to_tweetid"])
                 tweets_bulk.append(t)
             if tweets_bulk:
-                log.info(len(tweets_bulk))
                 updated, created, errors = bulk_update(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
                 log.debug("Saved %s tweets in database (including %s new ones)" % (updated, created))
                 if errors:
