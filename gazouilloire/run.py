@@ -155,9 +155,9 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
                             t["id"], db.nb_past_months, "s" if db.nb_past_months > 1 else ""
                         ))
                         continue
+                if pile_media and t["media_files"]:
+                    pile_media.put(t)
                 if pile_catchup and t["to_tweetid"]:
-                    if pile_media and t["media_files"]:
-                        pile_media.put(t)
                     if not db.find_tweet(t["to_tweetid"]):
                         pile_catchup.put(t["to_tweetid"])
                 tweets_bulk.append(t)
