@@ -151,7 +151,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
                 if db.multi_index and db.nb_past_months:
                     tweet_date = datetime.strptime(t["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
                     if db.is_too_old(tweet_date):
-                        log.debug("Prepared tweet {} is older than {} month{} and will not be saved.".format(
+                        log.debug("Tweet {} is older than {} month{} and will not be saved.".format(
                             t["id"], db.nb_past_months, "s" if db.nb_past_months > 1 else ""
                         ))
                         continue
