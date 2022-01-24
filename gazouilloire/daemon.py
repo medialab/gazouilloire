@@ -1,9 +1,9 @@
 # Adapted from Joseph Ernest https://gist.github.com/josephernest/77fdb0012b72ebdf4c9d19d6256a1119
 
 
-import sys, os, time, atexit, psutil
+import sys, os, atexit
 from signal import signal, SIGTERM
-from gazouilloire import run
+from gazouilloire.run import main, stop as main_stop
 from gazouilloire.config_format import log, create_file_handler
 
 
@@ -23,6 +23,10 @@ class Daemon:
         if os.path.isfile(self.stoplock):
             log.error("The daemon is currently being stopped. Please wait before trying to start, restart or stop.")
             sys.exit(1)
+
+    def write_lock_file(self):
+        pid = str(os.getpid())
+        open(self.pidfile,'w+').write("%s\n" % pid)
 
     def daemonize(self):
         """
@@ -66,21 +70,16 @@ class Daemon:
         atexit.register(self.onstop)
         signal(SIGTERM, lambda signum, stack_frame: exit())
 
-        # write pidfile
-        pid = str(os.getpid())
-        open(self.pidfile,'w+').write("%s\n" % pid)
+        self.write_lock_file()
 
     def onstop(self):
         self.quit()
         os.remove(self.pidfile)
 
-    def start(self, conf):
-        """
-        Start the daemon
-        """
+    def search_pid(self):
         # Check for a pidfile to see if the daemon already runs
         try:
-            pf = open(self.pidfile,'r')
+            pf = open(self.pidfile, 'r')
             pid = int(pf.read().strip())
             pf.close()
         except IOError:
@@ -95,50 +94,30 @@ class Daemon:
                       "collection process.")
             sys.exit(1)
 
+    def run(self, conf):
+        """
+        Run the app in the current process (no daemon)
+        """
+        self.search_pid()
+        self.write_lock_file()
+        main(conf)
+
+    def start(self, conf):
+        """
+        Start the daemon
+        """
+        self.search_pid()
+
         # Start the daemon
         create_file_handler(self.path)
         self.daemonize()
-        self.run(conf)
+        main(conf)
 
     def stop(self, timeout):
         """
         Stop the daemon
         """
-        # Indicate that the daemon is stopping by creating a .stoplock file
-        open(self.stoplock, 'w').close()
-        # Get the pid from the pidfile
-        try:
-            try:
-                pf = open(self.pidfile,'r')
-                pid = int(pf.read().strip())
-                pf.close()
-            except IOError:
-                pid = None
-
-            if not pid:
-                message = "pidfile %s does not exist. Daemon not running?\n"
-                log.warning(message % self.pidfile)
-                os.remove(self.stoplock)
-                return False
-
-            # Kill the daemon process
-            parent = psutil.Process(pid)
-            children = parent.children(recursive=True)
-            parent.terminate()
-            gone, alive = psutil.wait_procs(children, timeout=timeout)
-            for p in alive:
-                p.kill()
-            if os.path.exists(self.pidfile):
-                os.remove(self.pidfile)
-            os.remove(self.stoplock)
-            return True
-
-        # remove .stoplock file in case of crash
-        except Exception as error:
-            message = "Some error occurred while stopping: %s\n"
-            log.error(message % error)
-            os.remove(self.stoplock)
-            return False
+        main_stop(self.path, timeout)
 
     def restart(self, conf, timeout):
         """
@@ -146,9 +125,6 @@ class Daemon:
         """
         self.stop(timeout)
         self.start(conf)
-
-    def run(self, conf):
-        run.main(conf)
 
     def quit(self):
         """

@@ -2,9 +2,9 @@
 import click
 import os
 from gazouilloire.__version__ import __version__
+from gazouilloire.run import STOP_TIMEOUT, stop as main_stop
 from gazouilloire.config_format import create_conf_example, load_conf, log
 from gazouilloire.daemon import Daemon
-from gazouilloire.run import main as main_run
 from gazouilloire.resolving_script import resolve_script
 from gazouilloire.exports.export_csv import export_csv, count_by_step, call_database
 from gazouilloire.database.elasticmanager import ElasticManager, INDEX_QUERIES
@@ -49,7 +49,7 @@ def start(path):
 
 @main.command(help="Restart collection as daemon, following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-@click.option('--timeout', '-t', type=int, default=15, help="Time (in seconds) before killing the process.")
+@click.option('--timeout', '-t', type=int, default=STOP_TIMEOUT, help="Time (in seconds) before killing the process.")
 def restart(path, timeout):
     conf = load_conf(path)
     es = ElasticManager(**conf["database"])
@@ -63,20 +63,17 @@ def restart(path, timeout):
 @click.argument('path', type=click.Path(exists=True), default=".")
 def run(path):
     conf = load_conf(path)
-    if os.path.exists(os.path.join(path, ".lock")):
-        log.error("pidfile .lock already exists. Daemon already running?")
-    elif os.path.exists(os.path.join(path, ".stoplock")):
-        log.error("Please wait for the daemon to stop before running a new collection process.")
-    else:
-        main_run(conf)
+    es = ElasticManager(**conf["database"])
+    es.prepare_indices()
+    daemon = Daemon(path=path)
+    daemon.run(conf)
 
 
 @main.command(help="Stop collection daemon.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-@click.option('--timeout', '-t', type=int, default=15, help="Time (in seconds) before killing the process.")
+@click.option('--timeout', '-t', type=int, default=STOP_TIMEOUT, help="Time (in seconds) before killing the process.")
 def stop(path, timeout):
-    daemon = Daemon(path=path)
-    stopped = daemon.stop(timeout)
+    stopped = main_stop(path, timeout)
     if stopped:
         log.info("Collection stopped")
         conf = load_conf(path)

@@ -27,6 +27,7 @@ requests.packages.urllib3.disable_warnings()
 from multiprocessing import Process, Event
 from gazouilloire.multiprocessing import Queue
 import signal
+import psutil
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterError, TwitterHTTPError
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
@@ -41,6 +42,7 @@ from gazouilloire.config_format import load_conf, log
 
 DEPILER_BATCH_SIZE = 5000
 RESOLVER_BATCH_SIZE = 5000
+STOP_TIMEOUT = 15 # Time (in seconds) before killing the process after a keyboard interrupt.
 
 
 def instantiate_clients(oauth, oauth2):
@@ -73,6 +75,51 @@ def breakable_sleep(delay, exit_event):
         time.sleep(1)
 
 
+def stop(path, timeout=STOP_TIMEOUT):
+    """
+    Stop the collection
+    """
+    # Indicate that the process is stopping by creating a .stoplock file
+    stoplock_file = os.path.join(path, '.stoplock')
+    open(stoplock_file, 'w').close()
+    pidfile = os.path.join(path, '.lock')
+    # Get the pid from the pidfile
+    try:
+        try:
+            pf = open(pidfile, 'r')
+            pid = int(pf.read().strip())
+            pf.close()
+        except IOError:
+            pid = None
+
+        if not pid:
+            message = "pidfile %s does not exist. Daemon not running?\n"
+            log.warning(message % pidfile)
+            os.remove(stoplock_file)
+            return False
+
+        # Kill the processes
+        parent = psutil.Process(pid)
+        children = parent.children(recursive=True)
+        parent.terminate()
+        gone, alive = psutil.wait_procs(children, timeout=timeout)
+        for p in alive:
+            log.debug("Killing process nb {}".format(p.pid))
+            p.kill()
+        if os.path.exists(pidfile):
+            os.remove(pidfile)
+        os.remove(stoplock_file)
+        return True
+
+    # remove .stoplock file in case of crash
+    except Exception as error:
+        message = "Some {} occurred while stopping: {}"
+        log.error(message.format(type(error), error))
+        os.remove(stoplock_file)
+        os.remove(pidfile)
+        return False
+
+
 def write_pile(pile, todo, file_prefix):
     store = []
     while not pile.safe_empty():
@@ -80,11 +127,11 @@ def write_pile(pile, todo, file_prefix):
     store.extend(todo)
     if store:
         path = datetime.strftime(datetime.now(), file_prefix +"_%Y%m%d-%H%M.json")
-        log.info("Save {} tweets to {}".format(len(store), path))
         if not os.path.isdir(os.path.dirname(path)):
             os.mkdir(os.path.dirname(path))
         with open(path, "w") as f:
             json.dump(store, f)
+        log.info("Saved {} tweets to {}".format(len(store), path))
 
 
 def load_pile(path, file_prefix, pile):
@@ -746,13 +793,23 @@ def main(conf):
         name="searcher  "
     )
     search.start()
+
     def stopper(*args):
         exit_event.set()
+
     signal.signal(signal.SIGTERM, stopper)
+
     try:
         depile.join()
     except KeyboardInterrupt:
-        exit_event.set()
+        stopped = stop(".")
+        if stopped:
+            log.info("Collection stopped.")
+            unresolved_urls = db.count_tweets("links_to_resolve", True)
+            if unresolved_urls:
+                log.info("{} tweets contain unresolved urls. Run 'gazou resolve' if you want to resolve all urls."
+                    .format(unresolved_urls)
+                         )
 
 
 if __name__=='__main__':
