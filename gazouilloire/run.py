@@ -75,19 +75,30 @@ def breakable_sleep(delay, exit_event):
         time.sleep(1)
 
 
+def kill_alive_processes(processes, timeout):
+    gone, alive = psutil.wait_procs(processes, timeout=timeout)
+    for p in alive:
+        log.debug("Killing process nb {}".format(p.pid, ))
+        p.kill()
+
+
 def stop(path, timeout=STOP_TIMEOUT):
     """
     Stop the collection
     """
-    # Indicate that the process is stopping by creating a .stoplock file
     stoplock_file = os.path.join(path, '.stoplock')
+    if os.path.exists(stoplock_file):
+        log.error("Gazouilloire is currently stopping.")
+        sys.exit(1)
+
+    # Indicate that the process is stopping by creating a .stoplock file
     open(stoplock_file, 'w').close()
     pidfile = os.path.join(path, '.lock')
     # Get the pid from the pidfile
     try:
         try:
             pf = open(pidfile, 'r')
-            pid = int(pf.read().strip())
+            pid = int(pf.readlines()[0].strip())
             pf.close()
         except IOError:
             pid = None
@@ -99,13 +110,25 @@ def stop(path, timeout=STOP_TIMEOUT):
             return False
 
         # Kill the processes
-        parent = psutil.Process(pid)
-        children = parent.children(recursive=True)
-        parent.terminate()
-        gone, alive = psutil.wait_procs(children, timeout=timeout)
-        for p in alive:
-            log.debug("Killing process nb {}".format(p.pid))
-            p.kill()
+        try:
+            parent = psutil.Process(pid)
+            children = parent.children(recursive=True)
+            parent.terminate()
+            kill_alive_processes(children, STOP_TIMEOUT)
+        except psutil.NoSuchProcess:
+            processes_to_kill = []
+            pf = open(pidfile, 'r')
+            for pid in pf.readlines():
+                try:
+                    p = psutil.Process(int(pid))
+                    if p.name().startswith("gazou"):
+                        processes_to_kill.append(p)
+                        p.terminate
+                except psutil.NoSuchProcess:
+                    continue
+            kill_alive_processes(processes_to_kill, STOP_TIMEOUT)
+            pf.close()
+
         if os.path.exists(pidfile):
             os.remove(pidfile)
         os.remove(stoplock_file)
@@ -116,8 +139,14 @@ def stop(path, timeout=STOP_TIMEOUT):
         message = "Some {} occurred while stopping: {}"
         log.error(message.format(type(error), error))
         os.remove(stoplock_file)
-        os.remove(pidfile)
         return False
+
+
+def start_process(process, path):
+    pidfile = os.path.join(path, ".lock")
+    process.start()
+    pid = process.pid
+    open(pidfile, 'a').write("%s\n" % pid)
 
 
 def write_pile(pile, todo, file_prefix):
@@ -675,7 +704,7 @@ def generate_geoloc_strings(x1, y1, x2, y2):
     log.info('Search Disk: %s/%s, %.2fkm' % (x, y, d))
     return streamgeocode, searchgeocode
 
-def main(conf):
+def main(conf, path="."):
     if len(conf['keywords']) + len(conf['url_pieces']) > 400:
         log.error('Please limit yourself to a maximum of 400 keywords total (including url_pieces): you set up %s keywords and %s url_pieces.' % (len(conf['keywords']), len(conf['url_pieces'])))
         sys.exit(1)
@@ -753,7 +782,7 @@ def main(conf):
         daemon=True,
         name="depiler   "
     )
-    depile.start()
+    start_process(depile, path)
     if grab_conversations:
         catchup = Process(
             target=catchupper,
@@ -761,7 +790,7 @@ def main(conf):
             daemon=True,
             name="catchupper"
         )
-        catchup.start()
+        start_process(catchup, path)
     if resolve_links:
         resolve = Process(
             target=resolver,
@@ -769,7 +798,7 @@ def main(conf):
             daemon=True,
             name="resolver  "
         )
-        resolve.start()
+        start_process(resolve, path)
     if dl_media:
         download = Process(
             target=downloader,
@@ -777,7 +806,7 @@ def main(conf):
             daemon=True,
             name="downloader"
         )
-        download.start()
+        start_process(download, path)
     signal.signal(signal.SIGINT, default_handler)
     stream = Process(
         target=streamer,
@@ -785,14 +814,14 @@ def main(conf):
         daemon=True,
         name="streamer  "
     )
-    stream.start()
+    start_process(stream, path)
     search = Process(
         target=searcher,
         args=(pile, oauth, oauth2, conf, locale, language, searchgeocode, exit_event, no_rollback),
         daemon=True,
         name="searcher  "
     )
-    search.start()
+    start_process(search, path)
 
     def stopper(*args):
         exit_event.set()
@@ -802,7 +831,7 @@ def main(conf):
     try:
         depile.join()
     except KeyboardInterrupt:
-        stopped = stop(".")
+        stopped = stop(path)
         if stopped:
             log.info("Collection stopped.")
             unresolved_urls = db.count_tweets("links_to_resolve", True)
@@ -813,4 +842,4 @@ def main(conf):
 
 
 if __name__=='__main__':
-    main(load_conf("."))
+    main(load_conf("."), ".")

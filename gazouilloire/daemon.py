@@ -1,9 +1,12 @@
 # Adapted from Joseph Ernest https://gist.github.com/josephernest/77fdb0012b72ebdf4c9d19d6256a1119
 
-
-import sys, os, atexit
+import os
+import sys
+import atexit
+import psutil
 from signal import signal, SIGTERM
-from gazouilloire.run import main, stop as main_stop
+
+from gazouilloire.run import main, STOP_TIMEOUT, kill_alive_processes, stop as main_stop
 from gazouilloire.config_format import log, create_file_handler
 
 
@@ -77,22 +80,47 @@ class Daemon:
         os.remove(self.pidfile)
 
     def search_pid(self):
-        # Check for a pidfile to see if the daemon already runs
-        try:
-            pf = open(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
-
-        if pid:
-            message = "pidfile %s already exists. Daemon already running?\n"
-            log.error(message % self.pidfile)
-            sys.exit(1)
         if os.path.exists(self.stoplock):
             log.error("Gazouilloire is currently stopping. Please wait for the daemon to stop before running a new "
                       "collection process.")
             sys.exit(1)
+
+        # Check for a pidfile to see if the daemon already runs
+        try:
+            pf = open(self.pidfile, 'r')
+            pids = pf.readlines()
+            pf.close()
+        except IOError:
+            pids = None
+
+        if pids:
+            running_processes = []
+            for pid in pids:
+                try:
+                    p = psutil.Process(int(pid))
+                    if p.status() == "zombie":
+                        running_processes.append(None)
+                    running_processes.append(p)
+                except psutil.NoSuchProcess:
+                    running_processes.append(None)
+            if all(running_processes):
+                message = "Gazouilloire is already running. Type 'gazou restart' to restart the collection."
+                log.error(message)
+                sys.exit(1)
+            else:
+                # If the first process is the main process, go for a standard stop.
+                p = running_processes[0]
+                if p is not None and p.name().startswith("gazou") and running_processes[0].children(recursive=True):
+                    self.stop(STOP_TIMEOUT)
+                # Else, kill all remaining processes
+                else:
+                    processes_to_kill = []
+                    for p in running_processes:
+                        if p is not None and p.name().startswith("gazou"):
+                            processes_to_kill.append(p)
+                            p.terminate()
+                    kill_alive_processes(processes_to_kill)
+
 
     def run(self, conf):
         """
@@ -100,7 +128,7 @@ class Daemon:
         """
         self.search_pid()
         self.write_lock_file()
-        main(conf)
+        main(conf, self.path)
 
     def start(self, conf):
         """
@@ -111,7 +139,7 @@ class Daemon:
         # Start the daemon
         create_file_handler(self.path)
         self.daemonize()
-        main(conf)
+        main(conf, self.path)
 
     def stop(self, timeout):
         """
