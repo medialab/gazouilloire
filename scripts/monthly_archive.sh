@@ -49,6 +49,7 @@ eval "$(pyenv virtualenv-init -)"
 pyenv activate "$CORPUSENV"
 
 # Export inactive indices (older than the value of nb_past_months set in config.json)
+gazou count --index inactive --step days > "collected_tweets_per_day_${TODAY}.csv"
 gazou export --index inactive --step hours > "monthly_export_${TODAY}.csv"
 
 if [ "$?" = 0 ]; then
