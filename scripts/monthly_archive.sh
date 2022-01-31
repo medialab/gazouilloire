@@ -49,12 +49,13 @@ eval "$(pyenv virtualenv-init -)"
 pyenv activate "$CORPUSENV"
 
 # Export inactive indices (older than the value of nb_past_months set in config.json)
-gazou export --index inactive > "monthly_export_${TODAY}.csv"
+gazou export --index inactive --step hours > "monthly_export_${TODAY}.csv"
 
-# Close or delete inactive indices
-if [[ $CLOSE == "close" ]]; then
-  gazou close --index inactive
-elif [[ $CLOSE == "delete" ]]; then
-  gazou close --index inactive --delete
+if [ "$?" = 0 ]; then
+  # Close or delete inactive indices
+  if [[ $CLOSE == "close" ]]; then
+    gazou close --index inactive
+  elif [[ $CLOSE == "delete" ]]; then
+    gazou close --index inactive --delete
+  fi
 fi
-
