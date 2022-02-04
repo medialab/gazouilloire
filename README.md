@@ -16,6 +16,7 @@ Python >= 3.7 compatible.
 ## Summary
 * [Installation](#installation)
 * [Quick start](#quick-start)
+* [Disk space](#disk-space)
 * [Export the tweets](#export-the-tweets-in-csv-format)
 * [Advanced parameters](#quick-start)
 * [Troubleshouting](#troubleshooting)
@@ -75,7 +76,15 @@ a `config.json` file is created. Open it to configure the collection parameters.
     ```
     gazou run path/to/collection/directory
     ```
-  
+ 
+## Disk space
+Before starting the collection, you should make sure that you will have enough disk space.
+It takes about 1Go per million tweets collected (**without** images and other media contents).
+
+You should also consider starting gazouilloire in [multi-index mode](docs/multiindex.md) if the collection is planed to exceed 
+100 million tweets.
+
+
 ## Export the tweets in CSV format
 - Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in csv format:
 
@@ -166,13 +175,6 @@ Setup the `media_directory` field in complement to setup the absolute path where
 
 #### - timezone
 Adjust the timezone within which tweets timestamps should be computed. Allowed values are proposed on Gazouilloire's startup when setting up an invalid one.
-  
-### Disk space
-Before starting the collection, you should make sure that you will have enough disk space.
-It takes about 1Go per million tweets collected (**without** images and other media contents).
-
-You should also plan to restart your collection in a new folder (i.e. open another elasticsearch index)
-if the current collection exceeds 150 million tweets.
 
 ### daemon mode
 - The tool can also run as daemon (which means that it executes in the background, 
