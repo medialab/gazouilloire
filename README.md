@@ -4,11 +4,11 @@
 A command line tool for long-term tweets collection. Gazouilloire combines two methods to collect tweets from the 
 Twitter API ("search" and "filter") in order to maximize the number of collected tweets, and automatically fills the 
 gaps in the collection in case of connexion errors or reboots.It handles various config options such as:
- * collecting only during specific time periods
- * limiting the collection to some locations
- * resolving redirected urls
- * downloading only certain types of media contents (only photos and no videos, for example)
- * unfolding Twitter conversations
+ * collecting only during [specific time periods](#--time_limited_keywords)
+ * limiting the collection to some [locations](#--geolocation)
+ * resolving [redirected urls](#--resolve_redirected_links)
+ * downloading only certain types of [media contents](#--download_media) (only photos and no videos, for example)
+ * unfolding Twitter [conversations](#--grab_conversations)
  
 
 Python >= 3.7 compatible.
@@ -34,11 +34,11 @@ Python >= 3.7 compatible.
 
 - Init gazouilloire collection in a specific directory...
     ```bash
-    gazouilloire init path/to/collection/directory
+    gazou init path/to/collection/directory
     ```
 - ...or in the current directory
     ```bash
-    gazouilloire init
+    gazou init
     ```
 a `config.json` file is created. Open it to configure the collection parameters.
 
@@ -127,18 +127,21 @@ a `config.json` file is created. Open it to configure the collection parameters.
 ## Advanced parameters
 
 ### config.json file
-- **keywords**
+#### - keywords
   Some advanced filters can be used in combination with the keywords, such as `-undesiredkeyword`, `filter:links`, `-filter:media`, `-filter:retweets`, etc. See [Twitter API's documentation](https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators) for more details.
 
   Avoid using accented characters (Twitter will automatically return both tweets with and without accents, for instance searching "heros" will find both tweets with "heros" and "héros").
 
   Note that there are three possibilities to filter further:
 
-  - **language**: in order to collect only tweets written in a specific language : just add `"language": "fr"` to the config (the language should be written in [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes))
+#### - language
+In order to collect only tweets written in a specific language : just add `"language": "fr"` to the config (the language should be written in [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes))
 
-  - **geolocation**: just add `"geolocation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box (for instance `[48.70908786918211, 2.1533203125, 49.00274483644453, 2.610626220703125]`)
+#### - geolocation 
+Just add `"geolocation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box (for instance `[48.70908786918211, 2.1533203125, 49.00274483644453, 2.610626220703125]`)
 
-  - **time_limited_keywords**: in order to filter on specific keywords during planned time periods, for instance:
+#### - time_limited_keywords 
+In order to filter on specific keywords during planned time periods, for instance:
 
   ```json
   "time_limited_keywords": {
@@ -148,19 +151,23 @@ a `config.json` file is created. Open it to configure the collection parameters.
     }
   ```
 
-- Setup extra options:
+#### - resolve_redirected_links 
+Set to `true` or `false` to enable or disable automatic resolution of all links found in tweets (t.co links are always handled, but this allows resolving also all other shorteners like bit.ly).
 
-  - **resolve_redirected_links**: set to `true` or `false` to enable or disable automatic resolution of all links found in tweets (t.co links are always handled, but this allows resolving also all other shorteners like bit.ly).
+#### - grab_conversations
+Set to `true` to activate automatic iterative collection of all tweets to which collected tweets are answering (warning: one should account for the presence of these when processing data, it often results in collecting tweets way out of the collection time period).
 
-  - **grab_conversations**: set to `true` to activate automatic iterative collection of all tweets to which collected tweets are answering (warning: one should account for the presence of these when processing data, it often results in collecting tweets way out of the collection time period).
+#### - catchup_past_week
+Twitter's free API allows to collect tweet up to 7 days in the past only which gazouilloire does by default, set this option to `false` to disable this and only collect tweets posted after the collection was started.
 
-  - **catchup_past_week**: Twitter's free API allows to collect tweet up to 7 days in the past only which gazouilloire does by default, set this option to `false` to disable this and only collect tweets posted after the collection was started.
+#### - download_media
+Set `"download_media": {"photo": true, "video": false, "animated_gif": false, "media_directory": "path/to/media/directory"}` to activate automatic downloading of photos posted by users, without videos or gifs (this does not include images from social cards). All fields can also be set to `true` to download everything. 
+Setup the `media_directory` field in complement to setup the absolute path where Gazouilloire should store the images and videos on the machine.
 
-  - **download_media**: set `"download_media": {"photo": true, "video": false, "animated_gif": false}` to activate automatic downloading of photos posted by users, without videos or gifs (this does not include images from social cards). All fields can also be set to `true` to download everything. Setup the `media_directory` field in complement to setup the absolute path where Gazouilloire should store the images and videos on the machine.
-
-  - **timezone**: adjust the timezone within which tweets timestamps should be computed. Allowed values are proposed on Gazouilloire's startup when setting up an invalid one.
+#### - timezone
+Adjust the timezone within which tweets timestamps should be computed. Allowed values are proposed on Gazouilloire's startup when setting up an invalid one.
   
-
+### Disk space
 Before starting the collection, you should make sure that you will have enough disk space.
 It takes about 1Go per million tweets collected (**without** images and other media contents).
 
