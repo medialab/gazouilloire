@@ -25,6 +25,9 @@ You can also ask about one specific index by typing `gazou status -i 2022-02` (i
 tweets posted in February 2022). To obtain the list of **inactive** indices (and their size), type 
 `gazou status -i inactive`. These indices can be safely exported in csv format, and then deleted.
 
+During the first `{nb_past_months}` months of your collection, there will be no inactive
+index. You will receive an error message if you try to query `gazou status `with the `"-i inactive"` parameter.
+
 ## Resolve urls
 Before exporting, you may want to resolve redirected urls for the inactive indices only:
 ```bash
