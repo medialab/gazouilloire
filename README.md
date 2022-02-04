@@ -81,7 +81,7 @@ a `config.json` file is created. Open it to configure the collection parameters.
 Before starting the collection, you should make sure that you will have enough disk space.
 It takes about 1Go per million tweets collected (**without** images and other media contents).
 
-You should also consider starting gazouilloire in [multi-index mode](docs/multiindex.md) if the collection is planed to exceed 
+You should also consider starting gazouilloire in [multi-index mode](doc/multiindex.md) if the collection is planed to exceed 
 100 million tweets.
 
 
