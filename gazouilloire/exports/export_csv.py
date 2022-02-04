@@ -260,9 +260,12 @@ def get_relevant_indices(db, index_param, since, until):
 
 def yield_step_scans(db, step, global_since, until, query, exclude_threads, exclude_retweets, index_param):
     for index_name in get_relevant_indices(db, index_param, global_since, until):
-        index_expression = datetime.strptime(index_name, db.tweets + "_%Y_%m").strftime("%Y-%m")
+        if db.multi_index:
+            index_expression = datetime.strptime(index_name, db.tweets + "_%Y_%m").strftime("%Y-%m")
+        else:
+            index_expression = None
         for since, body in time_step_iterator(db, step, global_since, until, query, exclude_threads, exclude_retweets,
-                                              index_expression):
+                                index_expression):
             body["sort"] = ["timestamp_utc"]
             for t in helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True):
                 yield t
