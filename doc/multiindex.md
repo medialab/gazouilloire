@@ -10,7 +10,7 @@ delete as you go. You can set the time period during which an index remains **ac
 For example, if you set this period to 1 month, Twitter will continue to update the number of likes and retweets 
 received by past tweets during a month, as well as trace the conversations that happened during the past month. 
 Older tweets will no longer be updated. This way, you can safely erase "inactive" indices without compromising the 
-functioning of Twitter.
+functioning of gazouilloire.
 
 ## Start the collection in multi-index mode
 To start your collection in **multi-index mode**, open the `config.json` file and set `"multi_index"` to `true`.
