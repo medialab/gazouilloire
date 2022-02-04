@@ -14,7 +14,10 @@ functioning of gazouilloire.
 
 ## Start the collection in multi-index mode
 To start your collection in **multi-index mode**, open the `config.json` file and set `"multi_index"` to `true`.
-Choose the number of past active months by changing the value of `nb_past_months`. The maximum value is **12 months**.
+Choose the number of past active months by changing the value of `nb_past_months`. If you leave the value at 0, 
+Twitter will use 12 months as the default.
+
+The maximum value is **12 months**.
 
 ## Check out space occupation
 To find out about the size (in GB and in number of tweets) of each index, you can use the `gazou status -l` command.
