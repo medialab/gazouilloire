@@ -55,7 +55,7 @@ Using the --step parameter can speed up the process:
 
 ## Can I switch a corpus from mono-index to multi-index or reciprocally?
 Yes, but the past data (mono or multi-index) is then ignored by gazouilloire (for now). 
-There may be duplicates tweets between the past data and the current index/indices.
+There may be duplicate tweets between the past data and the current index/indices.
 
 To switch from one mode to the other, update the `config.json` file with the new configuration
 (`"multi_index": false/true`) and restart gazouilloire (`gazou restart`). 
