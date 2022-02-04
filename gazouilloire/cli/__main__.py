@@ -63,8 +63,6 @@ def restart(path, timeout):
 @click.argument('path', type=click.Path(exists=True), default=".")
 def run(path):
     conf = load_conf(path)
-    es = ElasticManager(**conf["database"])
-    es.prepare_indices()
     daemon = Daemon(path=path)
     daemon.run(conf)
 
