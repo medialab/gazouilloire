@@ -25,6 +25,12 @@ You can also ask about one specific index by typing `gazou status -i 2022-02` (i
 tweets posted in February 2022). To obtain the list of **inactive** indices (and their size), type 
 `gazou status -i inactive`. These indices can be safely exported in csv format, and then deleted.
 
+## Resolve urls
+Before exporting, you may want to resolve redirected urls for the inactive indices only:
+```bash
+gazou resolve -i inactive
+```
+
 ## Export and delete indices
 To export and delete inactive indices:
 ```bash
