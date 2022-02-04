@@ -8,7 +8,9 @@
     "database": {
         "host": "localhost",
         "port": 9200,
-        "db_name": "gazouilloire"
+        "db_name": "gazouilloire",
+        "multi_index": false,
+	    "nb_past_months": 0
     },
     "keywords": [
         "amour",

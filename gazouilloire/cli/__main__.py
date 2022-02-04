@@ -2,12 +2,12 @@
 import click
 import os
 from gazouilloire.__version__ import __version__
+from gazouilloire.run import STOP_TIMEOUT, stop as main_stop
 from gazouilloire.config_format import create_conf_example, load_conf, log
 from gazouilloire.daemon import Daemon
-from gazouilloire.run import main as main_run
 from gazouilloire.resolving_script import resolve_script
 from gazouilloire.exports.export_csv import export_csv, count_by_step, call_database
-from gazouilloire.database.elasticmanager import ElasticManager
+from gazouilloire.database.elasticmanager import ElasticManager, INDEX_QUERIES
 from elasticsearch import exceptions
 from twitwi.constants import TWEET_FIELDS
 import shutil
@@ -40,6 +40,8 @@ def init(path):
 @click.argument('path', type=click.Path(exists=True), default=".")
 def start(path):
     conf = load_conf(path)
+    es = ElasticManager(**conf["database"])
+    es.prepare_indices()
     daemon = Daemon(path=path)
     log.info("Tweet collection will start in daemon mode")
     daemon.start(conf)
@@ -47,9 +49,11 @@ def start(path):
 
 @main.command(help="Restart collection as daemon, following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-@click.option('--timeout', '-t', type=int, default=15, help="Time (in seconds) before killing the process.")
+@click.option('--timeout', '-t', type=int, default=STOP_TIMEOUT, help="Time (in seconds) before killing the process.")
 def restart(path, timeout):
     conf = load_conf(path)
+    es = ElasticManager(**conf["database"])
+    es.prepare_indices()
     daemon = Daemon(path=path)
     log.info("Restarting...")
     daemon.restart(conf, timeout)
@@ -59,20 +63,15 @@ def restart(path, timeout):
 @click.argument('path', type=click.Path(exists=True), default=".")
 def run(path):
     conf = load_conf(path)
-    if os.path.exists(os.path.join(path, ".lock")):
-        log.error("pidfile .lock already exists. Daemon already running?")
-    elif os.path.exists(os.path.join(path, ".stoplock")):
-        log.error("Please wait for the daemon to stop before running a new collection process.")
-    else:
-        main_run(conf)
+    daemon = Daemon(path=path)
+    daemon.run(conf)
 
 
 @main.command(help="Stop collection daemon.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-@click.option('--timeout', '-t', type=int, default=15, help="Time (in seconds) before killing the process.")
+@click.option('--timeout', '-t', type=int, default=STOP_TIMEOUT, help="Time (in seconds) before killing the process.")
 def stop(path, timeout):
-    daemon = Daemon(path=path)
-    stopped = daemon.stop(timeout)
+    stopped = main_stop(path, timeout)
     if stopped:
         log.info("Collection stopped")
         conf = load_conf(path)
@@ -92,14 +91,32 @@ def sizeof_fmt(num, suffix='B'):
     return "%.1f%s%s" % (num, 'Y', suffix)
 
 
+def print_index_status(index_name, index_info, message=None):
+    print("{}{}\ntweets: {}\ndisk space tweets: {}\n".format(
+        index_name if message else "name: ",
+        message if message else index_name,
+        index_info["docs.count"],
+        sizeof_fmt(int(index_info["store.size"])).upper()
+    ))
+
+
+def get_bytes_index_info(es, index_name):
+    return es.client.cat.indices(index=index_name, format="json", bytes="b")
+
+
 @main.command(help="Get current status.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-def status(path):
+@click.option('--index', '-i',
+              help="In case of multi-index, months to consider in format YYYY-MM, or relative positions such as "
+                   "'last' or first', separated by comma. Use `--index inactive` to get the status of all inactive "
+                   "indices. Usage: "
+                   "'gazou status -i 2018-08,2021-09' or 'gazou status -i inactive'")
+@click.option('--list-indices', '-l', is_flag=True, help="print the detailed list of indices")
+def status(path, index, list_indices):
     conf = load_conf(path)
     running = "running" if os.path.exists(os.path.join(path, ".lock")) else "not running"
-    es = ElasticManager(conf["database"]["host"], conf["database"]["port"], conf["database"]["db_name"])
+    es = ElasticManager(**conf["database"])
     try:
-        tweets = es.client.cat.indices(index=es.tweets, format="json")[0]
         links = es.client.cat.indices(index=es.links, format="json")[0]
     except exceptions.NotFoundError:
         log.error(
@@ -119,33 +136,91 @@ def status(path):
                 media_size += os.path.getsize(os.path.join(path, f))
                 media_count += 1
     media_size = sizeof_fmt(media_size)
-    print("name: {}\nstatus: {}\ntweets: {}\nlinks: {}\nmedia: {}\ndisk space tweets: {}\n"
-          "disk space links: {}\ndisk space media: {}"
-          .format(conf["database"]["db_name"], running, tweets["docs.count"], links["docs.count"], media_count,
-                  tweets["store.size"].upper(), links["store.size"].upper(), media_size))
+
+    print("status: {}\n".format(running))
+
+    if es.multi_index:
+        if index:
+            queried_indices = es.get_valid_index_names(index, include_closed_indices=True)
+            if len(queried_indices) == 1:
+                index_name = queried_indices[0]
+                index_info = es.client.cat.indices(index=index_name, format="json", bytes="b")[0]
+                if index_info["status"] == "open":
+                    print_index_status(index_name, index_info)
+                else:
+                    print("name: {}\nclosed\n".format(index_info["index"]))
+                print("links: {}\ndisk space links: {}\n\nmedia: {}\ndisk space media: {}\n"
+                      .format(links["docs.count"], links["store.size"].upper(), media_count, media_size))
+                return
+            if len(queried_indices) > 1:
+                indices = []
+                for queried in queried_indices:
+                    for index in get_bytes_index_info(es, queried):
+                        indices.append(index)
+            else:
+                log.error("There is no index corresponding to your query. Use 'gazou status -l' to list all indices")
+                sys.exit(1)
+        else:
+            indices = get_bytes_index_info(es, es.tweets + "_*")
+
+        summed_info = {"docs.count": 0, "store.size": 0}
+        for index_info in sorted(indices, key=lambda x: x["index"]):
+            if index_info["status"] == "open":
+                summed_info["docs.count"] += int(index_info["docs.count"])
+                summed_info["store.size"] += int(index_info["store.size"])
+                if list_indices or index:
+                    print_index_status(index_info["index"], index_info)
+                    print("*" * 10)
+            else:
+                if list_indices or index:
+                    print("name: {}\nclosed\n".format(index_info["index"]))
+                    print("*" * 10)
+
+        if list_indices or index:
+            if indices:
+                print_index_status("", summed_info, message="TOTAL")
+                print("*" * 10)
+            else:
+                print_index_status(es.tweets, summed_info, message=" does not exist")
+        else:
+            print_index_status(es.tweets, summed_info)
+
+    else:
+        index_info = get_bytes_index_info(es, es.tweets)[0]
+        print_index_status(es.tweets, index_info, message="")
+
+    print("links: {}\ndisk space links: {}\n\nmedia: {}\ndisk space media: {}\n"
+          .format(links["docs.count"], links["store.size"].upper(), media_count, media_size))
 
 
 @main.command(help="Resolve urls contained in a given Elasticsearch database. Usage: 'gazou resolve'")
-@click.option('--host', default="localhost")
 @click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
                                                                               "be found. By default, looks in the"
                                                                               "current directory. Usage: gazou resolve "
                                                                               "-p /path/to/directory/")
-@click.option('--port', default=9200)
 @click.option('--batch-size', default=5000)
 @click.option('--verbose/--silent', default=False)
 @click.option('--url-debug/--url-retry', default=False)
+@click.option('--host')
+@click.option('--port')
 @click.option('--db-name', help="Name of the ElasticSearch database containing the tweets. "
-                                "Will take precedence over --path if also given. "
+                                "Will take precedence over the config file in --path if also given. "
                                 "Usage: gazou resolve --db-name mydb")
-def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
+@click.option('--index', '-i',
+              help="In case of multi-index, specify the index to count from. Use `--index inactive` "
+                   "to count tweets from the inactive indices (i. e. not used any more for indexing). "
+                   "By default, count from all opened indices.")
+def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
     if url_debug:
         verbose = False
-
-    if db_name is None:
-        db_name = load_conf(path)["database"]["db_name"]
-
-    resolve_script(batch_size, host, port, db_name, verbose=verbose, url_debug=url_debug)
+    database_params = load_conf(path)["database"]
+    if host:
+        database_params["host"] = host
+    if port:
+        database_params["port"] = port
+    if db_name:
+        database_params["db_name"] = db_name
+    resolve_script(**database_params, batch_size=batch_size, verbose=verbose, url_debug=url_debug, index=index)
 
 
 @main.command(help="Export tweets in csv format. Type 'gazou export' to get all collected tweets, or 'gazou export "
@@ -179,8 +254,12 @@ def resolve(host, port, path, batch_size, verbose, url_debug, db_name):
                                                                                      "containing those tweets")
 @click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
 @click.option("--resume", "-r", is_flag=True, help="Restart the export from the last id specified in --output file")
+@click.option('--index', '-i',
+              help="In case of multi-index, monthly indices to export in format YYYY-MM, or relative positions such as "
+                   "'last', 'first', 'inactive', separated by comma. Use `--index inactive` to export all inactive"
+                   "indices (i. e. not used any more for indexing). By default, export from all opened indices.")
 def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
-           columns, list_fields, output, resume, since, until, step):
+           columns, list_fields, output, resume, since, until, step, index):
     if resume and not output:
         log.error("The --resume option requires to set a file name with --output")
         sys.exit(1)
@@ -195,7 +274,8 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
     else:
         conf = load_conf(path)
         export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-                   verbose, export_threads_from_file, export_tweets_from_file, columns, output, resume, step)
+                   verbose, export_threads_from_file, export_tweets_from_file, columns, output, resume, step, index)
+
 
 @main.command(help="Get a report about the number of tweets. Type 'gazou count' to get the number of collected tweets "
                    "or 'gazou count médialab' to get the number of tweets that contain médialab")
@@ -217,9 +297,13 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
                                                                          "defined in config.json). By default, threads "
                                                                          "are included.")
 @click.option('--exclude-retweets/--include-retweets', default=False, help="Exclude retweets from the counted tweets")
-def count(path, query, exclude_threads, exclude_retweets, output, since, until, step):
+@click.option('--index', '-i',
+              help="In case of multi-index, specify the index to count from. Use `--index inactive` "
+                   "to count tweets from the inactive indices (i. e. not used any more for indexing). "
+                   "By default, count from all opened indices.")
+def count(path, query, exclude_threads, exclude_retweets, output, since, until, step, index):
     conf = load_conf(path)
-    count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, output, step)
+    count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, output, step, index)
 
 def check_valid_reset_option(element_list):
     element_list = element_list.split(",")
@@ -260,7 +344,7 @@ def reset(path, yes, preserve, only):
     es = ElasticManager(conf["database"]["host"], conf["database"]["port"], db_name)
     for index in ["tweets", "links"]:
         if index not in preserve:
-            confirm_delete_index(es, db_name, index, yes)
+            es.delete_index(index, yes)
     if "search_state" not in preserve:
         file_path = os.path.join(path, ".search_state.json")
         if os.path.isfile(file_path) \
@@ -286,10 +370,45 @@ def reset(path, yes, preserve, only):
                 log.warning("{} folder does not exist and could not be erased.".format(folder_path))
 
 
-def confirm_delete_index(es, db_name, doc_type, yes):
-    if yes or click.confirm("Elasticsearch index {}_{} will be erased, do you want to continue?".format(
-            db_name, doc_type)):
-        if es.delete_index(doc_type):
-            log.info("{}_{} successfully erased".format(db_name, doc_type))
+# def confirm_delete_index(es, db_name, doc_type, yes):
+#     if yes or click.confirm("Elasticsearch index {}_{} will be erased, do you want to continue?".format(
+#             db_name, doc_type)):
+#         es.delete_index(doc_type)
+
+
+@main.command(help="Close/delete indices")
+@click.option('--index', '-i', help="Months to close in format YYYY-MM, or relative positions such as 'last' or first',"
+                                    "separated by comma. Use `--index inactive` to close all inactive indices. "
+                                    "Run gazou status -l to see the list of existing indices. "
+                                    "Usage: 'gazou close -i 2018-08,2021-09' "
+                                    "or 'gazou close -i inactive'")
+@click.option('--delete/--close', '-d/-c', default=False, help="Delete indices instead of closing them.")
+@click.option('--force/--', '-f/-', default=False, help="Force the closure/deletion even if some indices are newer "
+                                                        "than the 'nb_past_months' limit")
+@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
+                                                                              "be found. By default, looks in the "
+                                                                              "current directory. Usage: gazou reset "
+                                                                              "-p /path/to/directory/")
+def close(path, delete, force, index):
+    conf = load_conf(path)
+    es = ElasticManager(**conf["database"])
+
+    if es.multi_index:
+        if index is None:
+            indices = [i for i in es.client.indices.get(es.tweets + "_*", expand_wildcards="all")]
         else:
-            log.warning("{}_{} does not exist and could not be erased".format(db_name, doc_type))
+            indices = es.get_valid_index_names(index, include_closed_indices=delete)
+
+    else:
+        if index is None:
+            if force:
+                indices = es.tweets
+            else:
+                log.error("{} is currently the only index since multi-index is not activated. Use --force option if "
+                          "you want to {} this index anyway.".format(es.tweets, "delete" if delete else "close"))
+                sys.exit(1)
+        else:
+            log.error("multi-index is not set in config.json, there should be no --index/-i parameter")
+            sys.exit(1)
+
+    es.close_indices(indices, delete, force)

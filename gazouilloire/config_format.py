@@ -88,6 +88,32 @@ def required_format(conf):
             'in config.json '
         )
         sys.exit(1)
+
+    if not conf["database"].get("multi_index", False) and "nb_past_months" in conf["database"] and \
+            conf["database"]["nb_past_months"] > 0:
+        log.error(
+            'if "multi_index" is set to false or omitted in config.json, "nb_past_months" is not supported. '
+            'Please set "nb_past_months" to 0 in the config file or set "multi_index" to true.'
+        )
+        sys.exit(1)
+
+    if conf["database"].get("multi_index", False):
+        if "nb_past_months" not in conf["database"] or conf["database"]["nb_past_months"] == 0:
+            log.warning(
+                '"multi_index" is set to true in config.json but "nb_past_months" is not indicated. '
+                'Setting "nb_past_months" to 12.'
+            )
+            conf["database"]["nb_past_months"] = 12
+
+        if conf["database"]["nb_past_months"] > 12:
+            log.error(
+                'When using "multi_index", "nb_past_months" is limited to 12 months max. '
+                'Please set "nb_past_months" to 12 or less in the config file.'
+            )
+            sys.exit(1)
+
+
+
     if "download_media" in conf:
         for subfield in ["photos", "videos", "animated_gifs"]:
             if type(conf["download_media"][subfield]) != bool:
@@ -95,6 +121,7 @@ def required_format(conf):
                     "The '{}' parameter in config.json should be set to either true or false".format(subfield)
                 )
                 sys.exit(1)
+
     if conf["verbose"]:
         log.setLevel(logging.DEBUG)
     return conf

@@ -27,19 +27,22 @@ requests.packages.urllib3.disable_warnings()
 from multiprocessing import Process, Event
 from gazouilloire.multiprocessing import Queue
 import signal
+import psutil
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterError, TwitterHTTPError
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 import shutil
 from twitwi import normalize_tweet
+from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 from ural.get_domain_name import get_hostname_prefixes
 from gazouilloire.database.elasticmanager import ElasticManager, prepare_db, bulk_update
 from elasticsearch import helpers, exceptions
 from gazouilloire.url_resolve import resolve_loop, count_and_log
 from gazouilloire.config_format import load_conf, log
 
-DEPILER_BATCH_SIZE = 1000
+DEPILER_BATCH_SIZE = 5000
 RESOLVER_BATCH_SIZE = 5000
+STOP_TIMEOUT = 15 # Time (in seconds) before killing the process after a keyboard interrupt.
 
 
 def instantiate_clients(oauth, oauth2):
@@ -72,6 +75,80 @@ def breakable_sleep(delay, exit_event):
         time.sleep(1)
 
 
+def kill_alive_processes(processes, timeout):
+    gone, alive = psutil.wait_procs(processes, timeout=timeout)
+    for p in alive:
+        log.debug("Killing process nb {}".format(p.pid, ))
+        p.kill()
+
+
+def stop(path, timeout=STOP_TIMEOUT):
+    """
+    Stop the collection
+    """
+    stoplock_file = os.path.join(path, '.stoplock')
+    if os.path.exists(stoplock_file):
+        log.error("Gazouilloire is currently stopping.")
+        sys.exit(1)
+
+    # Indicate that the process is stopping by creating a .stoplock file
+    open(stoplock_file, 'w').close()
+    pidfile = os.path.join(path, '.lock')
+    # Get the pid from the pidfile
+    try:
+        try:
+            pf = open(pidfile, 'r')
+            pid = int(pf.readlines()[0].strip())
+            pf.close()
+        except IOError:
+            pid = None
+
+        if not pid:
+            message = "pidfile %s does not exist. Daemon not running?\n"
+            log.warning(message % pidfile)
+            os.remove(stoplock_file)
+            return False
+
+        # Kill the processes
+        try:
+            parent = psutil.Process(pid)
+            children = parent.children(recursive=True)
+            parent.terminate()
+            kill_alive_processes(children, STOP_TIMEOUT)
+        except psutil.NoSuchProcess:
+            processes_to_kill = []
+            pf = open(pidfile, 'r')
+            for pid in pf.readlines():
+                try:
+                    p = psutil.Process(int(pid))
+                    if p.name().startswith("gazou"):
+                        processes_to_kill.append(p)
+                        p.terminate
+                except psutil.NoSuchProcess:
+                    continue
+            kill_alive_processes(processes_to_kill, STOP_TIMEOUT)
+            pf.close()
+
+        if os.path.exists(pidfile):
+            os.remove(pidfile)
+        os.remove(stoplock_file)
+        return True
+
+    # remove .stoplock file in case of crash
+    except Exception as error:
+        message = "Some {} occurred while stopping: {}"
+        log.error(message.format(type(error), error))
+        os.remove(stoplock_file)
+        return False
+
+
+def start_process(process, path):
+    pidfile = os.path.join(path, ".lock")
+    process.start()
+    pid = process.pid
+    open(pidfile, 'a').write("%s\n" % pid)
+
+
 def write_pile(pile, todo, file_prefix):
     store = []
     while not pile.safe_empty():
@@ -79,11 +156,11 @@ def write_pile(pile, todo, file_prefix):
     store.extend(todo)
     if store:
         path = datetime.strftime(datetime.now(), file_prefix +"_%Y%m%d-%H%M.json")
-        log.info("Save {} tweets to {}".format(len(store), path))
         if not os.path.isdir(os.path.dirname(path)):
             os.mkdir(os.path.dirname(path))
         with open(path, "w") as f:
             json.dump(store, f)
+        log.info("Saved {} tweets to {}".format(len(store), path))
 
 
 def load_pile(path, file_prefix, pile):
@@ -147,6 +224,13 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
                 log.debug("Preparing to index %s collected tweets" % len(todo))
             tweets_bulk = []
             for t in prepare_tweets(todo, locale):
+                if db.multi_index and db.nb_past_months:
+                    tweet_date = datetime.strptime(t["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
+                    if db.is_too_old(tweet_date):
+                        log.debug("Tweet {} is older than {} month{} and will not be saved.".format(
+                            t["id"], db.nb_past_months, "s" if db.nb_past_months > 1 else ""
+                        ))
+                        continue
                 if pile_media and t["media_files"]:
                     pile_media.put(t)
                 if pile_catchup and t["to_tweetid"]:
@@ -620,7 +704,7 @@ def generate_geoloc_strings(x1, y1, x2, y2):
     log.info('Search Disk: %s/%s, %.2fkm' % (x, y, d))
     return streamgeocode, searchgeocode
 
-def main(conf):
+def main(conf, path="."):
     if len(conf['keywords']) + len(conf['url_pieces']) > 400:
         log.error('Please limit yourself to a maximum of 400 keywords total (including url_pieces): you set up %s keywords and %s url_pieces.' % (len(conf['keywords']), len(conf['url_pieces'])))
         sys.exit(1)
@@ -698,7 +782,7 @@ def main(conf):
         daemon=True,
         name="depiler   "
     )
-    depile.start()
+    start_process(depile, path)
     if grab_conversations:
         catchup = Process(
             target=catchupper,
@@ -706,7 +790,7 @@ def main(conf):
             daemon=True,
             name="catchupper"
         )
-        catchup.start()
+        start_process(catchup, path)
     if resolve_links:
         resolve = Process(
             target=resolver,
@@ -714,7 +798,7 @@ def main(conf):
             daemon=True,
             name="resolver  "
         )
-        resolve.start()
+        start_process(resolve, path)
     if dl_media:
         download = Process(
             target=downloader,
@@ -722,7 +806,7 @@ def main(conf):
             daemon=True,
             name="downloader"
         )
-        download.start()
+        start_process(download, path)
     signal.signal(signal.SIGINT, default_handler)
     stream = Process(
         target=streamer,
@@ -730,22 +814,32 @@ def main(conf):
         daemon=True,
         name="streamer  "
     )
-    stream.start()
+    start_process(stream, path)
     search = Process(
         target=searcher,
         args=(pile, oauth, oauth2, conf, locale, language, searchgeocode, exit_event, no_rollback),
         daemon=True,
         name="searcher  "
     )
-    search.start()
+    start_process(search, path)
+
     def stopper(*args):
         exit_event.set()
+
     signal.signal(signal.SIGTERM, stopper)
+
     try:
         depile.join()
     except KeyboardInterrupt:
-        exit_event.set()
+        stopped = stop(path)
+        if stopped:
+            log.info("Collection stopped.")
+            unresolved_urls = db.count_tweets("links_to_resolve", True)
+            if unresolved_urls:
+                log.info("{} tweets contain unresolved urls. Run 'gazou resolve' if you want to resolve all urls."
+                    .format(unresolved_urls)
+                         )
 
 
 if __name__=='__main__':
-    main(load_conf("."))
+    main(load_conf("."), ".")

@@ -1,10 +1,16 @@
 import os
 import sys
 import json
+import calendar
 from elasticsearch import Elasticsearch, helpers, exceptions
 from datetime import datetime, timedelta
+import dateutil.relativedelta
+from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 import itertools
+from gazouilloire.config_format import log
+import click
 
+INDEX_QUERIES = ["first", "last", "inactive"]
 
 try:
     with open(os.path.join(os.path.dirname(__file__), "db_mappings.json"), "r") as db_mappings:
@@ -67,10 +73,13 @@ def format_tweet_fields(tweet):
     return elastic_tweet
 
 
-def prepare_db(host, port, db_name):
+def prepare_db(host, port, db_name, multi_index=False, nb_past_months=None):
     try:
-        db = ElasticManager(host, port, db_name)
-        db_exists = db.exists(db.tweets)
+        db = ElasticManager(host, port, db_name, multi_index=multi_index)
+        if multi_index:
+            db_exists = db.exists(db.tweets + "*")
+        else:
+            db_exists = db.exists(db.tweets)
     except Exception as e:
         sys.stderr.write(
             "ERROR: Could not initiate connection to database: %s %s" % (type(e), e))
@@ -82,11 +91,19 @@ def prepare_db(host, port, db_name):
             "ERROR: elasticsearch index %s does not exist" % db_name
         )
 
+
+def get_month(day):
+    return datetime.strftime(day, "_%Y_%m")
+
+
 class ElasticManager:
 
-    def __init__(self, host, port, db_name, links_index=None):
+    def __init__(self, host, port, db_name, multi_index=False, nb_past_months=12, links_index=None):
         self.host = host
         self.port = port
+        self.multi_index = multi_index
+        self.nb_past_months = nb_past_months
+        self.current_month = get_month(datetime.now())
         self.db_name = db_name.replace(" ", "_")
         self.client = Elasticsearch(
             host + ":" + str(port),
@@ -99,42 +116,174 @@ class ElasticManager:
         else:
             self.links = self.db_name + "_links"
 
-    # main() methods
-
-    def exists(self, doc_type):
+    def exists(self, doc_type, include_closed_indices=True):
         """
         Check if index already exists in elasticsearch
         """
-        return self.client.indices.exists(index=doc_type)
+        if include_closed_indices:
+            return self.client.indices.exists(index=doc_type)
+        return self.client.indices.exists(index=doc_type+"*", allow_no_indices=False)
+
+    def get_index_name(self, day):
+        return self.tweets + get_month(day)
+
+    def get_last_index_day(self, index):
+        splited_index = index.split("_")
+        month = splited_index[-1]
+        year = splited_index[-2]
+        now = datetime.now()
+        return datetime(
+            int(year),
+            int(month),
+            calendar.monthrange(int(year), int(month))[1],
+            now.hour,
+            now.minute,
+            now.second
+        )
+
+    def get_sorted_indices(self, include_closed_indices=False):
+        indices = self.client.cat.indices(index=self.tweets + "_*", format="json")
+
+        if include_closed_indices:
+            return sorted([index["index"] for index in indices])
+
+        return sorted(
+            [index["index"] for index in indices if index["status"] == "open"]
+        )
+
+    def get_valid_index_names(self, expr, include_closed_indices):
+        if not self.multi_index:
+            log.error("Multi-index is not activated in config.json, you should not use the --index/-i option")
+            sys.exit(1)
+
+        indices = set()
+
+        for param in expr.split(","):
+            if param in INDEX_QUERIES:
+                indices.update(i for i in self.get_positional_index(param, include_closed_indices))
+            else:
+                try:
+                    index_name = datetime.strptime(param + "-01", "%Y-%m-%d").strftime(self.db_name + "_tweets_%Y_%m")
+                except ValueError:
+                    log.error("indices should be in format YYYY-MM")
+                    sys.exit(1)
+                if self.exists(index_name, include_closed_indices=include_closed_indices):
+                    indices.add(index_name)
+                else:
+                    log.error("{} does not exist{}. Use 'gazou status -l' to list existing indices."
+                              .format(index_name, "" if include_closed_indices else " or is closed"))
+                    sys.exit(1)
+        return sorted(indices)
+
+    def get_positional_index(self, position, include_closed_indices):
+        indices = self.get_sorted_indices(include_closed_indices)
+        if position == "last":
+            yield indices[-1]
+
+        elif position == "first":
+            yield indices[0]
+
+        elif position == "inactive":
+            for index in indices:
+                if self.is_too_old(self.get_last_index_day(index)):
+                    yield index
+
+    def create_index(self, index_name, mapping):
+        if not self.exists(index_name):
+            self.client.indices.create(index=index_name, body=mapping)
+        elif self.client.cat.indices(index=index_name, format="json")[0]["status"] == "close":
+            self.client.indices.open(index=index_name)
 
     def prepare_indices(self):
         """
-        Check if indices exist, if not, create them
+        Check if indices exist and are open, if not, create/open them
         """
-        if not self.exists(self.tweets):
-            self.client.indices.create(
-                index=self.tweets, body=DB_MAPPINGS["tweets_mapping"])
-        if not self.exists(self.links):
-            self.client.indices.create(
-                index=self.links, body=DB_MAPPINGS["links_mapping"])
+        try:
+            if self.multi_index:
+                if self.client.indices.exists(index=self.tweets):
+                    log.warning('You set "multi_index" to true in the config file but there is an existing mono-index. '
+                                'Gazouilloire will ignore the tweets stored in this previous index.')
 
-    def delete_index(self, doc_type):
+                one_month_in_advance = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
+                nb_past_months = self.nb_past_months + 2
+                for i in range(nb_past_months):
+                    index_name = self.get_index_name(
+                        one_month_in_advance - dateutil.relativedelta.relativedelta(months=i)
+                    )
+                    self.create_index(index_name, DB_MAPPINGS["tweets_mapping"])
+            else:
+                if len(self.client.cat.indices(index=self.tweets + "_*", format="json")) > 0:
+                    log.warning('You set "multi_index" to false in the config file but there is an existing '
+                                'multi-index. '
+                                'Gazouilloire will ignore the tweets stored in these previous indices.')
+                self.create_index(self.tweets, DB_MAPPINGS["tweets_mapping"])
+
+            self.create_index(self.links, DB_MAPPINGS["links_mapping"])
+        except Exception as e:
+            log.error("Could not initiate connection to database: %s %s" % (type(e), e))
+            sys.exit(1)
+
+    def delete_index(self, doc_type, yes=False):
         """
-        Check if index exists, if so, delete it
+        Check if index exists, if so, delete it.
+        In case of multi_index, delete all indices with the name prefix.
         """
         index_name = getattr(self, doc_type)
-        if self.exists(index_name):
-            self.client.indices.delete(index=index_name)
-            return True
+        if yes or click.confirm("Elasticsearch index {} will be erased, do you want to continue?".format(index_name)):
+
+            indices = self.client.cat.indices(index=index_name + "*", format="json")
+
+            success = []
+            if len(indices) > 0:
+                for index_info in indices:
+                    success.append(self.client.indices.delete(index=index_info["index"]))
+            if all(success):
+                log.info("{} successfully deleted".format(index_name))
+                return True
+            else:
+                for status, index_info in zip(success, indices):
+                    if not status:
+                        log.error("failed to delete {}".format(index_info["index"]))
+                return False
+            log.warning("{} does not exist and could not be deleted".format(index_name))
+            return False
         return False
 
-    # depiler() methods
+    def close_index(self, index_name, delete, log_message, yes=False):
+        """
+        Close or delete one specific index (with the month suffix).
+        """
+        if self.exists(index_name):
+            if delete:
+                if yes or click.confirm(
+                        "Elasticsearch index {} will be erased, do you want to continue?".format(index_name)):
+                    success = self.client.indices.delete(index_name).get("acknowledged", False)
+                else:
+                    return
+            else:
+                success = self.client.indices.close(index_name).get("acknowledged", False)
+            if success:
+                log.info("{} successfully {}d".format(index_name, log_message))
+            else:
+                log.error("failed to {} {}".format(log_message, index_name))
+        else:
+            log.warning("{} does not exist and could not be {}d".format(index_name, log_message))
 
-    def update(self, tweet_id, new_value):
-        """Updates the given tweet to the content of 'new_value' argument"""
-        formatted_new_value = format_tweet_fields(new_value)
-        return self.client.update(index=self.tweets, id=tweet_id,
-                                  body={"doc": formatted_new_value, "doc_as_upsert": True})
+    def close_indices(self, indices, delete=False, force=False):
+        """
+        "Close all indices older than self.nb_past_months or close specific indices"
+        """
+        log_message = "delete" if delete else "close"
+        if self.multi_index:
+            for index in indices:
+                last_day_of_month = self.get_last_index_day(index)
+                if self.is_too_old(last_day_of_month) or force == True:
+                    self.close_index(index, delete, log_message, force)
+                else:
+                    log.warning("{} may contain tweets posted less than {} months ago, use --force option if you want "
+                                "to {} it anyway.".format(index, self.nb_past_months, log_message))
+        else:
+            self.close_index(indices, delete, log_message)
 
     def prepare_indexing_links(self, links):
         """Yields an indexing action for every link of a list"""
@@ -147,9 +296,16 @@ class ElasticManager:
 
     def prepare_indexing_tweets(self, tweets):
         """Yields an indexing action for every tweet of a list. For existing tweets, only some fields are updated."""
+        if self.multi_index and get_month(datetime.now()) != self.current_month:
+            self.prepare_indices()
+            self.current_month = get_month(datetime.now())
+        index = self.tweets
         for tweet in tweets:
             t = tweet.copy()
             reply_count = t.get("reply_count", None)
+            if self.multi_index:
+                tweet_date = datetime.strptime(t["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
+                index = self.get_index_name(tweet_date)
             if reply_count is not None:
                 source = "ctx._source.match_query |= params.match_query; \
                     ctx._source.retweet_count = params.retweet_count; \
@@ -162,7 +318,7 @@ class ElasticManager:
                     ctx._source.favorite_count = params.favorite_count; \
                     if (!ctx._source.collected_via.contains(params.collected_via)){ctx._source.collected_via.add(params.collected_via)}"
             yield {
-                '_index': self.tweets,
+                '_index': index,
                 "_op_type": "update",
                 "_id": t.pop("id"),
                 "script": {
@@ -184,43 +340,44 @@ class ElasticManager:
         """Yields an update action for the links of every tweet in the list"""
         for l in links:
             l.update({
-                "_index": self.tweets,
                 "_op_type": "update"
             })
             yield l
 
-    def stream_tweets_batch(self, tweets, upsert=False, common_update=None):
-        """Yields an update action for every tweet of a list"""
-        for tweet in tweets:
-            if common_update:
-                doc = common_update
-            else:
-                doc = format_tweet_fields(tweet)
-            yield {
-                "_id": tweet["_id"],
-                "_index": self.tweets,
-                "_op_type": "update",
-                "_source": {
-                    "doc": doc,
-                    "doc_as_upsert": upsert
-                }
-            }
-
     def set_deleted(self, tweet_id):
         """Sets the field 'deleted' of the given tweet to True"""
-        return self.client.update(index=self.tweets, id=tweet_id,
-                                  body={"doc": {"deleted": True}, "doc_as_upsert": True})
+
+        opened_indices = self.client.indices.get(self.tweets + "*")
+        success = []
+        for index in opened_indices:
+            try:
+                self.client.update(index=index, id=tweet_id,
+                                                   body={"doc": {"deleted": True}, "doc_as_upsert": False})
+                success.append(True)
+                break
+            except exceptions.NotFoundError:
+                success.append(False)
+                continue
+        if not any(success):
+            log.debug("tweet {} was not found while trying to mark it as deleted".format(tweet_id))
 
     def find_tweet(self, tweet_id):
         """Returns the tweet corresponding to the given id"""
-        try:
-            response = self.client.get(
-                index=self.tweets,
-                id=tweet_id
-            )
-        except exceptions.NotFoundError:
-            return None
-        return response
+        opened_indices = self.client.indices.get(self.tweets + "*")
+        for index in opened_indices:
+            try:
+                response = self.client.get(
+                    index=index,
+                    id=tweet_id
+                )
+                return response
+            except exceptions.NotFoundError:
+                continue
+        return None
+
+    def is_too_old(self, date):
+        min_date = datetime.now() - dateutil.relativedelta.relativedelta(months=self.nb_past_months)
+        return date < min_date
 
     def get_urls(self, url_list):
         """Returns the urls corresponding to the given url_list.
@@ -233,22 +390,21 @@ class ElasticManager:
         )
         return response
 
-    # resolver() methods
-
-    def find_tweets_with_unresolved_links(self, batch_size=600, retry_days=30):
+    def find_tweets_with_unresolved_links(self, batch_size=600, retry_days=30, indices=None):
         """Returns a list of tweets where 'links_to_resolve' field is True"""
         query = {"bool": {"filter": [{"term": {"links_to_resolve": True}}]}}
         if retry_days:
             range_clause = {"range": {"timestamp_utc": {"gte":
-                                                            str((datetime.now() - timedelta(days=retry_days)).timestamp())
+                                                            str((datetime.now() - timedelta(
+                                                                days=retry_days)).timestamp())
                                                         }
                                       }
                             }
             query["bool"]["filter"].append(range_clause)
         response = self.client.search(
-            index=self.tweets,
+            index=indices if indices else self.tweets + "*",
             body={
-                "_source": ["links", "proper_links", "retweet_id"],
+                "_source": ["links", "proper_links", "retweet_id", "local_time"],
                 "size": batch_size,
                 "query": query
             }
@@ -261,16 +417,16 @@ class ElasticManager:
             index=self.links,
             size=batch_size,
             body={
-              "query": {
-                "bool": {
-                  "filter": {
-                    "terms": {
-                      "link_id": urls_list
+                "query": {
+                    "bool": {
+                        "filter": {
+                            "terms": {
+                                "link_id": urls_list
 
+                            }
+                        }
                     }
-                  }
                 }
-              }
             }
         )
 
@@ -282,12 +438,17 @@ class ElasticManager:
                           body={"link_id": link, "real": resolved_link})
 
     def prepare_indexing_tweets_with_new_links(self, tweets, links, domains):
+        index = self.tweets
         for t in tweets:
+            if self.multi_index:
+                index = self.get_index_name(
+                    datetime.strptime(t["_source"]["local_time"], FORMATTED_TWEET_DATETIME_FORMAT)
+                )
             t["_source"]["proper_links"] = links
             t["_source"]["domains"] = domains
             t["_source"]["links_to_resolve"] = False
             yield {
-                '_index': self.tweets,
+                '_index': index,
                 "_op_type": "index",
                 '_source': t["_source"],
                 "_id": t["_id"]
@@ -302,31 +463,19 @@ class ElasticManager:
         }
         response = helpers.scan(
             client=self.client,
-            index=self.tweets,
+            index=self.tweets + "*",
             query={"query": query}
         )
 
         helpers.bulk(self.client, actions=self.prepare_indexing_tweets_with_new_links(response, links, domains))
 
-    def count_tweets(self, key, value):
+    def count_tweets(self, key, value, indices=None):
         """Counts the number of documents where the given key is equal to the given value"""
-        return self.client.count(index=self.tweets, body={"query": {"term": {key: value}}})['count']
+        return self.client.count(
+            index=indices if indices else self.tweets + "*",
+            body={"query": {"term": {key: value}}}
+        )['count']
 
-    def update_resolved_tweets(self, tweetsdone):
-        """Sets the "links_to_resolve" field of the tweets in tweetsdone to False"""
-        q = {
-            "script": {
-                "inline": "ctx._source.links_to_resolve=false",
-                "lang": "painless"
-            },
-            "query": {
-                "terms": {"_id": tweetsdone}
-            }
-        }
-        self.client.update_by_query(
-            body=q, index=self.tweets)
-
-    # export methods
     def search_thread_elements(self, ids_list):
         """
         Elasticsearch query on which get_thread_ids_from_ids is based
@@ -348,7 +497,7 @@ class ElasticManager:
         }
         response = helpers.scan(
             client=self.client,
-            index=self.tweets,
+            index=self.tweets + "*",
             query=body
         )
         return response
@@ -372,11 +521,35 @@ class ElasticManager:
             ids_list = list(todo_ids)
         return list(all_ids)
 
-    def multi_get(self, ids, batch_size=1000):
+    def multi_get(self, ids, index_param, batch_size=1000):
+        indices = [self.tweets]
+        if self.multi_index:
+            ids = sorted(ids)
+            if index_param:
+                indices = self.get_valid_index_names(index_param, include_closed_indices=False)
+            else:
+                indices = self.get_sorted_indices(include_closed_indices=False)
         for i in range(0, len(ids), batch_size):
-            batch = self.client.mget(body={'ids': ids[i:i+batch_size]}, index=self.tweets)
-            for tweet in batch["docs"]:
-                yield tweet
+            if self.multi_index and len(indices) > 1:
+                body = {
+                  "query": {
+                    "ids" : {
+                      "values": ids[i:i + batch_size]
+                    }
+                  }
+                }
+                # Avoid duplicates while dealing with historical mono-index
+                batch = {t["_id"]: t for t in helpers.scan(query=body, index=self.tweets + "*", client=self.client)}
+                for tweet_id in ids[i:i + batch_size]:
+                    if tweet_id in batch:
+                        yield batch[tweet_id]
+                    else:
+                        yield {"_id": tweet_id, "found": False}
+            else:
+                batch = self.client.mget(body={'ids': ids[i:i + batch_size]}, index=indices[0])["docs"]
+                for tweet in batch:
+                    yield tweet
+
 
 def bulk_update(client, actions):
     # Adapted code from elasticsearch's helpers.bulk method to return the
@@ -394,19 +567,7 @@ def bulk_update(client, actions):
 
     return success, created, errors
 
+
 if __name__ == "__main__":
     es = ElasticManager("localhost", 9200, "gazouilloire")
-    es.prepare_indices()
     print(es.tweets)
-    # todo = es.find_tweets_with_unresolved_links()
-    # print(">> todo : ", todo[:10])
-    # urlstoclear = list(set([l for t in todo if not t.get(
-    #     "proper_links", []) for l in t.get("links", [])]))
-    # print(">> urlstoclear : ", urlstoclear[:10])
-    # alreadydone = [{l["_id"]: l["real"]
-    #                 for l in es.find_links_in(urlstoclear)}]
-    # print(">> alreadydone : ", alreadydone[:10])
-    # # es.update_tweets_with_links(
-    # #     1057377903506325506, ["goodlink3", "goodlink4"])
-    # print(es.count_tweets("retweet_id", "1057377903506325506"))
-    # es.update_resolved_tweets([1057223967893729280, 1057223975032373249])

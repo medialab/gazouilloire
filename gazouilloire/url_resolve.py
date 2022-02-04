@@ -11,14 +11,18 @@ from minet.exceptions import RedirectError
 from gazouilloire.database.elasticmanager import ElasticManager
 from ural.get_domain_name import get_hostname_prefixes
 from twitwi.utils import custom_get_normalized_hostname, custom_normalize_url
+from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 from gazouilloire.config_format import log
 import logging
 
 
-def count_and_log(db, batch_size, done=0, skip=0, retry_days=30):
-    db.client.indices.refresh(index=db.tweets)
-    todo = list(db.find_tweets_with_unresolved_links(batch_size=batch_size, retry_days=retry_days))
-    left = db.count_tweets("links_to_resolve", True)
+def count_and_log(db, batch_size, done=0, skip=0, retry_days=30, indices=None):
+    if indices:
+        db.client.indices.refresh(index=indices)
+    else:
+        db.client.indices.refresh(index=db.tweets + "*")
+    todo = list(db.find_tweets_with_unresolved_links(batch_size=batch_size, retry_days=retry_days, indices=indices))
+    left = db.count_tweets("links_to_resolve", True, indices)
     if done:
         done = "(+%s actual redirections resolved out of %s)" % (done, len(todo))
     log.info("RESOLVING LINKS: %s waiting (done:%s skipped:%s)\n" % (left, done or "", skip))
@@ -110,6 +114,7 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug, retry_days=30):
     tweets_already_done = []
     ids_done_in_batch = set()
     to_update = []
+    index = db.tweets
     for tweet in todo:
         if tweet.get("proper_links", []):
             tweets_already_done.append(tweet["_id"])
@@ -128,12 +133,20 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug, retry_days=30):
             skip += 1
             continue
         if tweet.get("retweeted_id") is None:  # The tweet is an original tweet. No need to search for its id.
-            to_update.append(
-                {'_id': tweet["_id"], "_source": {"doc": {
-                    'proper_links': gdlinks,
-                    'links_to_resolve': False,
-                    'domains': list(gddomains)
-                }}})
+            if db.multi_index:
+                index = db.get_index_name(datetime.strptime(tweet["local_time"], FORMATTED_TWEET_DATETIME_FORMAT))
+            try:
+                to_update.append(
+                    {'_id': tweet["_id"],
+                     '_index': index,
+                     "_source": {"doc": {
+                        'proper_links': gdlinks,
+                        'links_to_resolve': False,
+                        'domains': list(gddomains)
+                    }}})
+            except KeyError:
+                log.error(tweet)
+                sys.exit(1)
         db.update_retweets_with_links(tweetid, gdlinks, list(gddomains))
         ids_done_in_batch.add(tweetid)
 
