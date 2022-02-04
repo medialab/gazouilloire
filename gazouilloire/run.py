@@ -681,7 +681,7 @@ def searcher(pile, oauth, oauth2, conf, locale, language, geocode, exit_event, n
                     news += 1
                 if news:
                     log.debug("+%d tweets (%s since %s until %s)" % (news, query, queries_since_id[query], max_id))
-                if news < 1:
+                else:
                     if not exit_event.is_set():
                         queries_since_id[query] = since
                         write_search_state(queries_since_id, dir_path=conf["path"])
