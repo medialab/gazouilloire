@@ -18,7 +18,9 @@ Python >= 3.7 compatible.
 * [Quick start](#quick-start)
 * [Disk space](#disk-space)
 * [Export the tweets](#export-the-tweets-in-csv-format)
-* [Advanced parameters](#quick-start)
+* [Advanced parameters](#advanced-parameters)
+* [Daemon mode](#daemon-mode)
+* [Reset](#reset)
 * [Troubleshouting](#troubleshooting)
 * [Publications](#publications)
 * [Credits & Licenses](#credits--license)
@@ -31,7 +33,7 @@ Python >= 3.7 compatible.
     pip install gazouilloire
     ```
 
-- Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch#ga-release), version 7.X (you can also use [Docker](https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html) for this)
+- Install [ElasticSearch](https://www.elastic.co/downloads/elasticsearch#ga-release), version 7.X (you can also use [Docker](https://www.elastic.co/guide/en/elasticsearch/reference/7.x/docker.html) for this)
 
 - Init gazouilloire collection in a specific directory...
     ```bash
@@ -48,12 +50,22 @@ a `config.json` file is created. Open it to configure the collection parameters.
 
     ```json
     "twitter": {
-       "key": "<Consumer Key (API Key)>xxxxxxxxxxxxxxxxxxxxx",
-       "secret": "<Consumer Secret (API Secret)>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-       "oauth_token": "<Access Token>xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-       "oauth_secret": "<Access Token Secret>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        "key": "<Consumer Key (API Key)>xxxxxxxxxxxxxxxxxxxxx",
+        "secret": "<Consumer Secret (API Secret)>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "oauth_token": "<Access Token>xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "oauth_secret": "<Access Token Secret>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     }
 
+    ```
+
+- Set your ElasticSearch connection (host & port) within the `database` section and choose a database name that will host your corpus' index:
+
+    ```json
+    "database": {
+        "host": "localhost",
+        "port": 9200,
+        "db_name": "medialab-tweets"
+    }
     ```
 
 - Write down the list of desired **keywords** and **@users** and/or the list of desired **url_pieces** as json arrays:
@@ -68,6 +80,8 @@ a `config.json` file is created. Open it to configure the collection parameters.
         "medialab.sciencespo.fr/fr"
     ],
     ```
+  Read below the [advanced settings](#advanced-parameters) section to setup more filters and options or to get precisions on how to properly write your queries within keywords.
+
 - Start the collection by typing the following command in your terminal:
     ```bash
     gazou run
@@ -76,17 +90,18 @@ a `config.json` file is created. Open it to configure the collection parameters.
     ```bash
     gazou run path/to/collection/directory
     ```
- 
+  Read below the [daemon](#daemon-mode) section to let gazouilloire run continuously on a server and how to set up automatic restarts.
+
+
 ## Disk space
 Before starting the collection, you should make sure that you will have enough disk space.
-It takes about 1Go per million tweets collected (**without** images and other media contents).
+It takes about 1GB per million tweets collected (**without** images and other media contents).
 
-You should also consider starting gazouilloire in [multi-index mode](doc/multiindex.md) if the collection is planed to exceed 
-100 million tweets.
+You should also consider starting gazouilloire in [multi-index mode](doc/multiindex.md) if the collection is planed to exceed 100 million tweets, or simply restart your collection in a new folder and a new `db_name` (i.e. open another ElasticSearch index) if the current collection exceeds 150 million tweets.
 
 
 ## Export the tweets in CSV format
-- Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in csv format:
+- Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in CSV format:
 
     ```bash
     # Export all fields from all tweets:
@@ -99,57 +114,70 @@ You should also consider starting gazouilloire in [multi-index mode](doc/multiin
     # is equivalent to
     gazou export -o my_tweets_file.csv
     ```
+  Although if you interrupt the export and need to resume it to complete in multiple sequences, only the -o option will work with the --resume option.
 
 - Other available options:
     ```bash
+    # Get documentation for all options of gazou export (-h or --help)
+    gazou export -h
+
+    # By default, the export will show a progressbar, which you can disable like this:
+    gazou export --quiet
+
+    # Export a csv of all tweets between 2 dates or datetimes (--since is inclusive and --until exclusive):
+    gazou export --since "2021-03-24" --until "2021-03-25"
+    # or
+    gazou export --since "2021-03-24T12:00" --until "2021-03-24T13:00"
+
     # Export a csv of all tweets having a specific word in their text:
     gazou export medialab
   
-    # Export a csv of all tweets between 2 dates (the last date is excluded):
-    gazou export --since "2021-03-24T12:00" --until "2021-03-24T13:00"
-    # or
-    gazou export --since "2021-03-24" --until "2021-03-25"
-
     # Export a csv of all tweets having one of many specific words in their text:
     gazou export medialab digitalhumanities datajournalism '#python'
 
-    # Export only a selection of columns:
-    gazouilloire export --columns/-c id,user_screen_name,local_time,links
-    # or
-    gazou export --select/-s id,user_screen_name,local_time,links
-    # Other example: export only the text of the tweets:
-    gazou export -s text
+    # List all available fields for each tweet:
+    gazou export --list-fields
 
-    # Exclude tweets from conversations or from quotes (i.e. that do not match the keywords defined in config.json)
+    # Export only a selection of fields (-c / --columns or -s / --select the xsv way):
+    gazou export -c id,user_screen_name,local_time,links
+    # or for example to export only the text of the tweets:
+    gazou export --select text
+
+    # Exclude tweets collected via conversations or quotes (i.e. which do not match the keywords defined in config.json)
     gazou export --exclude-threads
   
     # Exclude retweets from the export
     gazou export --exclude-retweets
 
-    # Export all tweets matching a specific Elasticsearch term query, for instance by user name:
+    # Export all tweets matching a specific ElasticSearch term query, for instance by user name:
     gazou export "{'user_screen_name': 'medialab_ScPo'}"
   
-    # Take a csv file with an "id" column and return all tweets matching these ids:
-    gazou export --export-tweets-from-file yourfile.csv
+    # Take a csv file with an "id" column and export only the tweets whose ids are included in this file:
+    gazou export --export-tweets-from-file list_of_ids.csv
+
+    # You can of course combine all of these options, for instance:
+    gazou export medialab --since "2021-03-24" --until "2021-03-25" -c text --exclude-threads --exclude-retweets -o medialab_tweets_210324_nothreads_norts.csv
+
     ```
     
 ## Advanced parameters
 
-### config.json file
-#### - keywords
+Many advanced settings can be used to better filter the tweets collected and complete the corpus. They can all be modified within the `config.json` file.
+
+### - keywords
   Some advanced filters can be used in combination with the keywords, such as `-undesiredkeyword`, `filter:links`, `-filter:media`, `-filter:retweets`, etc. See [Twitter API's documentation](https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators) for more details.
 
   Avoid using accented characters (Twitter will automatically return both tweets with and without accents, for instance searching "heros" will find both tweets with "heros" and "héros").
 
   Note that there are three possibilities to filter further:
 
-#### - language
-In order to collect only tweets written in a specific language : just add `"language": "fr"` to the config (the language should be written in [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes))
+### - language
+In order to collect only tweets written in a specific language: just add `"language": "fr"` to the config (the language should be written in [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes))
 
-#### - geolocation 
+### - geolocation 
 Just add `"geolocation": "Paris, France"` field to the config with the desired geographical boundaries or give in coordinates of the desired box (for instance `[48.70908786918211, 2.1533203125, 49.00274483644453, 2.610626220703125]`)
 
-#### - time_limited_keywords 
+### - time_limited_keywords 
 In order to filter on specific keywords during planned time periods, for instance:
 
   ```json
@@ -159,42 +187,61 @@ In order to filter on specific keywords during planned time periods, for instanc
         ]
     }
   ```
+### - url_pieces
+  To search for specific parts of websites, one can input pieces of urls as keywords in this field. For instance:
 
-#### - resolve_redirected_links 
-Set to `true` or `false` to enable or disable automatic resolution of all links found in tweets (t.co links are always handled, but this allows resolving also all other shorteners like bit.ly).
+  ```json
+  "url_pieces": [
+      "medialab.sciencespo.fr",
+      "github.com/medialab"
+  ]
+  ```
 
-#### - grab_conversations
-Set to `true` to activate automatic iterative collection of all tweets to which collected tweets are answering (warning: one should account for the presence of these when processing data, it often results in collecting tweets way out of the collection time period).
+### - resolve_redirected_links 
+Set to `true` or `false` to enable or disable automatic resolution of all links found in tweets (t.co links are always handled, but this allows resolving also for all other shorteners such as bit.ly).
 
-#### - catchup_past_week
-Twitter's free API allows to collect tweet up to 7 days in the past only which gazouilloire does by default, set this option to `false` to disable this and only collect tweets posted after the collection was started.
+The `resolving_delay` (set to 30 by default) defines for how many days urls returning errors will be retried before leaving them as such.
 
-#### - download_media
-Set `"download_media": {"photo": true, "video": false, "animated_gif": false, "media_directory": "path/to/media/directory"}` to activate automatic downloading of photos posted by users, without videos or gifs (this does not include images from social cards). All fields can also be set to `true` to download everything. 
-Setup the `media_directory` field in complement to setup the absolute path where Gazouilloire should store the images and videos on the machine.
+### - grab_conversations
+Set to `true` to activate automatic recursive retrieval within the corpus of all tweets to which collected tweets are answering (warning: one should account for the presence of these when processing data, it often results in collecting tweets which do not contain the queried keywords and/or which are way out of the collection time period).
 
-#### - timezone
+### - catchup_past_week
+Twitter's free API allows to collect tweets up to 7 days in the past, which gazouilloire does by default when starting a new corpus. Set this option to `false` to disable this and only collect tweets posted after the collection was started.
+
+### - download_media
+Configure this option to activate automatic downloading within `media_directory` of photos and/or videos posted by users within the collected tweets (this does not include images from social cards). For instance the following configuration will only collect pictures without videos or gifs:
+
+  ```json
+  "download_media": {
+      "photo": true,
+      "video": false,
+      "animated_gif": false,
+      "media_directory": "path/to/media/directory"
+  }
+  ```
+
+All fields can also be set to `true` to download everything. 
+`media_directory` should either be an absolute path where Gazouilloire should store the images and videos on the machine or a relative one towards the directory wherein the configuration relies.
+
+### - timezone
 Adjust the timezone within which tweets timestamps should be computed. Allowed values are proposed on Gazouilloire's startup when setting up an invalid one.
-  
-### Disk space
-Before starting the collection, you should make sure that you will have enough disk space.
-It takes about 1Go per million tweets collected (**without** images and other media contents).
 
-You should also plan to restart your collection in a new folder (i.e. open another elasticsearch index)
-if the current collection exceeds 150 million tweets.
+### - verbose
+When set to `true`, logs will be way more explicit regarding Gazouilloire's interactions with Twitter's API.
 
-### daemon mode
-- The tool can also run as daemon (which means that it executes in the background, 
-and you can safely close the window where you started it). Start the collection
- in daemon mode with:
+
+## Daemon mode
+For production use and long term data collection, Gazouilloire can run as a daemon (which means that it executes in the background, and you can safely close the window within which you started it).
+
+- Start the collection in daemon mode with:
     ```
     gazou start
     ```
-- Stop the daemon with :
+- Stop the daemon with:
     ```
     gazou stop
     ```
-- Restart the daemon with :
+- Restart the daemon with:
     ```
     gazou restart
     ```
@@ -203,36 +250,36 @@ and you can safely close the window where you started it). Start the collection
     gazou status
     ```
 
-### reset
-- Gazouilloire stores its current search state in the collection directory. This means that if you restart Gazouilloire
-in the same directory, it will not search
-again for tweets that were already collected. If you want a fresh start, you can reset the search state, 
-as well as everything that was saved on disk, with:
+
+## Reset
+
+- Gazouilloire stores its current search state in the collection directory. This means that if you restart Gazouilloire in the same directory, it will not search again for tweets that were already collected. If you want a fresh start, you can reset the search state, as well as everything that was saved on disk, using:
 
     ```bash
     gazou reset
     ```
 
-- You can also choose to delete only some elements, e.g. the tweets stored in elasticsearch and the media files:
+- You can also choose to delete only some elements, e.g. the tweets stored in ElasticSearch and the media files:
     ```bash
     gazou reset --only tweets,media
     ```
     Possible values for the --only argument: tweets,links,logs,piles,search_state,media
 
+
 ## Troubleshooting
 
-- Elasticsearch
+### ElasticSearch
 
-  - Remember to [set the heap size](https://www.elastic.co/guide/en/elasticsearch/reference/current/heap-size.html) (at 1GB by default) when moving to production. 1GB is fine for indices under 15-20 million tweets, but be sure to set a higher value for heavier corpora.
+- Remember to [set the heap size](https://www.elastic.co/guide/en/elasticsearch/reference/current/heap-size.html) (at 1GB by default) when moving to production. 1GB is fine for indices under 15-20 million tweets, but be sure to set a higher value for heavier corpora.
 
-    Set these values here `/etc/elasticsearch/jvm.options` (if you use Elasticsearch as a service) or here `your_installation_folder/config/jvm.options` (if you have a custom installation folder):
+    Set these values here `/etc/elasticsearch/jvm.options` (if you use ElasticSearch as a service) or here `your_installation_folder/config/jvm.options` (if you have a custom installation folder):
     ```
     -Xms2g
     -Xmx2g
     ```
     Here the heap size is set at 2GB (set the values at `-Xms5g -Xmx5g` if you need 5GB, etc).
 
-  - If you encounter this Elasticsearch error message:
+- If you encounter this ElasticSearch error message:
     `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`:
 
     :arrow_right:  Increase the `max_map_count` value:
@@ -243,7 +290,7 @@ as well as everything that was saved on disk, with:
 
     ([source](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html))
 
-  - If you get a _ClusterBlockException_ `[SERVICE_UNAVAILABLE/1/state not recovered / initialized]` when starting Elasticsearch:
+- If you get a _ClusterBlockException_ `[SERVICE_UNAVAILABLE/1/state not recovered / initialized]` when starting ElasticSearch:
 
     :arrow_right:  Check the value of `gateway.recover_after_nodes` in _/etc/elasticsearch/elasticsearch.yml_:
 
@@ -253,18 +300,28 @@ as well as everything that was saved on disk, with:
 
     Edit the value of **`gateway.recover_after_nodes`** to match your number of nodes (usually `1` - easily checked here : *http://host:port/_nodes*).
 
+
 ## Publications
+
+### Gazouilloire presentations
+
+- Video @ FOSDEM (english): MAZOYER Béatrice, "[Gazouilloire: a command line tool for long-term tweets collection](https://archive.fosdem.org/2021/schedule/event/open_research_gazouilloire/)". Open Research Tools and Technologies devroom, FOSDEM 2021.
+
+- Slides (french): OOGHE-TABANOU Benjamin, "[Gazouilloire : Collecter des données dans la mare de tweets](https://drive.google.com/file/d/1nvohR3wmFwA8953_w_hkYtBb4OI4OnrH/view)". Séminaire MORDEV, Laboratoire de Linguistique Formelle, Paris 2019.
+
+
+
 ### Publications using Gazouilloire
 
-* CASTALDO Maria, VENTURINI Tommaso, FRASCA Paolo, GARGIULO Floriana, "[The Rhythms of the Night: increase in online night activity and emotional resilience during the Covid-19 lockdown](https://arxiv.org/pdf/2007.09353.pdf)"  (2020). arXiv preprint arXiv:2007.09353.
+- CASTALDO Maria, VENTURINI Tommaso, FRASCA Paolo, GARGIULO Floriana, "[The Rhythms of the Night: increase in online night activity and emotional resilience during the Covid-19 lockdown](https://arxiv.org/pdf/2007.09353.pdf)"  (2020). arXiv preprint arXiv:2007.09353.
 
-* WARD Jeremy K, GUILLE-ESCURET Paul, ALAPETITE Clément, "[Les « antivaccins », figure de l’anti-Science](https://www.cairn.info/revue-deviance-et-societe-2019-2-page-221.htm)" (2019), in Déviance et Société, 2019/2 (Vol. 43), p. 221-251. DOI: 10.3917/ds.432.0221
+- WARD Jeremy K, GUILLE-ESCURET Paul, ALAPETITE Clément, "[Les « antivaccins », figure de l’anti-Science](https://www.cairn.info/revue-deviance-et-societe-2019-2-page-221.htm)" (2019), in Déviance et Société, 2019/2 (Vol. 43), p. 221-251. DOI: 10.3917/ds.432.0221
 
-* RICCI, Donato, COLOMBO, Gabriele, MEUNIER, Axel, et al. [Designing Digital Methods to monitor and inform Urban Policy. The case of Paris and its Urban Nature initiative](https://re.public.polimi.it/bitstream/11311/1038509/1/IPPA_Ricci-Colombo-Meunier-Brilli.pdf). In: 3rd International Conference on Public Policy (ICPP3)-Panel T10P6 Session 1 Digital Methods for Public Policy. SGP, 2017. p. 1-37.
+- RICCI, Donato, COLOMBO, Gabriele, MEUNIER, Axel, et al. [Designing Digital Methods to monitor and inform Urban Policy. The case of Paris and its Urban Nature initiative](https://re.public.polimi.it/bitstream/11311/1038509/1/IPPA_Ricci-Colombo-Meunier-Brilli.pdf). In: 3rd International Conference on Public Policy (ICPP3)-Panel T10P6 Session 1 Digital Methods for Public Policy. SGP, 2017. p. 1-37.
 
-* DOUAY, Nicolas, REYS, Aurélien, ROBIN, Sabrina. [L’usage de Twitter par les maires d’Île-de-France](https://journals.openedition.org/netcom/2089). NETCOM, 29-3/4 | 2015 : Visualisation des réseaux, de l’information et de l’espace, p. 275-296.
+- DOUAY, Nicolas, REYS, Aurélien, ROBIN, Sabrina. [L’usage de Twitter par les maires d’Île-de-France](https://journals.openedition.org/netcom/2089). NETCOM, 29-3/4 | 2015 : Visualisation des réseaux, de l’information et de l’espace, p. 275-296.
 
-* ANTOLINOS-BASSO Diégo, PADDEU Flaminia, DOUAY Nicolas, BLANC Nathalie. [Pourquoi le débat #EuropaCity n’a pas pris sur Twitter ?](https://journals.openedition.org/reset/1070). RESET, 7 | 2018. DOI : 10.4000/reset.1070
+- ANTOLINOS-BASSO Diégo, PADDEU Flaminia, DOUAY Nicolas, BLANC Nathalie. [Pourquoi le débat #EuropaCity n’a pas pris sur Twitter ?](https://journals.openedition.org/reset/1070). RESET, 7 | 2018. DOI : 10.4000/reset.1070
 
 
 ### Publications talking about Gazouilloire
@@ -283,6 +340,6 @@ Read more about Gazouilloire's migration from Python2 & Mongo to Python3 & Elast
 
 Discover more of our projects at [médialab tools](http://tools.medialab.sciences-po.fr/).
 
-This work is supported by [DIME-Web](http://dimeweb.dime-shs.sciences-po.fr/), part of [DIME-SHS](http://www.sciencespo.fr/dime-shs/) research equipment financed by the EQUIPEX program (ANR-10-EQPX-19-01).
+This work has been supported by [DIME-Web](http://dimeweb.dime-shs.sciences-po.fr/), part of [DIME-SHS](http://www.sciencespo.fr/dime-shs/) research equipment financed by the EQUIPEX program (ANR-10-EQPX-19-01).
 
 Gazouilloire is a free open source software released under [GPL 3.0 license](LICENSE).
