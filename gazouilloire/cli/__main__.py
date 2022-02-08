@@ -247,9 +247,9 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
                                                                          "are included.")
 @click.option('--exclude-retweets/--include-retweets', default=False, help="Exclude retweets from the exported tweets")
 @click.option('--verbose/--quiet', default=True, help="Display or hide the progress bar. By default, display.")
-@click.option('--export-tweets-from-file', '-f', type=click.Path(exists=True), help="Take a csv file with tweets ids "
+@click.option('--export-tweets-from-file', type=click.Path(exists=True), help="Take a csv file with tweets ids "
                                                                                     "and return those tweets")
-@click.option('--export-threads-from-file', '-f', type=click.Path(exists=True), help="Take a csv file with tweets ids "
+@click.option('--export-threads-from-file', type=click.Path(exists=True), help="Take a csv file with tweets ids "
                                                                                      "and return the conversations "
                                                                                      "containing those tweets")
 @click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
