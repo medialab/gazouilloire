@@ -125,9 +125,9 @@ You should also consider starting gazouilloire in [multi-index mode](doc/multiin
     gazou export --quiet
 
     # Export a csv of all tweets between 2 dates or datetimes (--since is inclusive and --until exclusive):
-    gazou export --since "2021-03-24" --until "2021-03-25"
+    gazou export --since 2021-03-24 --until 2021-03-25
     # or
-    gazou export --since "2021-03-24T12:00" --until "2021-03-24T13:00"
+    gazou export --since 2021-03-24T12:00:00 --until 2021-03-24T13:00:00
 
     # Export a csv of all tweets having a specific word in their text:
     gazou export medialab
@@ -156,7 +156,7 @@ You should also consider starting gazouilloire in [multi-index mode](doc/multiin
     gazou export --export-tweets-from-file list_of_ids.csv
 
     # You can of course combine all of these options, for instance:
-    gazou export medialab --since "2021-03-24" --until "2021-03-25" -c text --exclude-threads --exclude-retweets -o medialab_tweets_210324_nothreads_norts.csv
+    gazou export medialab --since "2021-03-24" --until "2021-03-25" -c text --exclude-threads --exclude-retweets -o medialab_tweets_210324_no_threads_no_rts.csv
 
     ```
     
