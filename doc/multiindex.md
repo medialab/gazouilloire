@@ -63,3 +63,6 @@ To switch from one mode to the other, update the `config.json` file with the new
 If you need to export and/or delete data from the previous index type, you can always change the `config.json` file back 
 to its previous state. Then use `gazou export`/`gazou close`, and re-update the config file when you are done.
 It is recommended to stop the collection (`gazou stop`) during these operations. 
+
+Warning: the [`gazou reset`](README.md/#reset) command is designed to completely clear the disk in one command. If you use it,
+all existing indices (mono-index and multi-index) will be cleared.
