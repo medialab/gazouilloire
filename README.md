@@ -102,14 +102,15 @@ exceed 100 million tweets, or simply restart your collection in a new folder and
 (i.e. open another ElasticSearch index) if the current collection exceeds 150 million tweets.
 
 As a point of comparison, here is the number of tweets sent during the whole year 2021 containing certain keywords 
-(the values were obtained with the API V2: 
-https://api.twitter.com/2/tweets/counts/all ): 
+(the values were obtained with the API V2 
+[tweets count](https://developer.twitter.com/en/docs/twitter-api/tweets/counts/api-reference/get-tweets-counts-all)
+endpoint): 
 
 | Query                     | Nb of tweets in 2021 |
 |:--------------------------|:---------------------|
-| lemondefr lang:fr         | 2,990,873            |
-| macron lang:fr            | 21,156,044           |
-| vaccine                   | 176,137,763          |
+| lemondefr lang:fr         | 3 million            |
+| macron lang:fr            | 21 million           |
+| vaccine                   | 176 million          |
 
 ## Export the tweets in CSV format
 - Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in CSV format:
