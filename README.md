@@ -97,8 +97,19 @@ a `config.json` file is created. Open it to configure the collection parameters.
 Before starting the collection, you should make sure that you will have enough disk space.
 It takes about 1GB per million tweets collected (**without** images and other media contents).
 
-You should also consider starting gazouilloire in [multi-index mode](doc/multiindex.md) if the collection is planed to exceed 100 million tweets, or simply restart your collection in a new folder and a new `db_name` (i.e. open another ElasticSearch index) if the current collection exceeds 150 million tweets.
+You should also consider starting gazouilloire in [multi-index mode](doc/multiindex.md) if the collection is planed to 
+exceed 100 million tweets, or simply restart your collection in a new folder and a new `db_name` 
+(i.e. open another ElasticSearch index) if the current collection exceeds 150 million tweets.
 
+As a point of comparison, here is the number of tweets sent during the whole year 2021 containing certain keywords 
+(the values were obtained with the API V2: 
+https://api.twitter.com/2/tweets/counts/all ): 
+
+| Query                     | Nb of tweets in 2021 |
+|:--------------------------|:---------------------|
+| lemondefr lang:fr         | 2,990,873            |
+| macron lang:fr            | 21,156,044           |
+| vaccine                   | 176,137,763          |
 
 ## Export the tweets in CSV format
 - Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in CSV format:
