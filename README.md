@@ -233,7 +233,9 @@ Configure this option to activate automatic downloading within `media_directory`
   ```
 
 All fields can also be set to `true` to download everything. 
-`media_directory` should either be an absolute path where Gazouilloire should store the images and videos on the machine or a relative one towards the directory wherein the configuration relies.
+`media_directory` is the folder where Gazouilloire stores the images & videos. 
+It should either be an absolute path ("/home/user/gazouilloire/my_collection/my_images"), 
+or a path relative to the directory where config.json is located ("my_images").
 
 ### - timezone
 Adjust the timezone within which tweets timestamps should be computed. Allowed values are proposed on Gazouilloire's startup when setting up an invalid one.
