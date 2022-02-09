@@ -233,7 +233,9 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
                                                      "in isoformat")
 @click.option('--since', type=click.DateTime(), help="Export tweets published after the given date (included), "
                                                      "in isoformat")
-@click.option('--step', type=click.Choice(['seconds', 'minutes', 'hours', 'days', 'months', 'years']))
+@click.option('--step', type=click.Choice(['seconds', 'minutes', 'hours', 'days', 'months', 'years']),
+              help="Speed up export time if you are exporting millions of tweets, by setting this option to days or "
+                   "hours")
 @click.option('--output', '-o', type=click.Path(exists=False), help="File to write the tweets in. By default, "
                                                                     "'export' writes in stdout. Usage: gazou export -o "
                                                                     "my_tweet_file.csv")
