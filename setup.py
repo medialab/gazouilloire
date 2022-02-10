@@ -3,15 +3,12 @@ from setuptools import setup, find_packages
 with open('./README.md', 'r') as f:
     long_description = f.read()
 
-# Version
-# Info: https://packaging.python.org/guides/single-sourcing-package-version/
-# Example: https://github.com/pypa/warehouse/blob/64ca42e42d5613c8339b3ec5e1cb7765c6b23083/warehouse/__about__.py
-meta_package = {}
-with open('./gazouilloire/__version__.py') as f:
-    exec(f.read(), meta_package)
+def local_scheme(version):
+    """Skip the local version (eg. +xyz of 0.6.1.dev4+gdf99fe2)
+    to be able to upload to Test PyPI"""
+    return ""
 
 setup(name='gazouilloire',
-      version=meta_package['__version__'],
       description='Twitter stream & search API grabber',
       long_description=long_description,
       long_description_content_type='text/markdown',
@@ -23,6 +20,9 @@ setup(name='gazouilloire',
       python_requires='>=3.7',
       packages=find_packages(exclude=["collect*", "dist", "build"]),
       include_package_data=True,
+      zip_safe=True,
+      use_scm_version={"local_scheme": local_scheme},
+      setup_requires=["setuptools_scm"],
       install_requires=[
           "elasticsearch >= 7.10.1, < 8.0",
           "requests",
