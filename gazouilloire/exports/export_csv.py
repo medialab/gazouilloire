@@ -46,7 +46,8 @@ def yield_csv(queryiterator, last_ids=set(), export_list=False):
             yield source
 
 
-def build_body(query, exclude_threads, exclude_retweets, since=None, until=None, outputfile=None, resume=False):
+def build_body(query, exclude_threads, exclude_retweets, since=None, until=None, outputfile=None, resume=False,
+               lucene=False):
     if len(query) == 0 and not exclude_threads and not exclude_retweets and not since and not until and not resume:
         body = {
             "query": {
@@ -82,13 +83,12 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None,
             try:
                 query = json.loads(query)
             except Exception as e:
-                sys.stderr.write(
-                    "WARNING: query wrongly formatted: %s\n" % query)
+                log.error("query wrongly formatted: %s\n" % query)
                 sys.exit("%s: %s\n" % (type(e), e))
             if "id" in query:
                 query = {"_id": query["id"]}
             filter.append({"term": query})
-        elif ' AND ' in query or ' OR ' in query:
+        elif ' AND ' in query or ' OR ' in query or lucene:
             filter.append({
                 "query_string": {
                     "query": query,
@@ -99,6 +99,9 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None,
             filter.append({"term": {"text": query.lower()}})
 
     elif len(query) > 1:
+        if lucene:
+            log.error("Query wrongly formatted: use quotes to do a lucene query with several words.")
+            sys.exit(1)
         filter.append({"bool": {"should": []}})
         for arg in query:
             if ' AND ' in arg or ' OR ' in arg:
@@ -111,7 +114,6 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None,
             else:
                 queryarg = {"term": {"text": arg.lower()}}
             filter[-1]["bool"]["should"].append(queryarg)
-
     return body
 
 
@@ -149,7 +151,7 @@ def find_potential_duplicate_ids(outputfile):
                 return last_time, last_ids
 
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-               verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume,
+               verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume, lucene,
                step=None,
                index=None
                ):
@@ -203,7 +205,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         if resume:
             last_timestamp, last_ids = find_potential_duplicate_ids(outputfile)
             since = datetime.fromisoformat(last_timestamp)
-        body = build_body(query, exclude_threads, exclude_retweets, since, until)
+        body = build_body(query, exclude_threads, exclude_retweets, since, until, lucene=lucene)
         count = multiindex_count(db, body, index, since, until)
         if step:
             iterator = yield_csv(
@@ -281,7 +283,7 @@ def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_r
     if not until:
         until = datetime.now()
     if not since:
-        body = build_body(query, exclude_threads, exclude_retweets)
+        body = build_body(query, exclude_threads, exclude_retweets, lucene=lucene)
         body["sort"] = ["timestamp_utc"]
         body["size"] = 1
         if index_param:
@@ -300,7 +302,7 @@ def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_r
                 since = datetime.fromtimestamp(first_tweet["timestamp_utc"])
     one_more_step = increment_steps(since, step)
     while since < until:
-        body = build_body(query, exclude_threads, exclude_retweets, since, one_more_step)
+        body = build_body(query, exclude_threads, exclude_retweets, since, one_more_step, lucene=lucene)
         yield since, body
         since = increment_steps(since, step)
         one_more_step = increment_steps(since, step)
@@ -313,7 +315,8 @@ def multiindex_count(db, body, index_param, since, until):
     return count
 
 
-def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, step=None, index=None):
+def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, outputfile, lucene, step=None,
+                  index=None):
     db = call_database(conf)
     file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
     writer = csv.writer(file)
@@ -322,7 +325,7 @@ def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, 
             count = multiindex_count(db, body, index, since, until)
             writer.writerow([",".join(query), since, count] if query else [since, count])
     else:
-        body = build_body(query, exclude_threads, exclude_retweets, since, until)
+        body = build_body(query, exclude_threads, exclude_retweets, since, until, lucene=lucene)
         count = multiindex_count(db, body, index, since, until)
         writer.writerow([",".join(query), count] if query else [count])
 

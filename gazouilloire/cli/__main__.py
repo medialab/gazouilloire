@@ -256,12 +256,18 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
                                                                                      "containing those tweets")
 @click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
 @click.option("--resume", "-r", is_flag=True, help="Restart the export from the last id specified in --output file")
+@click.option("--lucene", is_flag=True, help="""Use lucene query syntax. 
+                Usage:\n 
+                    gazou export --lucene "user_location:('Sao Paulo' OR Tokyo)\n"
+                    gazou export --lucene "NOT(mentioned_names:*)"
+                """
+              )
 @click.option('--index', '-i',
               help="In case of multi-index, monthly indices to export in format YYYY-MM, or relative positions such as "
                    "'last', 'first', 'inactive', separated by comma. Use `--index inactive` to export all inactive"
                    "indices (i. e. not used any more for indexing). By default, export from all opened indices.")
 def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
-           columns, list_fields, output, resume, since, until, step, index):
+           columns, list_fields, output, resume, since, until, lucene, step, index):
     if resume and not output:
         log.error("The --resume option requires to set a file name with --output")
         sys.exit(1)
@@ -276,7 +282,8 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
     else:
         conf = load_conf(path)
         export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-                   verbose, export_threads_from_file, export_tweets_from_file, columns, output, resume, step, index)
+                   verbose, export_threads_from_file, export_tweets_from_file, columns, output, resume, lucene, step,
+                   index)
 
 
 @main.command(help="Get a report about the number of tweets. Type 'gazou count' to get the number of collected tweets "
@@ -303,9 +310,14 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
               help="In case of multi-index, specify the index to count from. Use `--index inactive` "
                    "to count tweets from the inactive indices (i. e. not used any more for indexing). "
                    "By default, count from all opened indices.")
-def count(path, query, exclude_threads, exclude_retweets, output, since, until, step, index):
+@click.option("--lucene", is_flag=True, help="""Use lucene query syntax.\n 
+                Usage: gazou count --lucene "user_location:('Sao Paulo' OR Tokyo)"
+                \ngazou count --lucene "NOT(mentioned_names:*)"
+                """
+              )
+def count(path, query, exclude_threads, exclude_retweets, output, since, until, step, index, lucene):
     conf = load_conf(path)
-    count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, output, step, index)
+    count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, output, lucene, step, index)
 
 def check_valid_reset_option(element_list):
     element_list = element_list.split(",")
