@@ -264,6 +264,10 @@ For production use and long term data collection, Gazouilloire can run as a daem
     gazou status
     ```
 
+- Gazouilloire should normally restart on its own in case of temporary internet access outages but it might occasionnally fail for various reasons such as ElasticSearch having crashed for instance. In order to ensure a long term collection remains up and running without always checking it, we recommand to program automatic restarts of Gazouilloire at least once every week using cronjobs (missing tweets will be completed up to 7 days after a crash). In order to do so, a [restart.sh](scripts/restart.sh) script is proposed that handles restarting ElasticSearch whenever necessary. Just copy paste it within your corpus directory. Usecases and cronjobs examples are proposed as comments at the top of the script.
+
+- An example script [daily_mail_export.sh](scripts/daily_mail_export.sh) is also proposed to perform daily tweets exports and get them by e-mail. Feel free to reuse and tailor it to your own needs.
+
 
 ## Reset
 
