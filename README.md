@@ -179,7 +179,13 @@ Many advanced settings can be used to better filter the tweets collected and com
 ### - keywords
   Some advanced filters can be used in combination with the keywords, such as `-undesiredkeyword`, `filter:links`, `-filter:media`, `-filter:retweets`, etc. See [Twitter API's documentation](https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators) for more details.
 
+  When adding a Twitter user as a keyword, such as "@medialab_ScPo", Gazouilloire will query specifically "from:medialab_Scpo OR to:medialab_ScPo OR @medialab_ScPo" so that all tweets mentionning the user will also be collected.
+
+  Using upper or lower case characters in keywords won't change anything.
+
   Avoid using accented characters (Twitter will automatically return both tweets with and without accents, for instance searching "heros" will find both tweets with "heros" and "héros").
+
+  Regarding hashtags, note that querying a word without the # character will return both tweets with the regular word and tweets with the hashtag. Adding a hashtag with the # characters inside keywords will only collect tweets with the hashtag.
 
   Note that there are three possibilities to filter further:
 
