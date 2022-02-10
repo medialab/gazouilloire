@@ -20,7 +20,6 @@ setup(name='gazouilloire',
       python_requires='>=3.7',
       packages=find_packages(exclude=["collect*", "dist", "build"]),
       include_package_data=True,
-      zip_safe=True,
       use_scm_version={"local_scheme": local_scheme},
       setup_requires=["setuptools_scm"],
       install_requires=[
