@@ -53,6 +53,12 @@ Using the --step parameter can speed up the process:
  gazou export --step hours
 ```
 
+## Automatic csv export
+We recommand to program automatic exports of the last inactive index every month using cronjobs. 
+In order to do so, we propose a [monthly_archive.sh](scripts/monthly_archive.sh) script. 
+Just copy paste it within your corpus directory. Usecases and cronjobs examples are 
+proposed as comments at the top of the script.
+
 ## Can I switch a corpus from mono-index to multi-index or reciprocally?
 Yes, but the past data (mono or multi-index) is then ignored by gazouilloire (for now). 
 There may be duplicate tweets between the past data and the current index/indices.
