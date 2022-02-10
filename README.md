@@ -106,11 +106,11 @@ As a point of comparison, here is the number of tweets sent during the whole yea
 [tweets count](https://developer.twitter.com/en/docs/twitter-api/tweets/counts/api-reference/get-tweets-counts-all)
 endpoint): 
 
-| Query                     | Nb of tweets in 2021 |
-|:--------------------------|:---------------------|
-| lemondefr lang:fr         | 3 million            |
-| macron lang:fr            | 21 million           |
-| vaccine                   | 176 million          |
+| Query                     | Number of tweets in 2021 |
+|:--------------------------|:-------------------------|
+| lemondefr lang:fr         | 3 million                |
+| macron lang:fr            | 21 million               |
+| vaccine                   | 176 million              |
 
 ## Export the tweets in CSV format
 - Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in CSV format:
