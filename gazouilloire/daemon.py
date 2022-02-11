@@ -79,7 +79,7 @@ class Daemon:
         self.quit()
         os.remove(self.pidfile)
 
-    def search_pid(self):
+    def search_pid(self, timeout=STOP_TIMEOUT):
         if os.path.exists(self.stoplock):
             log.error("Gazouilloire is currently stopping. Please wait for the daemon to stop before running a new "
                       "collection process.")
@@ -111,7 +111,7 @@ class Daemon:
                 # If the first process is the main process, go for a standard stop.
                 p = running_processes[0]
                 if p is not None and p.name().startswith("gazou") and running_processes[0].children(recursive=True):
-                    self.stop(STOP_TIMEOUT)
+                    self.stop(timeout)
                 # Else, kill all remaining processes
                 else:
                     processes_to_kill = []
@@ -119,7 +119,7 @@ class Daemon:
                         if p is not None and p.name().startswith("gazou"):
                             processes_to_kill.append(p)
                             p.terminate()
-                    kill_alive_processes(processes_to_kill)
+                    kill_alive_processes(processes_to_kill, timeout)
 
 
     def run(self, conf):

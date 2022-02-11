@@ -75,7 +75,7 @@ def breakable_sleep(delay, exit_event):
         time.sleep(1)
 
 
-def kill_alive_processes(processes, timeout=STOP_TIMEOUT):
+def kill_alive_processes(processes, timeout):
     gone, alive = psutil.wait_procs(processes, timeout=timeout)
     for p in alive:
         log.debug("Killing process nb {}".format(p.pid, ))
@@ -114,7 +114,7 @@ def stop(path, timeout=STOP_TIMEOUT):
             parent = psutil.Process(pid)
             children = parent.children(recursive=True)
             parent.terminate()
-            kill_alive_processes(children, STOP_TIMEOUT)
+            kill_alive_processes(children, timeout)
         except psutil.NoSuchProcess:
             processes_to_kill = []
             pf = open(pidfile, 'r')
@@ -126,7 +126,7 @@ def stop(path, timeout=STOP_TIMEOUT):
                         p.terminate
                 except psutil.NoSuchProcess:
                     continue
-            kill_alive_processes(processes_to_kill, STOP_TIMEOUT)
+            kill_alive_processes(processes_to_kill, timeout)
             pf.close()
 
         if os.path.exists(pidfile):
