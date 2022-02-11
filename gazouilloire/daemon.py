@@ -23,9 +23,6 @@ class Daemon:
         self.pidfile = os.path.join(path, '.lock')
         self.stoplock = os.path.join(path, '.stoplock')
         self.path = path
-        if os.path.isfile(self.stoplock):
-            log.error("The daemon is currently being stopped. Please wait before trying to start, restart or stop.")
-            sys.exit(1)
 
     def write_lock_file(self):
         pid = str(os.getpid())
@@ -80,10 +77,7 @@ class Daemon:
         os.remove(self.pidfile)
 
     def search_pid(self, timeout=STOP_TIMEOUT):
-        if os.path.exists(self.stoplock):
-            log.error("Gazouilloire is currently stopping. Please wait for the daemon to stop before running a new "
-                      "collection process.")
-            sys.exit(1)
+        already_stopping = os.path.isfile(self.stoplock)
 
         # Check for a pidfile to see if the daemon already runs
         try:
@@ -103,6 +97,15 @@ class Daemon:
                     running_processes.append(p)
                 except psutil.NoSuchProcess:
                     running_processes.append(None)
+
+            if already_stopping and not any(running_processes):
+                os.remove(self.stoplock)
+                already_stopping = False
+
+            if already_stopping:
+                log.error("Gazouilloire is currently stopping. Please wait before trying to start, restart or stop.")
+                sys.exit(1)
+
             if all(running_processes):
                 message = "Gazouilloire is already running. Type 'gazou restart' to restart the collection."
                 log.error(message)
@@ -145,7 +148,10 @@ class Daemon:
         """
         Stop the daemon
         """
-        main_stop(self.path, timeout)
+        if os.path.isfile(self.stoplock):
+            self.search_pid(timeout=timeout)
+        else:
+            main_stop(self.path, timeout)
 
     def restart(self, conf, timeout):
         """
