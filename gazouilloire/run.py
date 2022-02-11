@@ -75,7 +75,7 @@ def breakable_sleep(delay, exit_event):
         time.sleep(1)
 
 
-def kill_alive_processes(processes, timeout):
+def kill_alive_processes(processes, timeout=STOP_TIMEOUT):
     gone, alive = psutil.wait_procs(processes, timeout=timeout)
     for p in alive:
         log.debug("Killing process nb {}".format(p.pid, ))
