@@ -13,7 +13,7 @@ from twitwi.constants import TWEET_FIELDS
 from gazouilloire.config_format import log
 from casanova import reverse_reader
 from casanova.exceptions import MissingColumnError
-
+from elasticsearch.exceptions import RequestError
 
 def date_to_timestamp(date):
     return str(date.timestamp())
@@ -206,7 +206,13 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
             last_timestamp, last_ids = find_potential_duplicate_ids(outputfile)
             since = datetime.fromisoformat(last_timestamp)
         body = build_body(query, exclude_threads, exclude_retweets, since, until, lucene=lucene)
-        count = multiindex_count(db, body, index, since, until)
+        try:
+            count = multiindex_count(db, body, index, since, until)
+        except RequestError:
+            log.error("Query wrongly formatted.")
+            if lucene:
+                log.error("Please read ElasticSearch's documentation regarding Lucene queries: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html")
+            sys.exit(1)
         if step:
             iterator = yield_csv(
                 yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index),
