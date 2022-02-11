@@ -6,7 +6,8 @@ import atexit
 import psutil
 from signal import signal, SIGTERM
 
-from gazouilloire.run import main, STOP_TIMEOUT, kill_alive_processes, find_running_processes, get_pids, \
+from gazouilloire.run import main, STOP_TIMEOUT, kill_alive_processes, \
+    find_running_processes, get_pids, is_already_stopping, \
     stop as main_stop
 from gazouilloire.config_format import log, create_file_handler
 
@@ -78,30 +79,36 @@ class Daemon:
         os.remove(self.pidfile)
 
     def clear_zombies(self, timeout=STOP_TIMEOUT):
-        already_stopping = os.path.isfile(self.stoplock)
-
         # Check for a pidfile to see if the daemon already runs
         pids = get_pids(self.pidfile)
 
         if pids:
+            # Check existing processes from the list within pids
             running_processes = find_running_processes(pids)
 
-            if all(running_processes):
-                message = "Gazouilloire is already running. Type 'gazou restart' to restart the collection."
-                log.error(message)
-                sys.exit(1)
-            else:
-                # If the first process is the main process, go for a standard stop.
-                p = running_processes[0]
-                if p is not None and p.name().startswith("gazou") and running_processes[0].children(recursive=True):
-                    self.stop(timeout)
-                # Else, kill all remaining processes
-                processes_to_kill = []
-                for p in running_processes:
-                    if p is not None and p.name().startswith("gazou"):
-                        processes_to_kill.append(p)
-                        p.terminate()
-                kill_alive_processes(processes_to_kill, timeout)
+            # Check if a stoplock file is already present and stop if necessary or clear it if there's no running process
+            if os.path.exists(self.stoplock):
+                is_already_stopping(pids, self.stoplock, running_processes)
+
+            if running_processes:
+                if all(running_processes):
+                    message = "Gazouilloire is already running. Type 'gazou restart' to restart the collection."
+                    log.error(message)
+                    sys.exit(1)
+                else:
+                    # If the first process is the main process, go for a standard stop.
+                    p = running_processes[0]
+                    if p is not None and p.name().startswith("gazou") and running_processes[0].children(recursive=True):
+                        self.stop(timeout)
+
+                    # Else, kill all remaining processes
+                    else:
+                        processes_to_kill = []
+                        for p in running_processes:
+                            if p is not None and p.name().startswith("gazou"):
+                                processes_to_kill.append(p)
+                                p.terminate()
+                        kill_alive_processes(processes_to_kill, timeout)
 
     def run(self, conf):
         """

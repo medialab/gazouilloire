@@ -103,14 +103,22 @@ def get_pids(pidfile):
         with open(pidfile, 'r') as pf:
             pids = pf.readlines()
         return pids
-    except IOError:
+    except (IOError, IndexError):
+        # If reading an existing pidfile crashes, it is corrupted and should be dropped
+        if os.path.exists(pidfile):
+            os.remove(pidfile)
+        # If there is no pidfile but a stoplock exists it is obviously obsolete
+        if os.path.exists(stoplock_file):
+            os.remove(stoplock_file)
         return []
 
 
-def is_already_stopped(pids, stoplockfile):
-    running_processes = find_running_processes(pids)
-    if not any(running_processes):
-        os.remove(stoplockfile)
+# Check if stoplock is present, if so remove it when no running_processes or stop here otherwise
+def is_already_stopping(pids, stoplock_file, running_processes=None):
+    if running_processes is None:
+        running_processes = find_running_processes(pids)
+    if not running_processes or not any(running_processes):
+        os.remove(stoplock_file)
         log.warning(
             "Gazouilloire was currently stopping but all processes were already stopped. .stoplock file was removed.")
         return True
@@ -127,7 +135,7 @@ def stop(path, timeout=STOP_TIMEOUT):
     pids = get_pids(pidfile)
 
     if os.path.exists(stoplock_file):
-        return is_already_stopped(pids, stoplock_file)
+        return is_already_stopping(pids, stoplock_file)
 
     # Indicate that the process is stopping by creating a .stoplock file
     open(stoplock_file, 'w').close()
@@ -137,7 +145,12 @@ def stop(path, timeout=STOP_TIMEOUT):
         pid = int(pids[0].strip()) if pids else None
 
         if not pid:
-            message = "pidfile %s does not exist. Daemon not running?\n"
+           # If an existing pidfile lists no process, it is corrupted and should be dropped
+            if os.path.exists(pidfile):
+                message = "pidfile %s is corrupted, removing it.\n"
+                os.remove(pidfile)
+            else:
+                message = "pidfile %s does not exist. Daemon not running?\n"
             log.warning(message % pidfile)
             os.remove(stoplock_file)
             return False
