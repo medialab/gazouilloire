@@ -1,12 +1,7 @@
 name: Deploy
 
 on:
-  push:
-    branches:
-      - main
-  release:
-    types:
-      - published
+  tags: '*'
 
 jobs:
   build:
@@ -25,6 +20,7 @@ jobs:
           key: deploy-${{ hashFiles('**/setup.py') }}
           restore-keys: |
             deploy-
+
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -34,21 +30,16 @@ jobs:
         run: |
           python -m pip install -U pip
           python -m pip install -U setuptools twine wheel
+
       - name: Build package
         run: |
           python setup.py --version
           python setup.py sdist --format=gztar bdist_wheel
           twine check dist/*
+
       - name: Publish package to PyPI
-        if: github.event.action == 'published' #publish on pypi only on releases
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
           password: ${{ secrets.pypi_password }}
 
-      - name: Publish package to TestPyPI
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.test_pypi_password }}
-          repository_url: https://test.pypi.org/legacy/
