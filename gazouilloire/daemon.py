@@ -6,7 +6,8 @@ import atexit
 import psutil
 from signal import signal, SIGTERM
 
-from gazouilloire.run import main, STOP_TIMEOUT, kill_alive_processes, stop as main_stop
+from gazouilloire.run import main, STOP_TIMEOUT, kill_alive_processes, find_running_processes, get_pids, \
+    stop as main_stop
 from gazouilloire.config_format import log, create_file_handler
 
 
@@ -80,31 +81,10 @@ class Daemon:
         already_stopping = os.path.isfile(self.stoplock)
 
         # Check for a pidfile to see if the daemon already runs
-        try:
-            pf = open(self.pidfile, 'r')
-            pids = pf.readlines()
-            pf.close()
-        except IOError:
-            pids = None
+        pids = get_pids(self.pidfile)
 
         if pids:
-            running_processes = []
-            for pid in pids:
-                try:
-                    p = psutil.Process(int(pid))
-                    if p.status() == "zombie":
-                        running_processes.append(None)
-                    running_processes.append(p)
-                except psutil.NoSuchProcess:
-                    running_processes.append(None)
-
-            if already_stopping:
-                if not any(running_processes):
-                    os.remove(self.stoplock)
-                    log.error("Gazouilloire was currently stopping but all processes were already stopped. .stoplock file was removed.")
-                    return True
-                log.error("Gazouilloire is currently stopping. Please wait before trying to start, restart or stop.")
-                sys.exit(1)
+            running_processes = find_running_processes(pids)
 
             if all(running_processes):
                 message = "Gazouilloire is already running. Type 'gazou restart' to restart the collection."
@@ -114,7 +94,7 @@ class Daemon:
                 # If the first process is the main process, go for a standard stop.
                 p = running_processes[0]
                 if p is not None and p.name().startswith("gazou") and running_processes[0].children(recursive=True):
-                    return main_stop(timeout)
+                    self.stop(timeout)
                 # Else, kill all remaining processes
                 processes_to_kill = []
                 for p in running_processes:
@@ -122,8 +102,6 @@ class Daemon:
                         processes_to_kill.append(p)
                         p.terminate()
                 kill_alive_processes(processes_to_kill, timeout)
-        return True
-
 
     def run(self, conf):
         """
@@ -148,9 +126,7 @@ class Daemon:
         """
         Stop the daemon
         """
-        if os.path.isfile(self.stoplock):
-            return self.clear_zombies(timeout=timeout)
-        return main_stop(self.path, timeout)
+        main_stop(self.path, timeout)
 
     def restart(self, conf, timeout):
         """

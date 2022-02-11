@@ -82,26 +82,59 @@ def kill_alive_processes(processes, timeout):
         p.kill()
 
 
+def find_running_processes(pids):
+    running_processes = []
+    for pid in pids:
+        try:
+            p = psutil.Process(int(pid))
+            if p.status() == "zombie":
+                running_processes.append(None)
+            running_processes.append(p)
+        except psutil.NoSuchProcess:
+            running_processes.append(None)
+    return running_processes
+
+
+def get_pids(pidfile):
+    """
+    read pidfile and return an iterable of process ids
+    """
+    try:
+        with open(pidfile, 'r') as pf:
+            pids = pf.readlines()
+        return pids
+    except IOError:
+        return []
+
+
+def is_already_stopped(pids, stoplockfile):
+    running_processes = find_running_processes(pids)
+    if not any(running_processes):
+        os.remove(stoplockfile)
+        log.warning(
+            "Gazouilloire was currently stopping but all processes were already stopped. .stoplock file was removed.")
+        return True
+    log.error("Gazouilloire is currently stopping. Please wait before trying to start, restart or stop.")
+    sys.exit(1)
+
+
 def stop(path, timeout=STOP_TIMEOUT):
     """
     Stop the collection
     """
+    pidfile = os.path.join(path, '.lock')
     stoplock_file = os.path.join(path, '.stoplock')
+    pids = get_pids(pidfile)
+
     if os.path.exists(stoplock_file):
-        log.error("Gazouilloire is currently stopping.")
-        sys.exit(1)
+        return is_already_stopped(pids, stoplock_file)
 
     # Indicate that the process is stopping by creating a .stoplock file
     open(stoplock_file, 'w').close()
-    pidfile = os.path.join(path, '.lock')
+
     # Get the pid from the pidfile
     try:
-        try:
-            pf = open(pidfile, 'r')
-            pid = int(pf.readlines()[0].strip())
-            pf.close()
-        except IOError:
-            pid = None
+        pid = int(pids[0].strip()) if pids else None
 
         if not pid:
             message = "pidfile %s does not exist. Daemon not running?\n"
