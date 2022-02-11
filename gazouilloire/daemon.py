@@ -76,7 +76,7 @@ class Daemon:
         self.quit()
         os.remove(self.pidfile)
 
-    def search_pid(self, timeout=STOP_TIMEOUT):
+    def clear_zombies(self, timeout=STOP_TIMEOUT):
         already_stopping = os.path.isfile(self.stoplock)
 
         # Check for a pidfile to see if the daemon already runs
@@ -98,11 +98,11 @@ class Daemon:
                 except psutil.NoSuchProcess:
                     running_processes.append(None)
 
-            if already_stopping and not any(running_processes):
-                os.remove(self.stoplock)
-                already_stopping = False
-
             if already_stopping:
+                if not any(running_processes):
+                    os.remove(self.stoplock)
+                    log.error("Gazouilloire was currently stopping but all processes were already stopped. .stoplock file was removed.")
+                    return True
                 log.error("Gazouilloire is currently stopping. Please wait before trying to start, restart or stop.")
                 sys.exit(1)
 
@@ -122,14 +122,14 @@ class Daemon:
                         processes_to_kill.append(p)
                         p.terminate()
                 kill_alive_processes(processes_to_kill, timeout)
-                return True
+        return True
 
 
     def run(self, conf):
         """
         Run the app in the current process (no daemon)
         """
-        self.search_pid()
+        self.clear_zombies()
         self.write_lock_file()
         main(conf, self.path)
 
@@ -137,7 +137,7 @@ class Daemon:
         """
         Start the daemon
         """
-        self.search_pid()
+        self.clear_zombies()
 
         # Start the daemon
         create_file_handler(self.path)
@@ -149,7 +149,7 @@ class Daemon:
         Stop the daemon
         """
         if os.path.isfile(self.stoplock):
-            return self.search_pid(timeout=timeout)
+            return self.clear_zombies(timeout=timeout)
         return main_stop(self.path, timeout)
 
     def restart(self, conf, timeout):
