@@ -114,15 +114,15 @@ class Daemon:
                 # If the first process is the main process, go for a standard stop.
                 p = running_processes[0]
                 if p is not None and p.name().startswith("gazou") and running_processes[0].children(recursive=True):
-                    self.stop(timeout)
+                    return main_stop(timeout)
                 # Else, kill all remaining processes
-                else:
-                    processes_to_kill = []
-                    for p in running_processes:
-                        if p is not None and p.name().startswith("gazou"):
-                            processes_to_kill.append(p)
-                            p.terminate()
-                    kill_alive_processes(processes_to_kill, timeout)
+                processes_to_kill = []
+                for p in running_processes:
+                    if p is not None and p.name().startswith("gazou"):
+                        processes_to_kill.append(p)
+                        p.terminate()
+                kill_alive_processes(processes_to_kill, timeout)
+                return True
 
 
     def run(self, conf):
@@ -149,9 +149,8 @@ class Daemon:
         Stop the daemon
         """
         if os.path.isfile(self.stoplock):
-            self.search_pid(timeout=timeout)
-        else:
-            main_stop(self.path, timeout)
+            return self.search_pid(timeout=timeout)
+        return main_stop(self.path, timeout)
 
     def restart(self, conf, timeout):
         """
