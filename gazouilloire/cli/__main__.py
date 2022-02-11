@@ -2,7 +2,7 @@
 import click
 import os
 from gazouilloire.__version__ import __version__
-from gazouilloire.run import STOP_TIMEOUT, stop as main_stop
+from gazouilloire.run import STOP_TIMEOUT, find_running_processes, get_pids, stop as main_stop
 from gazouilloire.config_format import create_conf_example, load_conf, log
 from gazouilloire.daemon import Daemon
 from gazouilloire.resolving_script import resolve_script
@@ -113,8 +113,27 @@ def get_bytes_index_info(es, index_name):
                    "'gazou status -i 2018-08,2021-09' or 'gazou status -i inactive'")
 @click.option('--list-indices', '-l', is_flag=True, help="print the detailed list of indices")
 def status(path, index, list_indices):
+    pidfile = os.path.join(path, '.lock')
+    stoplock_file = os.path.join(path, '.stoplock')
+    pids = get_pids(pidfile, stoplock_file)
+    running_processes = find_running_processes(pids)
+    if os.path.exists(stoplock_file):
+        if not running_processes or not any(running_processes):
+            os.remove(stoplock_file)
+            running = "stopped"
+        else:
+            running = "stopping"
+    else:
+        if not running_processes:
+            running = "stopped"
+        elif not any(running_processes):
+            running = "crashed"
+        elif all(running_processes):
+            running = "running"
+        else:
+            running = "unstable, restart suggested"
+
     conf = load_conf(path)
-    running = "running" if os.path.exists(os.path.join(path, ".lock")) else "not running"
     es = ElasticManager(**conf["database"])
     try:
         links = es.client.cat.indices(index=es.links, format="json")[0]
@@ -256,8 +275,8 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
                                                                                      "containing those tweets")
 @click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
 @click.option("--resume", "-r", is_flag=True, help="Restart the export from the last id specified in --output file")
-@click.option("--lucene", is_flag=True, help="""Use lucene query syntax. 
-                Usage:\n 
+@click.option("--lucene", is_flag=True, help="""Use lucene query syntax.
+                Usage:\n
                     gazou export --lucene "user_location:('Sao Paulo' OR Tokyo)\n"
                     gazou export --lucene "NOT(mentioned_names:*)"
                 """
@@ -310,7 +329,7 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
               help="In case of multi-index, specify the index to count from. Use `--index inactive` "
                    "to count tweets from the inactive indices (i. e. not used any more for indexing). "
                    "By default, count from all opened indices.")
-@click.option("--lucene", is_flag=True, help="""Use lucene query syntax.\n 
+@click.option("--lucene", is_flag=True, help="""Use lucene query syntax.\n
                 Usage: gazou count --lucene "user_location:('Sao Paulo' OR Tokyo)"
                 \ngazou count --lucene "NOT(mentioned_names:*)"
                 """

@@ -95,7 +95,7 @@ def find_running_processes(pids):
     return running_processes
 
 
-def get_pids(pidfile):
+def get_pids(pidfile, stoplock_file):
     """
     read pidfile and return an iterable of process ids
     """
@@ -132,7 +132,7 @@ def stop(path, timeout=STOP_TIMEOUT):
     """
     pidfile = os.path.join(path, '.lock')
     stoplock_file = os.path.join(path, '.stoplock')
-    pids = get_pids(pidfile)
+    pids = get_pids(pidfile, stoplock_file)
 
     if os.path.exists(stoplock_file):
         return is_already_stopping(pids, stoplock_file)

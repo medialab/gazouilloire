@@ -80,7 +80,7 @@ class Daemon:
 
     def clear_zombies(self, timeout=STOP_TIMEOUT):
         # Check for a pidfile to see if the daemon already runs
-        pids = get_pids(self.pidfile)
+        pids = get_pids(self.pidfile, self.stoplock)
 
         if pids:
             # Check existing processes from the list within pids
