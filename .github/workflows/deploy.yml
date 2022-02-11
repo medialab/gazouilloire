@@ -1,7 +1,8 @@
 name: Deploy
 
 on:
-  tags: '*'
+  push:
+    tags: '*'
 
 jobs:
   build:
