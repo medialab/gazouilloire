@@ -22,7 +22,8 @@ Python >= 3.7 compatible.
 * [Advanced parameters](#advanced-parameters)
 * [Daemon mode](#daemon-mode)
 * [Reset](#reset)
-* [Troubleshouting](#troubleshooting)
+* [Development](#development)
+* [Troubleshooting](#troubleshooting)
 * [Publications](#publications)
 * [Credits & Licenses](#credits--license)
 
@@ -289,6 +290,30 @@ For production use and long term data collection, Gazouilloire can run as a daem
     gazou reset --only tweets,media
     ```
     Possible values for the --only argument: tweets,links,logs,piles,search_state,media
+
+
+## Development
+
+To install Gazouilloire's latest development version or to help develop it, clone the repository and install your local version using the setup.py file:
+
+```
+git clone https://github.com/medialab/gazouilloire
+cd gazouilloire
+python setup.py install
+```
+
+Gazouilloire's main code relies in `gazouilloire/run.py` in which the whole multiprocess architecture is orchestrated. Below is a diagram of all processes and queues.
+- The `searcher` collects tweets querying Twitter's search API v1.1 for all keywords sequentially as much as the API rates allows
+- The `streamer` collects live tweets using Twitter's streaming API v1.1 and info on deleted tweets from users explicity followed as keywords
+- The `depiler` processes and reformats tweets and deleted tweets before indexing them into ElasticSearch. It also extracts media urls and parent tweets to feed the `downloader` and the `catchupper`
+- The `downloader` requests all media urls and stores them on the filesystem (if the `download_media` option is enabled)
+- The `catchupper` collects recursively parent tweets of all collected tweets that are part of a thread and feeds back the `depiler` (if the `grab_conversations` option is enabled)
+- The `resolver` calls all urls found as links within the collected tweets and tries to resolve them to get unshortened and harmonized urls (if the `resolve_redirected_links` option is enabled)
+
+All three queues are backed up on filesystem in `pile_***.json` files to be reloaded at next restart whenever Gazouilloire is shut down.
+
+![multiprocesses](doc/multiprocessing_diagram.png)
+
 
 
 ## Troubleshooting
