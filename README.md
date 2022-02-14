@@ -7,7 +7,7 @@
 
 A command line tool for long-term tweets collection. Gazouilloire combines two methods to collect tweets from the 
 Twitter API ("search" and "filter") in order to maximize the number of collected tweets, and automatically fills the 
-gaps in the collection in case of connexion errors or reboots.It handles various config options such as:
+gaps in the collection in case of connexion errors or reboots. It handles various config options such as:
  * collecting only during [specific time periods](#--time_limited_keywords)
  * limiting the collection to some [locations](#--geolocation)
  * resolving [redirected urls](#--resolve_redirected_links)
