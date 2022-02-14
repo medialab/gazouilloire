@@ -201,10 +201,21 @@ gazou export --lucene 'NOT retweeted_id:*'
     gazou export --export-tweets-from-file list_of_ids.csv
 
     # You can of course combine all of these options, for instance:
-    gazou export medialab --since "2021-03-24" --until "2021-03-25" -c text --exclude-threads --exclude-retweets -o medialab_tweets_210324_no_threads_no_rts.csv
+    gazou export medialab --since 2021-03-24 --until 2021-03-25 -c text --exclude-threads --exclude-retweets -o medialab_tweets_210324_no_threads_no_rts.csv
 
     ```
-    
+### Count collected tweets
+The Gazouilloire query system is also available for the `count` command. For example, you can count the number
+of tweets that are retweets:
+```bash
+gazou count --lucene retweeted_id:*
+```
+You can also use the `--step` parameter to count the number of tweets per seconds/minutes/hours/days/months/years:
+```bash
+gazou count medialab --step months --since 2018-01-01 --until 2022-01-01
+```
+The result is written in CSV format.
+
 ## Advanced parameters
 
 Many advanced settings can be used to better filter the tweets collected and complete the corpus. They can all be modified within the `config.json` file.
