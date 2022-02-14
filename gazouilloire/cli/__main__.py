@@ -127,7 +127,9 @@ def status(path, index, list_indices):
         if not running_processes:
             running = "stopped"
         elif not any(running_processes):
-            running = "crashed"
+            os.remove(pidfile)
+            running = "crashed\n" \
+                      "All processes were cleared, you can safely restart."
         elif all(running_processes):
             running = "running"
         else:
