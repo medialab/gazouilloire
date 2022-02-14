@@ -70,6 +70,8 @@ a `config.json` file is created. Open it to configure the collection parameters.
     }
     ```
 
+Note that ElasticSearch's databases names must be lowercased and without any space or accented character.
+
 - Write down the list of desired **keywords** and **@users** and/or the list of desired **url_pieces** as json arrays:
 
     ```json
