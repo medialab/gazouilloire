@@ -1,8 +1,8 @@
 [![DOI](https://zenodo.org/badge/16621545.svg)](https://zenodo.org/badge/latestdoi/16621545)
-<img src="https://github.com/medialab/gazouilloire/blob/main/doc/NOIR.svg#gh-light-mode-only" alt="logo" width="200px">
-<img src="https://github.com/medialab/gazouilloire/blob/main/doc/BLANC.svg#gh-dark-mode-only" alt="logo" width="200px">
 
-# Gazouilloire
+
+<img src="https://github.com/medialab/gazouilloire/blob/main/doc/NOIR.svg#gh-light-mode-only" alt="logo" width="250px">
+<img src="https://github.com/medialab/gazouilloire/blob/main/doc/BLANC.svg#gh-dark-mode-only" alt="logo" width="250px">
 
 A command line tool for long-term tweets collection. Gazouilloire combines two methods to collect tweets from the 
 Twitter API ("search" and "filter") in order to maximize the number of collected tweets, and automatically fills the 
