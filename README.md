@@ -120,22 +120,54 @@ endpoint):
 | vaccine                   | 176 million              |
 
 ## Export the tweets in CSV format
-- Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in CSV format:
+Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in CSV format:
+```bash
+# Export all fields from all tweets:
+gazou export
+```
 
-    ```bash
-    # Export all fields from all tweets:
-    gazou export
-    ```
+### Write into a file
+By default, the `export` command writes in stdout. You can also use the -o option to write into a file:
+```bash
+gazou export > my_tweets_file.csv
+# is equivalent to
+gazou export -o my_tweets_file.csv
+```
+Although if you interrupt the export and need to resume it to complete in multiple sequences, only the -o option will work with the --resume option.
 
-- By default, the `export` command writes in stdout. You can also use the -o option to write into a file:
-    ```bash
-    gazou export > my_tweets_file.csv
-    # is equivalent to
-    gazou export -o my_tweets_file.csv
-    ```
-  Although if you interrupt the export and need to resume it to complete in multiple sequences, only the -o option will work with the --resume option.
+### Query specific keywords
 
-- Other available options:
+Export all tweets containing "medialab" in the `text` field:
+```bash
+gazou export medialab
+```
+The search engine is not case sensitive and it escapes # or @: `gazou export sciencespo` will export
+tweets containing "@sciencespo" or "#SciencesPo". However, it **is** sensitive to accents: `gazou export medialab`
+will not return tweets containing "médialab".
+
+Use [lucene query syntax](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax)
+with the `--lucene` option in order to write more complex queries:
+
+- Use AND / OR:
+```bash
+gazou export --lucene '(medialab OR médialab) AND ("Sciences Po" OR sciencespo)'
+```
+(note that queries containg AND or OR will be considered in lucene style even if you do not use the --lucene option)
+- Query other fields than the text of the tweets:
+```bash
+gazou export --lucene user_location:paris
+```
+- Query tweets containing only a non-empty field:
+```bash
+gazou export --lucene place_country_code:*
+```
+- Exclude retweets from the export:
+```bash
+gazou export --lucene 'NOT retweeted_id:*'
+```
+
+### Other available options:
+
     ```bash
     # Get documentation for all options of gazou export (-h or --help)
     gazou export -h
@@ -147,12 +179,6 @@ endpoint):
     gazou export --since 2021-03-24 --until 2021-03-25
     # or
     gazou export --since 2021-03-24T12:00:00 --until 2021-03-24T13:00:00
-
-    # Export a csv of all tweets having a specific word in their text:
-    gazou export medialab
-  
-    # Export a csv of all tweets having one of many specific words in their text:
-    gazou export medialab digitalhumanities datajournalism '#python'
 
     # List all available fields for each tweet:
     gazou export --list-fields
