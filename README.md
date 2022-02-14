@@ -1,4 +1,5 @@
 [![DOI](https://zenodo.org/badge/16621545.svg)](https://zenodo.org/badge/latestdoi/16621545)
+![logo light mode](doc/NOIR.svg#gh-light-mode-only")![logo dark mode](doc/BLANC.svg#gh-dark-mode-only")
 # Gazouilloire
 
 A command line tool for long-term tweets collection. Gazouilloire combines two methods to collect tweets from the 
