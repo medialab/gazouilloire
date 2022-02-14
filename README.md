@@ -303,12 +303,12 @@ python setup.py install
 ```
 
 Gazouilloire's main code relies in `gazouilloire/run.py` in which the whole multiprocess architecture is orchestrated. Below is a diagram of all processes and queues.
-- The `searcher` collects tweets querying Twitter's search API v1.1 for all keywords sequentially as much as the API rates allows
-- The `streamer` collects live tweets using Twitter's streaming API v1.1 and info on deleted tweets from users explicity followed as keywords
-- The `depiler` processes and reformats tweets and deleted tweets before indexing them into ElasticSearch. It also extracts media urls and parent tweets to feed the `downloader` and the `catchupper`
+- The `searcher` collects tweets querying [Twitter's search API v1.1](https://developer.twitter.com/en/docs/twitter-api/v1/tweets/search/api-reference/get-search-tweets) for all keywords sequentially as much as the API rates allows
+- The `streamer` collects realtime tweets using [Twitter's streaming API v1.1](https://developer.twitter.com/en/docs/twitter-api/v1/tweets/filter-realtime/api-reference/post-statuses-filter) and info on deleted tweets from users explicity followed as keywords
+- The `depiler` processes and reformats tweets and deleted tweets using [twitwi](https://github.com/medialab/twitwi) before indexing them into ElasticSearch. It also extracts media urls and parent tweets to feed the `downloader` and the `catchupper`
 - The `downloader` requests all media urls and stores them on the filesystem (if the `download_media` option is enabled)
-- The `catchupper` collects recursively parent tweets of all collected tweets that are part of a thread and feeds back the `depiler` (if the `grab_conversations` option is enabled)
-- The `resolver` calls all urls found as links within the collected tweets and tries to resolve them to get unshortened and harmonized urls (if the `resolve_redirected_links` option is enabled)
+- The `catchupper` collects recursively via [Twitter's lookup API v1.1](https://developer.twitter.com/en/docs/twitter-api/v1/tweets/post-and-engage/api-reference/get-statuses-lookup) parent tweets of all collected tweets that are part of a thread and feeds back the `depiler` (if the `grab_conversations` option is enabled)
+- The `resolver` runs multithreaded queries on all urls found as links within the collected tweets and tries to resolve them to get unshortened and harmonized urls (if the `resolve_redirected_links` option is enabled) thanks to [minet](https://github.com/medialab/minet)
 
 All three queues are backed up on filesystem in `pile_***.json` files to be reloaded at next restart whenever Gazouilloire is shut down.
 
