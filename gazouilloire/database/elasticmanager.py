@@ -108,7 +108,7 @@ class ElasticManager:
         self.client = Elasticsearch(
             host + ":" + str(port),
             retry_on_timeout=True,
-            timeout=30
+            timeout=600
         )
         self.tweets = self.db_name + "_tweets"
         if links_index:
