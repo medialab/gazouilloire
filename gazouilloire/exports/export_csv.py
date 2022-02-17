@@ -15,6 +15,7 @@ from casanova import reverse_reader
 from casanova.exceptions import MissingColumnError
 from elasticsearch.exceptions import RequestError
 
+
 def date_to_timestamp(date):
     return str(date.timestamp())
 
@@ -150,6 +151,7 @@ def find_potential_duplicate_ids(outputfile):
             else:
                 return last_time, last_ids
 
+
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume, lucene,
                step=None,
@@ -211,12 +213,13 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         except RequestError:
             log.error("Query wrongly formatted.")
             if lucene:
-                log.error("Please read ElasticSearch's documentation regarding Lucene queries: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html")
+                log.error(
+                    "Please read ElasticSearch's documentation regarding Lucene queries: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html")
             sys.exit(1)
         if step:
             iterator = yield_csv(
-                yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index),
-                last_ids = last_ids
+                yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index, lucene),
+                last_ids=last_ids
             )
         else:
             body["sort"] = ["timestamp_utc"]
@@ -266,14 +269,14 @@ def get_relevant_indices(db, index_param, since, until):
     return [db.tweets]
 
 
-def yield_step_scans(db, step, global_since, until, query, exclude_threads, exclude_retweets, index_param):
+def yield_step_scans(db, step, global_since, until, query, exclude_threads, exclude_retweets, index_param, lucene):
     for index_name in get_relevant_indices(db, index_param, global_since, until):
         if db.multi_index:
             index_expression = datetime.strptime(index_name, db.tweets + "_%Y_%m").strftime("%Y-%m")
         else:
             index_expression = None
         for since, body in time_step_iterator(db, step, global_since, until, query, exclude_threads, exclude_retweets,
-                                index_expression):
+                                              index_expression, lucene):
             body["sort"] = ["timestamp_utc"]
             for t in helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True):
                 yield t
@@ -285,7 +288,7 @@ def yield_scans(db, body, since, until, index_param):
             yield t
 
 
-def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index_param):
+def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index_param, lucene):
     if not until:
         until = datetime.now()
     if not since:
@@ -327,7 +330,8 @@ def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, 
     file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
     writer = csv.writer(file)
     if step:
-        for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index):
+        for since, body in time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index,
+                                              lucene):
             count = multiindex_count(db, body, index, since, until)
             writer.writerow([",".join(query), since, count] if query else [since, count])
     else:
