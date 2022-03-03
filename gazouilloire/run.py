@@ -392,13 +392,17 @@ def resolver(batch_size, db_conf, exit_event, verbose=False, url_debug=False, re
 real_min = lambda x, y: min(x, y) if x else y
 date_to_time = lambda x: time.mktime(datetime.strptime(x[:16], "%Y-%m-%d %H:%M").timetuple())
 re_andor = re.compile(r'(\([^)]+( OR [^)]+)*\) ?)+$')
+re_ands = re.compile(r'\s+(AND|\+)\s+')
+clean_ands = lambda x: re_ands.sub(" ", x).strip()
+re_rich_query = re.compile(r"[*:]| OR ")
 
 def format_keyword(k):
+    k = k.strip()
     if k.startswith('@'):
         k = k.lstrip('@')
         return "from:%s OR to:%s OR @%s" % (k, k, k)
     if " AND " in k or " + " in k:
-        k = "(%s)" % k.replace(" AND ", " ").replace(" + ", " ")
+        k = "(%s)" % clean_ands(k)
     query = quote(k.encode('utf-8'), ' ')
     for operator in ["from", "to", "list", "filter", "lang", "url", "since", "until"]:
         query = query.replace(operator + "%3A", operator + ":")
@@ -441,11 +445,11 @@ def streamer(pile, pile_deleted, oauth, oauth2, conf, locale, language, geocode,
 
         try:
             # keywords tracked on stream
-            query_keywords = [k.strip().lower() for k in keywords + format_url_queries(urlpieces) + extra_keywords if " OR " not in k and not k.startswith('@')]
-            filter_keywords = [k.strip().lower() for k in keywords + urlpieces + extra_keywords if " OR " not in k and not k.startswith('@')]
+            query_keywords = [clean_ands(k).lower() for k in keywords + format_url_queries(urlpieces) + extra_keywords if not re_rich_query.search(k) and not k.startswith('@')]
+            filter_keywords = [clean_ands(k).lower() for k in keywords + urlpieces + extra_keywords if not re_rich_query.search(k) and not k.startswith('@')]
             for k in keywords + extra_keywords:
-                if " OR " in k:
-                    if re_andor.match(k):
+                if re_rich_query.search(k):
+                    if re_andor.match(k) and "*" not in k and ":" not in k:
                         ands = [o.split(' OR ') for o in k.strip('()').split(') (')]
                         combis = ands[0]
                         for ors in ands[1:]:
@@ -453,7 +457,7 @@ def streamer(pile, pile_deleted, oauth, oauth2, conf, locale, language, geocode,
                         query_keywords += combis
                         filter_keywords += combis
                     else:
-                        log.warning('Ignoring keyword %s to streaming API, please use syntax with simple keywords separated by spaces or such as "(KEYW1 OR KEYW2) (KEYW3 OR KEYW4 OR KEYW5) (KEYW6)"' % k)
+                        log.warning('Ignoring keyword %s to streaming API, please use syntax with simple queries (no * wildcards nor filter: url: or else) separated by spaces or such as "(KEYW1 OR KEYW2) (KEYW3 OR KEYW4 OR KEYW5) (KEYW6)"' % k)
 
             # users followed on stream
             users = [k.lstrip('@').strip().lower() for k in keywords + extra_keywords if k.startswith('@')]
