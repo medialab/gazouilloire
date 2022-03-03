@@ -289,6 +289,8 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
                    "indices (i. e. not used any more for indexing). By default, export from all opened indices.")
 def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
            columns, list_fields, output, resume, since, until, lucene, step, index):
+    if output == "-":
+        output = None
     if resume and not output:
         log.error("The --resume option requires to set a file name with --output")
         sys.exit(1)
@@ -337,6 +339,8 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
                 """
               )
 def count(path, query, exclude_threads, exclude_retweets, output, since, until, step, index, lucene):
+    if output == "-":
+        output = None
     conf = load_conf(path)
     count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, output, lucene, step, index)
 
