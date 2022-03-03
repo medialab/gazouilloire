@@ -479,8 +479,15 @@ def streamer(pile, pile_deleted, oauth, oauth2, conf, locale, language, geocode,
                     args['track'] = ",".join(query_keywords)
                 if query_users:
                     args['follow'] = ",".join(query_users)
-            log.debug("Calling stream with args %s" % args)
-            streamiter = streamco.statuses.filter(**args)
+
+            streamiter = []
+            if not (geocode or query_keywords or query_users):
+                log.warning("No keyword is compatible with the stream API, only search API will be used.")
+                while not exit_event.is_set():
+                    breakable_sleep(86400, exit_event)
+            else:
+                log.debug("Calling stream with args %s" % args)
+                streamiter = streamco.statuses.filter(**args)
         except KeyboardInterrupt:
             log.info("closing streamer...")
             exit_event.set()
@@ -553,8 +560,9 @@ def streamer(pile, pile_deleted, oauth, oauth2, conf, locale, language, geocode,
             log.error(traceback.format_exc())
             exit_event.set()
 
-        log.debug("Stream stayed alive for %sh" % str(old_div((time.time()-ts),3600)))
-        breakable_sleep(2, exit_event)
+        if streamiter != []:
+            log.debug("Stream stayed alive for %sh" % str(old_div((time.time()-ts),3600)))
+            breakable_sleep(2, exit_event)
     log.info("FINISHED streamer")
 
 chunkize = lambda a, n: [a[i:i+n] for i in range(0, len(a), n)]
