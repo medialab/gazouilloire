@@ -622,7 +622,7 @@ def searcher(pile, oauth, oauth2, conf, locale, language, geocode, exit_event, n
     for q in urlpieces:
         fmtkeywords.append('url:"%s"' % format_url_query(q))
     if len(fmtkeywords) > 50:
-        queries += [" OR ".join(a) for a in chunkize(fmtkeywords, 3)]
+        queries += ["(" + ") OR (".join(a) + ")" for a in chunkize(fmtkeywords, 3)]
     else:
         queries += fmtkeywords
     timed_queries = {}
