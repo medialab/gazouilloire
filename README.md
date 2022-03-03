@@ -221,7 +221,9 @@ The result is written in CSV format.
 Many advanced settings can be used to better filter the tweets collected and complete the corpus. They can all be modified within the `config.json` file.
 
 ### - keywords
-  Some advanced filters can be used in combination with the keywords, such as `-undesiredkeyword`, `filter:links`, `-filter:media`, `-filter:retweets`, etc. See [Twitter API's documentation](https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators) for more details.
+  Keywords syntax follow Twitter's search engine rules. You can forge your queries by typing them within the [website's search bar](https://twitter.com/search?q=medialab&f=live). You can input a single word, or a combination of ones separated by spaces (which will query for tweets matching all of those words). You can also write complex boolean queries such as `(medialab OR (media lab)) (Sciences Po OR SciencesPo)` but note only the Search API will be used for these ones, not the Streaming API, resulting in less exhaustive results.
+
+  Some advanced filters can be used in combination with the keywords, such as `-undesiredkeyword`, `filter:links`, `-filter:media`, `-filter:retweets`, etc. See [Twitter API's documentation](https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators) for more details. Queries including these will also only run on the Search API and not the Streaming API.
 
   When adding a Twitter user as a keyword, such as "@medialab_ScPo", Gazouilloire will query specifically "from:medialab_Scpo OR to:medialab_ScPo OR @medialab_ScPo" so that all tweets mentionning the user will also be collected.
 
