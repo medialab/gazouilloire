@@ -38,33 +38,36 @@ def init(path):
 
 @main.command(help="Start collection as daemon, following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-def start(path):
+@click.option('--max-id', type=int, default=0, help="Search (not stream) will collect tweets from before that tweet id.")
+def start(path, max_id):
     conf = load_conf(path)
     es = ElasticManager(**conf["database"])
     es.prepare_indices()
     daemon = Daemon(path=path)
     log.info("Tweet collection will start in daemon mode")
-    daemon.start(conf)
+    daemon.start(conf, max_id)
 
 
 @main.command(help="Restart collection as daemon, following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
+@click.option('--max-id', type=int, default=0, help="Search (not stream) will collect tweets from before that tweet id.")
 @click.option('--timeout', '-t', type=int, default=STOP_TIMEOUT, help="Time (in seconds) before killing the process.")
-def restart(path, timeout):
+def restart(path, timeout, max_id):
     conf = load_conf(path)
     es = ElasticManager(**conf["database"])
     es.prepare_indices()
     daemon = Daemon(path=path)
     log.info("Restarting...")
-    daemon.restart(conf, timeout)
+    daemon.restart(conf, timeout, max_id)
 
 
 @main.command(help="Start collection following the parameters defined in config.json.")
 @click.argument('path', type=click.Path(exists=True), default=".")
-def run(path):
+@click.option('--max-id', type=int, default=0, help="Search (not stream) will collect tweets from before that tweet id.")
+def run(path, max_id):
     conf = load_conf(path)
     daemon = Daemon(path=path)
-    daemon.run(conf)
+    daemon.run(conf, max_id)
 
 
 @main.command(help="Stop collection daemon.")

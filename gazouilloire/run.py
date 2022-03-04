@@ -594,7 +594,7 @@ def write_search_state(state, dir_path="."):
 # TODO
 # - improve logs : add INFO on result of all queries on a keyword if new
 
-def searcher(pile, oauth, oauth2, conf, locale, language, geocode, exit_event, no_rollback=False):
+def searcher(pile, oauth, oauth2, conf, locale, language, geocode, exit_event, no_rollback=False, max_tweet_id=0):
     keywords = conf["keywords"]
     urlpieces = conf["url_pieces"]
     timed_keywords = conf["time_limited_keywords"]
@@ -667,7 +667,7 @@ def searcher(pile, oauth, oauth2, conf, locale, language, geocode, exit_event, n
                 planning = None
 
             since = queries_since_id[query]
-            max_id = 0
+            max_id = max_tweet_id
             log.debug("Starting search query on %s since %s" % (query, since))
             while not exit_event.is_set():
                 while not left and not exit_event.is_set():
@@ -759,7 +759,7 @@ def generate_geoloc_strings(x1, y1, x2, y2):
     log.info('Search Disk: %s/%s, %.2fkm' % (x, y, d))
     return streamgeocode, searchgeocode
 
-def main(conf, path="."):
+def main(conf, path=".", max_id=0):
     if len(conf['keywords']) + len(conf['url_pieces']) > 400:
         log.error('Please limit yourself to a maximum of 400 keywords total (including url_pieces): you set up %s keywords and %s url_pieces.' % (len(conf['keywords']), len(conf['url_pieces'])))
         sys.exit(1)
@@ -872,7 +872,7 @@ def main(conf, path="."):
     start_process(stream, path)
     search = Process(
         target=searcher,
-        args=(pile, oauth, oauth2, conf, locale, language, searchgeocode, exit_event, no_rollback),
+        args=(pile, oauth, oauth2, conf, locale, language, searchgeocode, exit_event, no_rollback, max_id),
         daemon=True,
         name="searcher  "
     )

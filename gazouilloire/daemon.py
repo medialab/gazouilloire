@@ -110,15 +110,15 @@ class Daemon:
                                 p.terminate()
                         kill_alive_processes(processes_to_kill, timeout)
 
-    def run(self, conf):
+    def run(self, conf, max_id=0):
         """
         Run the app in the current process (no daemon)
         """
         self.clear_zombies()
         self.write_lock_file()
-        main(conf, self.path)
+        main(conf, self.path, max_id)
 
-    def start(self, conf):
+    def start(self, conf, max_id=0):
         """
         Start the daemon
         """
@@ -127,7 +127,7 @@ class Daemon:
         # Start the daemon
         create_file_handler(self.path)
         self.daemonize()
-        main(conf, self.path)
+        main(conf, self.path, max_id)
 
     def stop(self, timeout):
         """
@@ -135,12 +135,12 @@ class Daemon:
         """
         main_stop(self.path, timeout)
 
-    def restart(self, conf, timeout):
+    def restart(self, conf, timeout, max_id):
         """
         Restart the daemon
         """
         self.stop(timeout)
-        self.start(conf)
+        self.start(conf, max_id)
 
     def quit(self):
         """
