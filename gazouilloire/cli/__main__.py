@@ -253,6 +253,9 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
 @click.option('--columns', '--select', '-c', '-s', help="Names of fields, separated by comma. Run gazou export "
                                                         "--list-fields to see the full list of available fields. "
                                                         "Usage: gazou export -s id,hashtags,local_time")
+@click.option('--format', '--fmt', '-f', default="v1", type=click.Choice(['v1', 'tcat']),
+              help="Export format, either standard (v1) or compatible with DMI TCAT (tcat). If 'tcat', the --columns"
+                   "option is not available.")
 @click.option('--until', type=click.DateTime(), help="Export tweets published strictly before the given date, "
                                                      "in isoformat")
 @click.option('--since', type=click.DateTime(), help="Export tweets published after the given date (included), "
@@ -291,7 +294,7 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
                    "'last', 'first', 'inactive', separated by comma. Use `--index inactive` to export all inactive"
                    "indices (i. e. not used any more for indexing). By default, export from all opened indices.")
 def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
-           columns, list_fields, output, resume, since, until, lucene, step, index):
+           columns, format, list_fields, output, resume, since, until, lucene, step, index):
     if output == "-":
         output = None
     if resume and not output:
@@ -302,14 +305,18 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
         log.error("The file {} could not be found".format(output))
         sys.exit(1)
 
+    if format == "tcat" and columns:
+        log.error("The tcat format is not compatible with the --columns / --select option")
+        sys.exit(1)
+
     if list_fields:
         for field in TWEET_FIELDS:
             print(field)
     else:
         conf = load_conf(path)
         export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-                   verbose, export_threads_from_file, export_tweets_from_file, columns, output, resume, lucene, step,
-                   index)
+                   verbose, export_threads_from_file, export_tweets_from_file, columns, format, output, resume, lucene,
+                   step, index)
 
 
 @main.command(help="Get a report about the number of tweets. Type 'gazou count' to get the number of collected tweets "

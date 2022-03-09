@@ -7,9 +7,9 @@ import json
 from datetime import datetime
 from dateutil import relativedelta
 from gazouilloire.database.elasticmanager import ElasticManager, helpers, DB_MAPPINGS
-from twitwi import transform_tweet_into_csv_dict
+from twitwi import transform_tweet_into_csv_dict, apply_tcat_format
 from twitwi.utils import custom_get_normalized_hostname
-from twitwi.constants import TWEET_FIELDS
+from twitwi.constants import TWEET_FIELDS, TWEET_FIELDS_TCAT
 from gazouilloire.config_format import log
 from casanova import reverse_reader
 from casanova.exceptions import MissingColumnError
@@ -30,7 +30,7 @@ def post_process_tweet_from_elastic(source):
     return source
 
 
-def yield_csv(queryiterator, last_ids=set(), export_list=False):
+def yield_csv(queryiterator, fmt, last_ids=set(), export_list=False):
     for t in queryiterator:
         try:
             source = t["_source"]
@@ -41,8 +41,14 @@ def yield_csv(queryiterator, last_ids=set(), export_list=False):
 
         # ignore tweets only caught on deletion missing most fields
         if export_list or (len(source) >= 10 and t["_id"] not in last_ids):
+            if fmt == "tcat":
+                source = apply_tcat_format(post_process_tweet_from_elastic(source))
+            else:
+                source = post_process_tweet_from_elastic(source)
             transform_tweet_into_csv_dict(
-                post_process_tweet_from_elastic(source), item_id=t["_id"], allow_erroneous_plurals=True
+                source,
+                item_id=t["_id"],
+                allow_erroneous_plurals=True
             )
             yield source
 
@@ -153,7 +159,8 @@ def find_potential_duplicate_ids(outputfile):
 
 
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
-               verbose, export_threads_from_file, export_tweets_from_file, selection, outputfile, resume, lucene,
+               verbose, export_threads_from_file, export_tweets_from_file, selection, fmt, outputfile, resume,
+               lucene,
                step=None,
                index=None
                ):
@@ -166,7 +173,11 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                 log.warning("Field '{}' not in elasticsearch mapping, are you sure that you spelled it correctly?"
                             .format(field))
     else:
-        SELECTION = TWEET_FIELDS
+        if fmt == "v1":
+            SELECTION = TWEET_FIELDS
+        else:
+            SELECTION = list(TWEET_FIELDS_TCAT['identical_fields'].values()) \
+                        + TWEET_FIELDS_TCAT['added_fields'] + TWEET_FIELDS_TCAT['modified_fields']
     if resume:
         with open(outputfile, "r") as f:
             reader = csv.DictReader(f)
@@ -201,7 +212,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
 
     if export_threads_from_file or export_tweets_from_file:
         count = len(body)
-        iterator = yield_csv(db.multi_get(body, index), export_list=True)
+        iterator = yield_csv(db.multi_get(body, index), fmt, export_list=True)
     else:
         last_ids = set()
         if resume:
@@ -219,12 +230,14 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         if step:
             iterator = yield_csv(
                 yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index, lucene),
+                fmt,
                 last_ids=last_ids
             )
         else:
             body["sort"] = ["timestamp_utc"]
             iterator = yield_csv(
                 yield_scans(db, body, since, until, index),
+                fmt,
                 last_ids=last_ids
             )
     if verbose:
