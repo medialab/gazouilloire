@@ -157,13 +157,20 @@ gazou export --lucene '(medialab OR médialab) AND ("Sciences Po" OR sciencespo)
 ```bash
 gazou export --lucene user_location:paris
 ```
-- Query tweets containing only a non-empty field:
+- Query tweets containing non-empty fields:
 ```bash
 gazou export --lucene place_country_code:*
 ```
-- Exclude retweets from the export:
+- Query tweets containing empty fields:
 ```bash
 gazou export --lucene 'NOT retweeted_id:*'
+# (this is equivalent to:)
+gazou export --exclude-retweets
+```
+- Note that single quotes will not match exact phrases:
+```bash
+gazou export --lucene "NewYork OR \"New York\"" #match tweets containing "New York" or "NewYork"
+gazou export --lucene "NewYork OR 'New York'" #match tweets containing "New" or "York" or "NewYork"
 ```
 
 ### Other available options:
@@ -195,7 +202,7 @@ gazou export --lucene 'NOT retweeted_id:*'
     gazou export --exclude-retweets
 
     # Export all tweets matching a specific ElasticSearch term query, for instance by user name:
-    gazou export "{'user_screen_name': 'medialab_ScPo'}"
+    gazou export '{"user_screen_name": "medialab_ScPo"}'
   
     # Take a csv file with an "id" column and export only the tweets whose ids are included in this file:
     gazou export --export-tweets-from-file list_of_ids.csv
