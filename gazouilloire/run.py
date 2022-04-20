@@ -307,8 +307,10 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
 
 def download_media(tweet, media_id, media_url, media_dir="media"):
     subdir = os.path.join(media_dir, media_id.split('_')[0][:-15])
+    created_dir = False
     if not os.path.exists(subdir):
         os.makedirs(subdir)
+        created_dir = True
     filepath = os.path.join(subdir, media_id)
     if os.path.exists(filepath):
         return 0
@@ -321,6 +323,8 @@ def download_media(tweet, media_id, media_url, media_dir="media"):
         return 1
     except Exception as e:
         log.warning("Could not download media %s for tweet %s (%s: %s)" % (media_url, tweet["url"], type(e), e))
+        if created_dir:
+            os.rmdir(subdir)
         return 0
 
 
