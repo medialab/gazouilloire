@@ -61,8 +61,10 @@ def depiler(pile, pile_deleted, pile_catchup, pile_medias, mongoconf, locale, ex
 
 def download_media(tweet, media_id, media_url, medias_dir="medias"):
     subdir = os.path.join(medias_dir, media_id.split('_')[0][:-15])
+    created_dir = False
     if not os.path.exists(subdir):
         os.makedirs(subdir)
+        created_dir = True
     filepath = os.path.join(subdir, media_id)
     if os.path.exists(filepath):
         return 0
@@ -75,6 +77,8 @@ def download_media(tweet, media_id, media_url, medias_dir="medias"):
         return 1
     except Exception as e:
         log("WARNING", "Could not download media %s for tweet %s (%s: %s)" % (media_url, tweet["url"], type(e), e))
+        if created_dir:
+            os.rmdir(subdir)
         return 0
 
 def downloader(pile_medias, medias_dir, exit_event, debug=False):
