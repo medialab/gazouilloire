@@ -1,9 +1,12 @@
 #!/bin/bash
 
 ARCHIVES=$1
-
+if [ -z "$2" ]; then
+  DB=$(grep '"db":' config.json | awk -F '"' '{print $4}')
+else
+  DB="$2"
+fi
 NOW=$(date +%y%m%d)
-DB=$(grep '"db":' config.json | awk -F '"' '{print $4}')
 FILENAME="${NOW}_${DB}"
 
 echo "autoedit config file to add dates & total tweets..."
@@ -13,10 +16,10 @@ ENDTS=$(mongo --quiet $DB --eval "db.tweets.find().sort({timestamp: -1}).limit(1
 ENDDATE=$(date +'%Y-%m-%d %H:%M:%S' -d @$ENDTS)
 TOTALLINKS=$(mongo --quiet $DB --eval "db.links.count()")
 TOTALTWEETS=$(mongo --quiet $DB --eval "db.tweets.count()")
-sed -ri 's/^(.*"language.*",)$/    "start_real": "'"$STARTDATE"'",\n    "end": "'"$ENDDATE"'",\n    "total_tweets": '"$TOTALTWEETS"',\n    "total_links": '"$TOTALLINKS"',\n\1/' config.json
+sed -ri 's/^(.*"language.*,)$/    "start_real": "'"$STARTDATE"'",\n    "end": "'"$ENDDATE"'",\n    "total_tweets": '"$TOTALTWEETS"',\n    "total_links": '"$TOTALLINKS"',\n\1/' config.json
 echo "DATES: $STARTDATE -> $ENDDATE"
 echo "TWEETS: $TOTALTWEETS"
-echo "LINKs: $TOTALLINKS"
+echo "LINKS: $TOTALLINKS"
 echo
 
 echo "backup config, search_state and logs to $ARCHIVES..."
