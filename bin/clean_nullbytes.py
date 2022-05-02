@@ -1,4 +1,4 @@
-import gzip
+import sys, gzip
 
 source = sys.argv[1]
 
