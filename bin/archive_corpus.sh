@@ -26,10 +26,14 @@ gzip logs/*.log
 mv logs $ARCHIVES/
 echo
 
-
 source $(which virtualenvwrapper.sh)
 deactivate > /dev/null 2>&1
 $(grep workon restart.sh)
+
+echo "resolve leftover urls..."
+bin/complete_links_resolving.py
+echo
+
 echo "backup corpus ids to /archives/twitter/backups..."
 bin/backup_corpus_ids.sh /archives/twitter/backups
 echo
