@@ -39,10 +39,10 @@ bin/export_resolved_links.py | gzip > $ARCHIVES/${FILENAME}_resolved-urls.csv.gz
 echo
 
 echo "backup all tweets to $ARCHIVES/${FILENAME}_full.csv.gz..."
-bin/export_csv_as_tcat.py | gzip > $ARCHIVES/${FILENAME}_full.csv
+bin/export_csv_as_tcat.py | gzip > $ARCHIVES/${FILENAME}_full.csv.gz
 echo
 
 echo "Check residual files then delete DB"
 git status
-ls -larth
+ls -larth . $ARCHIVES
 
