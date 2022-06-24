@@ -628,11 +628,15 @@ def searcher(pile, oauth, oauth2, conf, locale, language, geocode, exit_event, n
         queries += fmtkeywords
     timed_queries = {}
     state = {q: 0 for q in queries + [format_keyword(k) for k in timed_keywords.keys()]}
+    queries_since_id = {}
     try:
         queries_since_id = read_search_state(dir_path=conf["path"])
         assert queries_since_id and sorted(state.keys()) == sorted(queries_since_id.keys())
         log.info("Search queries restarting from previous state.")
     except Exception as e:
+        for key in queries_since_id:
+            if key in state and queries_since_id[key]:
+                state[key] = queries_since_id[key]
         queries_since_id = state
 
     timegap = 1 + len(queries)
