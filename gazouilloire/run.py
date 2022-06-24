@@ -714,6 +714,9 @@ def searcher(pile, oauth, oauth2, conf, locale, language, geocode, exit_event, n
                     breakable_sleep(2, exit_event)
                     continue
                 if not len(tweets):
+                    if not exit_event.is_set():
+                        queries_since_id[query] = since
+                        write_search_state(queries_since_id, dir_path=conf["path"])
                     break
                 news = 0
                 for tw in tweets:
