@@ -7,9 +7,9 @@ import json
 from datetime import datetime
 from dateutil import relativedelta
 from gazouilloire.database.elasticmanager import ElasticManager, helpers, DB_MAPPINGS
-from twitwi import transform_tweet_into_csv_dict, apply_tcat_format
+from gazouilloire.exports.tweet_fields import TWEET_FIELDS_TCAT, TWEET_FIELDS
+from twitwi import transform_tweet_into_csv_dict
 from twitwi.utils import custom_get_normalized_hostname
-from twitwi.constants import TWEET_FIELDS, TWEET_FIELDS_TCAT
 from gazouilloire.config_format import log
 from casanova import reverse_reader
 from casanova.exceptions import MissingColumnError
@@ -18,6 +18,13 @@ from elasticsearch.exceptions import RequestError
 
 def date_to_timestamp(date):
     return str(date.timestamp())
+
+
+def apply_tcat_format(item):
+    result = {v: item[k] for k, v in TWEET_FIELDS_TCAT['identical_fields'].items() if k in item}
+    result.update({k: item[k] for k in TWEET_FIELDS_TCAT['added_fields'] + TWEET_FIELDS_TCAT['modified_fields'] if k in item})
+    result['source'] = "<a href=""{}"" rel=""nofollow"">{}</a>".format(item["source_url"], item["source_name"])
+    return result
 
 
 def post_process_tweet_from_elastic(source):

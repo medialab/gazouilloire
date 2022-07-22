@@ -26,12 +26,14 @@ import requests
 requests.packages.urllib3.disable_warnings()
 from multiprocessing import Process, Event
 from gazouilloire.multiprocessing import Queue
+from gazouilloire.exports.tweet_fields import TWEET_FIELDS
 import signal
 import psutil
 from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterError, TwitterHTTPError
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 import shutil
+from ebbe.utils import pick
 from twitwi import normalize_tweet
 from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 from ural.get_domain_name import get_hostname_prefixes
@@ -227,7 +229,7 @@ def preprocess_tweet_for_indexing(normalized_tweet):
     for hostname in set(normalized_tweet["domains"]):
         hostnames.update(set(get_hostname_prefixes(hostname)))
     normalized_tweet["domains"] = list(hostnames)
-    return normalized_tweet
+    return pick(normalized_tweet, TWEET_FIELDS)
 
 
 def prepare_tweets(tweets, locale):
