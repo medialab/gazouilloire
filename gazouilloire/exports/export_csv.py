@@ -7,8 +7,9 @@ import json
 from datetime import datetime
 from dateutil import relativedelta
 from gazouilloire.database.elasticmanager import ElasticManager, helpers, DB_MAPPINGS
-from gazouilloire.exports.tweet_fields import TWEET_FIELDS_TCAT, TWEET_FIELDS
-from twitwi import transform_tweet_into_csv_dict
+from gazouilloire.exports.tweet_fields import TWEET_FIELDS
+from twitwi.constants import TWEET_FIELDS_TCAT
+from twitwi import transform_tweet_into_csv_dict, apply_tcat_format
 from twitwi.utils import custom_get_normalized_hostname
 from gazouilloire.config_format import log
 from casanova import reverse_reader
@@ -18,13 +19,6 @@ from elasticsearch.exceptions import RequestError
 
 def date_to_timestamp(date):
     return str(date.timestamp())
-
-
-def apply_tcat_format(item):
-    result = {v: item[k] for k, v in TWEET_FIELDS_TCAT['identical_fields'].items() if k in item}
-    result.update({k: item[k] for k in TWEET_FIELDS_TCAT['added_fields'] + TWEET_FIELDS_TCAT['modified_fields'] if k in item})
-    result['source'] = "<a href=""{}"" rel=""nofollow"">{}</a>".format(item["source_url"], item["source_name"])
-    return result
 
 
 def post_process_tweet_from_elastic(source):
@@ -183,8 +177,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         if fmt == "v1":
             SELECTION = TWEET_FIELDS
         else:
-            SELECTION = list(TWEET_FIELDS_TCAT['identical_fields'].values()) \
-                        + TWEET_FIELDS_TCAT['added_fields'] + TWEET_FIELDS_TCAT['modified_fields']
+            SELECTION = list(TWEET_FIELDS_TCAT['identical_fields'].values()) + TWEET_FIELDS_TCAT['modified_fields']
     if resume:
         with open(outputfile, "r") as f:
             reader = csv.DictReader(f)
