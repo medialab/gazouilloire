@@ -10,6 +10,7 @@ from builtins import str
 from builtins import bytes
 from builtins import range
 import os, sys, time, json, re
+from random import randint
 from datetime import datetime
 try:
     from httplib import BadStatusLine
@@ -250,6 +251,27 @@ def prepare_tweets(tweets, locale):
             yield tweet
 
 
+def index_bulk(db, bulk, exit_event, pile_dir, retry=0):
+    max_retries = 5
+    try:
+        updated, created, errors = bulk_update(db.client, actions=db.prepare_indexing_tweets(bulk))
+        log.debug("Saved %s tweets in database (including %s new ones)" % (updated, created))
+        if errors:
+            log.error("Warning: %s tweets could not be updated properly in elasticsearch:\n - %s" % (len(errors), "\n -".join(json.dumps(e) for e in errors)))
+    except helpers.errors.BulkIndexError as e:
+        delay = randint(1, 5)
+        log.warning("Could not index bulk of %s tweets, will retry in %s seconds..." % (len(bulk), delay))
+        if retry < max_retries:
+            breakable_sleep(delay, exit_event)
+            index_bulk(db, bulk, exit_event, pile_dir, retry+1)
+        else:
+            backup_file = datetime.strftime(datetime.now(), os.path.join(pile_dir, "crashed_index_bulk_%Y%m%d-%H%M.json"))
+            log.error("Could not index bulk of %s tweets after %s retries, giving up and backing up bulk in %s: %s" % (len(bulk), max_retries, backup_file, str(e)))
+            if not os.path.isdir(os.path.dirname(backup_file)):
+                os.mkdir(os.path.dirname(backup_file))
+            write_pile(pile_deleted, [], os.path.join(pile_dir, "pile_deleted"))
+
+
 def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_event):
     db = ElasticManager(**conf['database'])
     todo = []
@@ -286,10 +308,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
                         pile_catchup.put(t["to_tweetid"])
                 tweets_bulk.append(t)
             if tweets_bulk:
-                updated, created, errors = bulk_update(db.client, actions=db.prepare_indexing_tweets(tweets_bulk))
-                log.debug("Saved %s tweets in database (including %s new ones)" % (updated, created))
-                if errors:
-                    log.error("Warning: %s tweets could not be updated properly in elasticsearch:\n - %s" % (len(errors), "\n -".join(json.dumps(e) for e in errors)))
+                index_bulk(db, tweets_bulk, exit_event, pile_dir)
         except exceptions.ConnectionError as e:
             log.error(e)
             log.error("DEPILER CAN'T CONNECT TO ELASTICSEARCH. ENDING COLLECTION.")
