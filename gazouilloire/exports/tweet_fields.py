@@ -4,12 +4,7 @@ TWEET_FIELDS = [
     'local_time',                     # ISO datetime of creation - local time
     'user_screen_name',               # author's user text ID (@user) (at collection time)
     'text',                           # message's text content
-    # 'filter_level',                   # maximum value of the filter_level parameter which may be used and still stream this Tweet
     'possibly_sensitive',             # whether a link present in the message might contain sensitive content according to Twitter
-    # 'withheld_copyright',             # whether the tweet might be censored by Twitter following copyright requests, ignorable
-    # 'withheld_scope',                 # whether the content withheld is the 'status' or a 'user', ignorable
-    # 'withheld_countries',             # list of ISO country codes in which the message is withheld, separated by |, ignorable
-    # 'truncated',                      # whether the tweet is bigger than 140 characters, obsolete
     'retweet_count',                  # number of retweets of the message (at collection time)
     'like_count',                     # number of likes of the message (at collection time)
     'reply_count',                    # number of answers to the message, dropped by Twitter (since Oct 17, now charged), unreliable and ignorable
@@ -17,7 +12,6 @@ TWEET_FIELDS = [
     'to_username',                    # text ID of the user the message is answering to
     'to_userid',                      # digital ID of the user the message is answering to
     'to_tweetid',                     # digital ID of the tweet the message is answering to
-    # 'source',                         # medium used by the user to post the message, now exported in source_name and source_url fields
     'source_name',                    # name of the medium used to post the message
     'source_url',                     # link to the medium used to post the message
     'user_location',                  # location declared in the user's profile (at collection time)
@@ -29,9 +23,6 @@ TWEET_FIELDS = [
     'user_description',               # description given in the author's profile (at collection time)
     'user_url',                       # link to a website given in the author's profile (at collection time)
     'user_image',                     # link to the image avatar of the author's profile (at collection time)
-    # 'user_utcoffset',                 # time offset due to the user's timezone, dropped by Twitter (since May 18), ignorable
-    # 'user_timezone',                  # timezone declared in the user's profile, dropped by Twitter (since May 18), ignorable
-    # 'user_lang',                      # language declared in the user's profile (at collection time), dropped by Twitter (since May 19), ignorable
     'user_tweets',                    # number of tweets sent by the user (at collection time)
     'user_followers',                 # number of users following the author (at collection time)
     'user_friends',                   # number of users the author is following (at collection time)
