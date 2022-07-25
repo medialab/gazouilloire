@@ -2,7 +2,7 @@ elasticsearch >= 7.10.1, < 8.0
 requests
 urllib3[secure]
 psutil
-minet >= 0.53.8
+minet >= 0.61.0
 future
 click
 progressbar2
