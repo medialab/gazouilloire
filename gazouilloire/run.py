@@ -259,9 +259,9 @@ def index_bulk(db, bulk, exit_event, pile_dir, retry=0):
         if errors:
             log.error("Warning: %s tweets could not be updated properly in elasticsearch:\n - %s" % (len(errors), "\n -".join(json.dumps(e) for e in errors)))
     except helpers.errors.BulkIndexError as e:
-        delay = randint(1, 5)
-        log.warning("Could not index bulk of %s tweets, will retry in %s seconds..." % (len(bulk), delay))
         if retry < max_retries:
+            delay = randint(1, 5)
+            log.warning("Could not index bulk of %s tweets, will retry in %s seconds..." % (len(bulk), delay))
             breakable_sleep(delay, exit_event)
             index_bulk(db, bulk, exit_event, pile_dir, retry+1)
         else:
