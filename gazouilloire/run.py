@@ -217,11 +217,15 @@ def load_pile(path, file_prefix, pile):
         for file_name in os.listdir(path):
             if file_name.startswith(file_prefix):
                 file_path = os.path.join(path, file_name)
-                with open(file_path, "r") as f:
-                    objects = json.load(f)
-                    for o in objects:
-                        pile.put(o)
-                log.debug("Loaded {} tweets from {}".format(len(objects), file_name))
+                try:
+                    with open(file_path, "r") as f:
+                        objects = json.load(f)
+                        for o in objects:
+                            pile.put(o)
+                    log.debug("Loaded {} tweets from {}".format(len(objects), file_name))
+                except json.decoder.JSONDecodeError as e:
+                    log.error("Impossible to open pile file {}, you might want to try and fix it: {}".format(file_name, str(e)))
+                    continue
                 os.remove(file_path)
 
 
