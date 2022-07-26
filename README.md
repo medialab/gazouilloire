@@ -236,7 +236,7 @@ Many advanced settings can be used to better filter the tweets collected and com
 
   Using upper or lower case characters in keywords won't change anything.
 
-  Avoid using accented characters (Twitter will automatically return both tweets with and without accents, for instance searching "heros" will find both tweets with "heros" and "héros").
+  You can leave accents in queries, as Twitter will automatically return both tweets with and without accents through the search API, for instance searching "héros" will find both tweets with "heros" and "héros". The streaming API will only return exact results but it mostly complements the search results.
 
   Regarding hashtags, note that querying a word without the # character will return both tweets with the regular word and tweets with the hashtag. Adding a hashtag with the # characters inside keywords will only collect tweets with the hashtag.
 
