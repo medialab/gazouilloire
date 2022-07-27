@@ -30,7 +30,7 @@ setup(name='gazouilloire',
           "minet >= 0.61.3",
           "future",
           "click",
-          "progressbar2"
+          "tqdm"
       ],
       entry_points={
         'console_scripts': [

@@ -241,9 +241,8 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                 last_ids=last_ids
             )
     if verbose:
-        import progressbar
-        bar = progressbar.ProgressBar(max_value=count)
-        iterator = bar(iterator)
+        from tqdm import tqdm
+        iterator = tqdm(iterator, total=count)
 
     if resume:
         file = open(outputfile, 'a', newline='')
@@ -255,6 +254,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
     for t in iterator:
         writer.writerow(t)
     file.close()
+    iterator.close()
 
 
 def increment_steps(start_date, step):

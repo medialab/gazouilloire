@@ -5,4 +5,4 @@ psutil
 minet >= 0.61.3
 future
 click
-progressbar2
+tqdm
