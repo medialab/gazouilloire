@@ -177,7 +177,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         if fmt == "v1":
             SELECTION = TWEET_FIELDS
         else:
-            SELECTION = list(TWEET_FIELDS_TCAT['identical_fields'].values()) + TWEET_FIELDS_TCAT['modified_fields']
+            SELECTION = TWEET_FIELDS_TCAT
     if resume:
         with open(outputfile, "r") as f:
             reader = csv.DictReader(f)
