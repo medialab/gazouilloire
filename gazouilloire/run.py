@@ -200,8 +200,9 @@ def start_process(process, path):
 
 def write_pile(pile, todo, file_prefix):
     store = []
-    while not pile.safe_empty():
-        store.append(pile.get())
+    if pile is not None:
+        while not pile.safe_empty():
+            store.append(pile.get())
     store.extend(todo)
     if store:
         path = datetime.strftime(datetime.now(), file_prefix +"_%Y%m%d-%H%M.json")
@@ -256,33 +257,42 @@ def prepare_tweets(tweets, locale):
 
 
 def index_bulk(db, bulk, exit_event, pile_dir, retry=0):
-    max_retries = 5
+    max_retries = 15
     try:
         updated, created, errors = bulk_update(db.client, actions=db.prepare_indexing_tweets(bulk))
-        log.debug("Saved %s tweets in database (including %s new ones)" % (updated, created))
+        log.debug("Saved {} tweets in database (including {} new ones)".format(updated, created))
         if errors:
-            log.error("Warning: %s tweets could not be updated properly in elasticsearch:\n - %s" % (len(errors), "\n -".join(json.dumps(e) for e in errors)))
-    except helpers.errors.BulkIndexError as e:
+            log.error("Warning: {} tweets could not be updated properly in elasticsearch:\n - {}".format(len(errors), "\n -".join(json.dumps(e) for e in errors)))
+    except (exceptions.ConnectionError, helpers.errors.BulkIndexError) as e:
         if retry < max_retries:
-            delay = randint(1, 5)
-            log.warning("Could not index bulk of %s tweets, will retry in %s seconds..." % (len(bulk), delay))
+            retry += 1
+            if type(e) == helpers.errors.BulkIndexError:
+                delay = randint(1, 5)   # Random delay to ensure difference between two concurrent running gazouilloire
+            else:
+                delay = 5 * retry       # Incremental delay to wait up to 10min before crashing
+            log.warning("Could not index bulk of {} tweets because of {}, will retry in {} seconds...".format(len(bulk), type(e), delay))
             breakable_sleep(delay, exit_event)
-            index_bulk(db, bulk, exit_event, pile_dir, retry+1)
+            index_bulk(db, bulk, exit_event, pile_dir, retry)
         else:
-            backup_file = datetime.strftime(datetime.now(), os.path.join(pile_dir, "crashed_index_bulk_%Y%m%d-%H%M.json"))
-            log.error("Could not index bulk of %s tweets after %s retries, giving up and backing up bulk in %s: %s" % (len(bulk), max_retries, backup_file, str(e)))
-            if not os.path.isdir(os.path.dirname(backup_file)):
-                os.mkdir(os.path.dirname(backup_file))
-            write_pile(pile_deleted, [], os.path.join(pile_dir, "pile_deleted"))
+            log.error(e)
+            if type(e) == helpers.errors.BulkIndexError:
+                backup_file_prefix = "crashed_index_bulk"
+                log.error("WARNING: Could not index bulk of {} tweets after {} retries, giving up and backing up {} file in {}".format(len(bulk), max_retries, backup_file_prefix, pile_dir))
+            else:
+                backup_file_prefix = "pile_crashed"
+                log.error("DEPILER CAN'T CONNECT TO ELASTICSEARCH. ENDING COLLECTION.")
+                exit_event.set()
+            write_pile(None, bulk, os.path.join(pile_dir, backup_file_prefix))
 
 
 def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_event):
     db = ElasticManager(**conf['database'])
     todo = []
     pile_dir = os.path.join(conf["path"], "piles")
+    load_pile(pile_dir, "pile_crashed", pile)
     load_pile(pile_dir, "pile_main", pile)
     load_pile(pile_dir, "pile_deleted", pile_deleted)
-    while not exit_event.is_set() or not pile.safe_empty() or not pile_deleted.safe_empty():
+    while not exit_event.is_set():
         pilesize = pile.qsize()
         if pilesize:
             log.info("Pile length: " + str(pilesize))
@@ -295,7 +305,7 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
                 todo.append(pile.get())
                 pilesize -= 1
             if todo:
-                log.debug("Preparing to index %s collected tweets" % len(todo))
+                log.debug("Preparing to index {} collected tweets".format(len(todo)))
             tweets_bulk = []
             for t in prepare_tweets(todo, locale):
                 if db.multi_index and db.nb_past_months:
@@ -313,15 +323,12 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
                 tweets_bulk.append(t)
             if tweets_bulk:
                 index_bulk(db, tweets_bulk, exit_event, pile_dir)
-        except exceptions.ConnectionError as e:
-            log.error(e)
-            log.error("DEPILER CAN'T CONNECT TO ELASTICSEARCH. ENDING COLLECTION.")
-            exit_event.set()
-            break
         except Exception as e:
             log.error(str(type(e)) + ": " + str(e))
             log.error("ENDING COLLECTION.")
             exit_event.set()
+            if todo:
+                write_pile(None, todo, os.path.join(pile_dir, "pile_crashed"))
             break
         breakable_sleep(2, exit_event)
     #TODO: move write_pile openation to main process, after all other processes are dead
