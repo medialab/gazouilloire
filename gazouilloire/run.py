@@ -257,14 +257,14 @@ def prepare_tweets(tweets, locale):
 
 
 def index_bulk(db, bulk, exit_event, pile_dir, retry=0):
-    max_retries = 15
+    MAX_RETRIES = 15
     try:
         updated, created, errors = bulk_update(db.client, actions=db.prepare_indexing_tweets(bulk))
         log.debug("Saved {} tweets in database (including {} new ones)".format(updated, created))
         if errors:
             log.error("Warning: {} tweets could not be updated properly in elasticsearch:\n - {}".format(len(errors), "\n -".join(json.dumps(e) for e in errors)))
     except (exceptions.ConnectionError, helpers.errors.BulkIndexError) as e:
-        if retry < max_retries:
+        if retry < MAX_RETRIES:
             retry += 1
             if type(e) == helpers.errors.BulkIndexError:
                 delay = randint(1, 5)   # Random delay to ensure difference between two concurrent running gazouilloire
@@ -277,7 +277,7 @@ def index_bulk(db, bulk, exit_event, pile_dir, retry=0):
             log.error(e)
             if type(e) == helpers.errors.BulkIndexError:
                 backup_file_prefix = "crashed_index_bulk"
-                log.error("WARNING: Could not index bulk of {} tweets after {} retries, giving up and backing up {} file in {}".format(len(bulk), max_retries, backup_file_prefix, pile_dir))
+                log.error("WARNING: Could not index bulk of {} tweets after {} retries, giving up and backing up {} file in {}".format(len(bulk), MAX_RETRIES, backup_file_prefix, pile_dir))
                 write_pile(None, bulk, os.path.join(pile_dir, backup_file_prefix))
             else:
                 log.error("DEPILER CAN'T CONNECT TO ELASTICSEARCH. ENDING COLLECTION.")
