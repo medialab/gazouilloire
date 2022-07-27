@@ -278,18 +278,16 @@ def index_bulk(db, bulk, exit_event, pile_dir, retry=0):
             if type(e) == helpers.errors.BulkIndexError:
                 backup_file_prefix = "crashed_index_bulk"
                 log.error("WARNING: Could not index bulk of {} tweets after {} retries, giving up and backing up {} file in {}".format(len(bulk), max_retries, backup_file_prefix, pile_dir))
+                write_pile(None, bulk, os.path.join(pile_dir, backup_file_prefix))
             else:
-                backup_file_prefix = "pile_crashed"
                 log.error("DEPILER CAN'T CONNECT TO ELASTICSEARCH. ENDING COLLECTION.")
                 exit_event.set()
-            write_pile(None, bulk, os.path.join(pile_dir, backup_file_prefix))
 
 
 def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_event):
     db = ElasticManager(**conf['database'])
     todo = []
     pile_dir = os.path.join(conf["path"], "piles")
-    load_pile(pile_dir, "pile_crashed", pile)
     load_pile(pile_dir, "pile_main", pile)
     load_pile(pile_dir, "pile_deleted", pile_deleted)
     while not exit_event.is_set():
@@ -327,8 +325,6 @@ def depiler(pile, pile_deleted, pile_catchup, pile_media, conf, locale, exit_eve
             log.error(str(type(e)) + ": " + str(e))
             log.error("ENDING COLLECTION.")
             exit_event.set()
-            if todo:
-                write_pile(None, todo, os.path.join(pile_dir, "pile_crashed"))
             break
         breakable_sleep(2, exit_event)
     #TODO: move write_pile openation to main process, after all other processes are dead
