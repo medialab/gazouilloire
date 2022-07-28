@@ -24,24 +24,26 @@ def date_to_timestamp(date):
 def post_process_tweet_from_elastic(source):
     domains = [
         custom_get_normalized_hostname(l, normalize_amp=False, infer_redirection=False) for l in source.get(
-            "proper_links", source["links"]
+            "proper_links", source.get("links", "")
         )
     ]
     source["domains"] = domains
     return source
 
 
-def yield_csv(queryiterator, fmt, last_ids=set(), export_list=False):
+def yield_csv(queryiterator, fmt, last_ids=set(), export_list=False, query_fields=None):
     for t in queryiterator:
         try:
             source = t["_source"]
         except KeyError:
+            log.error(t)
             if not t["found"]:
                 log.warning(t["_id"] + " not found in database")
                 source = {"_id": t["_id"]}
 
         # ignore tweets only caught on deletion missing most fields
-        if export_list or (len(source) >= 10 and t["_id"] not in last_ids):
+        # if export_list or (len(source) >= 10 and t["_id"] not in last_ids):
+        if export_list or t["_id"] not in last_ids:
             if fmt == "tcat":
                 source = apply_tcat_format(post_process_tweet_from_elastic(source))
             else:
@@ -54,7 +56,7 @@ def yield_csv(queryiterator, fmt, last_ids=set(), export_list=False):
             yield source
 
 
-def build_body(query, exclude_threads, exclude_retweets, since=None, until=None, outputfile=None, resume=False,
+def build_body(query, exclude_threads, exclude_retweets, query_fields=None, since=None, until=None, resume=False,
                lucene=False):
     if len(query) == 0 and not exclude_threads and not exclude_retweets and not since and not until and not resume:
         body = {
@@ -62,6 +64,10 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None,
                 "match_all": {}
             }
         }
+
+        if query_fields:
+            body["_source"] = query_fields
+
         return body
 
     body = {
@@ -72,6 +78,10 @@ def build_body(query, exclude_threads, exclude_retweets, since=None, until=None,
             }
         }
     }
+
+    if query_fields:
+        body["_source"] = query_fields
+
     filter = body["query"]["bool"]["filter"]
     if exclude_threads:
         filter.append({"term": {"match_query": True}})
@@ -166,24 +176,32 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                index=None
                ):
     threads = conf.get('grab_conversations', False)
+
+    query_fields = None
     if selection:
-        SELECTION = selection.split(",")
+        headers = selection.split(",")
         mapping = DB_MAPPINGS["tweets_mapping"]["mappings"]["properties"]
-        for field in SELECTION:
+        for field in headers:
             if field not in mapping and field != "id":
-                log.warning("Field '{}' not in elasticsearch mapping, are you sure that you spelled it correctly?"
-                            .format(field))
+                log.error("Field '{}' not in elasticsearch mapping, are you sure that you spelled it correctly?"
+                          .format(field))
+                sys.exit(1)
+        if "domains" in headers:
+            unique_fields = set(headers)
+            query_fields = list(unique_fields.union({"links", "proper_links"}))
+        elif query_fields != ["id"]:
+                query_fields = headers
     else:
         if fmt == "v1":
-            SELECTION = TWEET_FIELDS
+            headers = TWEET_FIELDS
         else:
-            SELECTION = TWEET_FIELDS_TCAT
+            headers = TWEET_FIELDS_TCAT
     if resume:
         with open(outputfile, "r") as f:
             reader = csv.DictReader(f)
             fieldnames = reader.fieldnames
-            if sorted(fieldnames) == sorted(SELECTION):
-                SELECTION = fieldnames
+            if sorted(fieldnames) == sorted(headers):
+                headers = fieldnames
             else:
                 log.error("The column names in the {} file do not match the export format".format(outputfile))
                 sys.exit(1)
@@ -218,18 +236,19 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         if resume:
             last_timestamp, last_ids = find_potential_duplicate_ids(outputfile)
             since = datetime.fromisoformat(last_timestamp)
-        body = build_body(query, exclude_threads, exclude_retweets, since, until, lucene=lucene)
+        body = build_body(query, exclude_threads, exclude_retweets, query_fields, since, until, lucene=lucene)
         try:
             count = multiindex_count(db, body, index, since, until)
-        except RequestError:
-            log.error("Query wrongly formatted.")
+        except RequestError as e:
+            log.error("Query wrongly formatted. {}".format(str(e)))
             if lucene:
                 log.error(
                     "Please read ElasticSearch's documentation regarding Lucene queries: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html")
             sys.exit(1)
         if step:
             iterator = yield_csv(
-                yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, index, lucene),
+                yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, query_fields, index,
+                                 lucene),
                 fmt,
                 last_ids=last_ids
             )
@@ -248,7 +267,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         file = open(outputfile, 'a', newline='')
     else:
         file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
-    writer = csv.DictWriter(file, fieldnames=SELECTION, restval='', quoting=csv.QUOTE_MINIMAL, extrasaction='ignore')
+    writer = csv.DictWriter(file, fieldnames=headers, restval='', quoting=csv.QUOTE_MINIMAL, extrasaction='ignore')
     if not resume:
         writer.writeheader()
     for t in iterator:
@@ -282,14 +301,15 @@ def get_relevant_indices(db, index_param, since, until):
     return [db.tweets]
 
 
-def yield_step_scans(db, step, global_since, until, query, exclude_threads, exclude_retweets, index_param, lucene):
+def yield_step_scans(db, step, global_since, until, query, exclude_threads, exclude_retweets, query_fields, index_param,
+                     lucene):
     for index_name in get_relevant_indices(db, index_param, global_since, until):
         if db.multi_index:
             index_expression = datetime.strptime(index_name, db.tweets + "_%Y_%m").strftime("%Y-%m")
         else:
             index_expression = None
         for since, body in time_step_iterator(db, step, global_since, until, query, exclude_threads, exclude_retweets,
-                                              index_expression, lucene):
+                                              index_expression, lucene, query_fields):
             body["sort"] = ["timestamp_utc"]
             for t in helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True):
                 yield t
@@ -301,11 +321,12 @@ def yield_scans(db, body, since, until, index_param):
             yield t
 
 
-def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index_param, lucene):
+def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_retweets, index_param,
+                       lucene, query_fields=None):
     if not until:
         until = datetime.now()
     if not since:
-        body = build_body(query, exclude_threads, exclude_retweets, lucene=lucene)
+        body = build_body(query, exclude_threads, exclude_retweets, ["timestamp_utc"], lucene=lucene)
         body["sort"] = ["timestamp_utc"]
         body["size"] = 1
         if index_param:
@@ -324,7 +345,7 @@ def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_r
                 since = datetime.fromtimestamp(first_tweet["timestamp_utc"])
     one_more_step = increment_steps(since, step)
     while since < until:
-        body = build_body(query, exclude_threads, exclude_retweets, since, one_more_step, lucene=lucene)
+        body = build_body(query, exclude_threads, exclude_retweets, query_fields, since, one_more_step, lucene=lucene)
         yield since, body
         since = increment_steps(since, step)
         one_more_step = increment_steps(since, step)
@@ -332,8 +353,9 @@ def time_step_iterator(db, step, since, until, query, exclude_threads, exclude_r
 
 def multiindex_count(db, body, index_param, since, until):
     count = 0
+    count_body = {"query": body["query"]}
     for index_name in get_relevant_indices(db, index_param, since, until):
-        count += db.client.count(index=index_name, body=body)['count']
+        count += db.client.count(index=index_name, body=count_body)['count']
     return count
 
 
