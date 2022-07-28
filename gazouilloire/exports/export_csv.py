@@ -173,24 +173,21 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                verbose, export_threads_from_file, export_tweets_from_file, selection, fmt, outputfile, resume,
                lucene,
                step=None,
-               index=None
+               index=None,
+               sort_key="timestamp_utc"
                ):
     threads = conf.get('grab_conversations', False)
 
+    sort_key = check_elastic_fields(sort_key) if sort_key != "no" else ["_doc"]
+
     query_fields = None
     if selection:
-        headers = selection.split(",")
-        mapping = DB_MAPPINGS["tweets_mapping"]["mappings"]["properties"]
-        for field in headers:
-            if field not in mapping and field != "id":
-                log.error("Field '{}' not in elasticsearch mapping, are you sure that you spelled it correctly?"
-                          .format(field))
-                sys.exit(1)
+        headers = check_elastic_fields(selection)
         if "domains" in headers:
             unique_fields = set(headers)
             query_fields = list(unique_fields.union({"links", "proper_links"}))
         elif query_fields != ["id"]:
-                query_fields = headers
+            query_fields = headers
     else:
         if fmt == "v1":
             headers = TWEET_FIELDS
@@ -248,12 +245,12 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         if step:
             iterator = yield_csv(
                 yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, query_fields, index,
-                                 lucene),
+                                 lucene, sort_key),
                 fmt,
                 last_ids=last_ids
             )
         else:
-            body["sort"] = ["timestamp_utc"]
+            body["sort"] = sort_key
             iterator = yield_csv(
                 yield_scans(db, body, since, until, index),
                 fmt,
@@ -302,7 +299,7 @@ def get_relevant_indices(db, index_param, since, until):
 
 
 def yield_step_scans(db, step, global_since, until, query, exclude_threads, exclude_retweets, query_fields, index_param,
-                     lucene):
+                     lucene, sort_key):
     for index_name in get_relevant_indices(db, index_param, global_since, until):
         if db.multi_index:
             index_expression = datetime.strptime(index_name, db.tweets + "_%Y_%m").strftime("%Y-%m")
@@ -310,7 +307,7 @@ def yield_step_scans(db, step, global_since, until, query, exclude_threads, excl
             index_expression = None
         for since, body in time_step_iterator(db, step, global_since, until, query, exclude_threads, exclude_retweets,
                                               index_expression, lucene, query_fields):
-            body["sort"] = ["timestamp_utc"]
+            body["sort"] = sort_key
             for t in helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True):
                 yield t
 
@@ -375,3 +372,14 @@ def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, 
         writer.writerow([",".join(query), count] if query else [count])
 
     file.close()
+
+
+def check_elastic_fields(fields):
+    field_list = fields.split(",")
+    mapping = DB_MAPPINGS["tweets_mapping"]["mappings"]["properties"]
+    for field in field_list:
+        if field not in mapping and field != "id":
+            log.error("Field '{}' not in elasticsearch mapping, are you sure that you spelled it correctly?"
+                      .format(field))
+            sys.exit(1)
+    return field_list

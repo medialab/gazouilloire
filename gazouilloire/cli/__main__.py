@@ -293,8 +293,12 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
               help="In case of multi-index, monthly indices to export in format YYYY-MM, or relative positions such as "
                    "'last', 'first', 'inactive', separated by comma. Use `--index inactive` to export all inactive"
                    "indices (i. e. not used any more for indexing). By default, export from all opened indices.")
+@click.option('--sort', default="timestamp_utc",
+              help="Names of fields who should serve as sorting key, separated by comma. Choose 'no' to reduce export "
+                   "time. Defaults to 'timestamp_utc'. 'id' is not a valid option. Run 'gazou export --list-fields' "
+                   "to see the full list of available fields.")
 def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
-           columns, format, list_fields, output, resume, since, until, lucene, step, index):
+           columns, format, list_fields, output, resume, since, until, lucene, step, index, sort):
     if output == "-":
         output = None
     if resume and not output:
@@ -316,7 +320,7 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
         conf = load_conf(path)
         export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                    verbose, export_threads_from_file, export_tweets_from_file, columns, format, output, resume, lucene,
-                   step, index)
+                   step, index, sort)
 
 
 @main.command(help="Get a report about the number of tweets. Type 'gazou count' to get the number of collected tweets "
