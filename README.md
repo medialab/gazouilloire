@@ -136,15 +136,18 @@ You can also sort tweets using one or several other sorting keys:
 ```bash
 gazou export --sort collection_time
 
-gazou export --sort user_location,user_id
+gazou export --sort user_id,user_screen_name
 
 ```
 
 Please note that:
 - Sorting by "id" is not possible.
+- Sorting by long textual fields (links, place_name, proper_links, text, url, 
+user_description, user_image, user_location, user_url) is not possible.
 - Sorting by other id fields such as "user_id" or "retweeted_id" will sort these fields in
 alphabetical order (100, 101, 1000, 99) and not numerical.
-- Sorting by several fields may strongly increase export time.
+- Sorting by plural fields (e.g. mentions, hashtags, domains) may produce unexpected results.
+- Sorting by several fields may **strongly increase export time**.
 
 ### Write into a file
 By default, the `export` command writes in stdout. You can also use the -o option to write into a file:
