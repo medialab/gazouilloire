@@ -245,7 +245,7 @@ elasticdump --fsCompress --input http://localhost:9200/gazouilloire_links --outp
 elasticdump --fsCompress --input gazouilloire_links_elasticdump.json.gz --output http://localhost:9200/gazouilloire_backup_links
 
 # If multi_index is set to true in config.json, there are multiple indexes to backup which you can list using:
-gazo_elasticdump.json.gzu status -l
+gazou status -l
 # To back them all up, you can do for instance:
 gazou status -l | grep "^name:" | awk '{print $2}' | while read idx; do
   elasticdump --fsCompress --input http://localhost:9200/$idx --output $idx_elasticdump.json.gz
