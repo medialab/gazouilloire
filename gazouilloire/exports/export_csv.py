@@ -398,9 +398,6 @@ def check_elastic_fields(fields, sort=False):
 
         if sort and mapping[field]["type"] == "text":
             log.error("Sorting by textual fields such as '{}' is not a valid option.".format(field))
-            for f in mapping:
-                if mapping[f]["type"] == "text":
-                    print(f)
             sys.exit(1)
 
     return field_list
