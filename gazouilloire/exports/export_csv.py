@@ -178,7 +178,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                ):
     threads = conf.get('grab_conversations', False)
 
-    sort_key = check_elastic_fields(sort_key) if sort_key != "no" else ["_doc"]
+    sort_key = check_elastic_fields(sort_key, sort=True) if sort_key != "no" else ["_doc"]
     if "id" in sort_key:
         log.error("Sorting by id is not a valid option.")
         sys.exit(1)
@@ -386,12 +386,21 @@ def count_by_step(conf, query, exclude_threads, exclude_retweets, since, until, 
     file.close()
 
 
-def check_elastic_fields(fields):
+def check_elastic_fields(fields, sort=False):
     field_list = fields.split(",")
     mapping = DB_MAPPINGS["tweets_mapping"]["mappings"]["properties"]
     for field in field_list:
+
         if field not in mapping and field != "id":
             log.error("Field '{}' not in elasticsearch mapping, are you sure that you spelled it correctly?"
                       .format(field))
             sys.exit(1)
+
+        if sort and mapping[field]["type"] == "text":
+            log.error("Sorting by textual fields such as '{}' is not a valid option.".format(field))
+            for f in mapping:
+                if mapping[f]["type"] == "text":
+                    print(f)
+            sys.exit(1)
+
     return field_list
