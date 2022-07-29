@@ -19,6 +19,8 @@ CONTEXT_SETTINGS = {
 
 PRESERVE_FROM_RESET = {"tweets", "links", "logs", "piles", "search_state", "media"}
 
+GDPR_DISCLAIMER = "Please note that by collecting tweets, you are building a database of personal and potentially sensitive information which falls under the European Union's GDPR directive. Such data collection is totally permitted for research uses, but you are entitled to declare it with your institution's Data Protection Officer. Read more at https://gdpr.eu/what-is-gdpr/"
+
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(version=__version__, message='%(version)s')
 def main():
@@ -31,9 +33,10 @@ def main():
 def init(path):
     if create_conf_example(path):
         print(
-            "Welcome to Gazouilloire! \nPlease make sure that Elasticsearch 7 is installed and edit {}"
+            "Welcome to Gazouilloire! \nPlease make sure that ElasticSearch 7 is installed and edit {}"
             "\nConfiguration parameters are detailed in https://github.com/medialab/gazouilloire#howto"
-            .format(os.path.join(os.path.realpath(path), "config.json")))
+            "\n\n{}\n"
+            .format(os.path.join(os.path.realpath(path), "config.json"), GDPR_DISCLAIMER))
 
 
 @main.command(help="Start collection as daemon, following the parameters defined in config.json.")
@@ -144,12 +147,12 @@ def status(path, index, list_indices):
         links = es.client.cat.indices(index=es.links, format="json")[0]
     except exceptions.NotFoundError:
         log.error(
-            "{} does not exist in Elasticsearch. Try 'gazou run' or 'gazou start' " \
+            "{} does not exist in ElasticSearch. Try 'gazou run' or 'gazou start' " \
             "to start the collection.".format(conf["database"]["db_name"])
         )
         return
     except exceptions.ConnectionError:
-        log.error("Connection to Elasticsearch failed. Is Elasticsearch started?")
+        log.error("Connection to ElasticSearch failed. Is ElasticSearch started?")
         return
     media_path = os.path.join(path, conf.get("media_directory", "media"))
     media_count = 0
@@ -217,7 +220,7 @@ def status(path, index, list_indices):
           .format(links["docs.count"], links["store.size"].upper(), media_count, media_size))
 
 
-@main.command(help="Resolve urls contained in a given Elasticsearch database. Usage: 'gazou resolve'")
+@main.command(help="Resolve urls contained in a given ElasticSearch database. Usage: 'gazou resolve'")
 @click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
                                                                               "be found. By default, looks in the"
                                                                               "current directory. Usage: gazou resolve "
@@ -424,7 +427,7 @@ def reset(path, yes, preserve, only):
 
 
 # def confirm_delete_index(es, db_name, doc_type, yes):
-#     if yes or click.confirm("Elasticsearch index {}_{} will be erased, do you want to continue?".format(
+#     if yes or click.confirm("ElasticSearch index {}_{} will be erased, do you want to continue?".format(
 #             db_name, doc_type)):
 #         es.delete_index(doc_type)
 
