@@ -140,9 +140,11 @@ gazou export --sort user_location,user_id
 
 ```
 
-However:
-- Sorting by "id" is not possible
-- Sorting by other id fields such as user_id or 
+Please note that:
+- Sorting by "id" is not possible.
+- Sorting by other id fields such as "user_id" or "retweeted_id" will sort these fields in
+alphabetical order (100, 101, 1000, 99) and not numerical.
+- Sorting by several fields may strongly increase export time.
 
 ### Write into a file
 By default, the `export` command writes in stdout. You can also use the -o option to write into a file:
