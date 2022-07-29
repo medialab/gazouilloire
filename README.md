@@ -223,6 +223,41 @@ gazou count medialab --step months --since 2018-01-01 --until 2022-01-01
 ```
 The result is written in CSV format.
 
+### Export/Import data dumps directly with ElasticSearch
+
+In order to run and reimport backups, you can also export or import data by dialoguing directly with ElasticSearch, with some of the many tools of the ecosystem built for this.
+
+We recommend using [elasticdump](https://github.com/elasticsearch-dump/elasticsearch-dump), which requires to install [NodeJs](https://nodejs.dev/):
+
+```
+# Install the package
+npm install -g elasticdump
+
+# Export a gzipped dump of your gazouilloire tweets index
+# (assuming localhost, 9200 and gazouilloire are the values for database's host, port and db_name in config.json)
+elasticdump --fsCompress --input http://localhost:9200/gazouilloire_tweets --output gazouilloire_tweets_elasticdump.json.gz
+
+# Reimport a previously exported dump of tweets into a new db named gazouilloire_backup 
+elasticdump --fsCompress --input gazouilloire_tweets_elasticdump.json.gz --output http://localhost:9200/gazouilloire_backup_tweets
+
+# Same with the links index
+elasticdump --fsCompress --input http://localhost:9200/gazouilloire_links --output gazouilloire_links_elasticdump.json.gz
+elasticdump --fsCompress --input gazouilloire_links_elasticdump.json.gz --output http://localhost:9200/gazouilloire_backup_links
+
+# If multi_index is set to true in config.json, there are multiple indexes to backup which you can list using:
+gazo_elasticdump.json.gzu status -l
+# To back them all up, you can do for instance:
+gazou status -l | grep "^name:" | awk '{print $2}' | while read idx; do
+  elasticdump --fsCompress --input http://localhost:9200/$idx --output $idx_elasticdump.json.gz
+done
+# And to reload them all:
+ls *_elasticdump.json.gz | while read file; do
+  idx_name=$(echo $file | sed 's/_elasticdump.json.gz//'
+  elasticdump --fsCompress --input $file --output http://localhost:9200/$idx_name
+done
+```
+
+
 ## Advanced parameters
 
 Many advanced settings can be used to better filter the tweets collected and complete the corpus. They can all be modified within the `config.json` file.
@@ -434,8 +469,8 @@ All three queues are backed up on filesystem in `pile_***.json` files to be relo
 
 ## Credits & License
 
-[Benjamin Ooghe-Tabanou](https://github.com/boogheta), [Jules Farjas](https://github.com/farjasju),
- [Béatrice Mazoyer](https://github.com/bmaz) & al @ [Sciences Po médialab](https://github.com/medialab)
+[Benjamin Ooghe-Tabanou](https://github.com/boogheta), [Béatrice Mazoyer](https://github.com/bmaz),
+[Jules Farjas](https://github.com/farjasju) & al @ [Sciences Po médialab](https://github.com/medialab)
 
 Read more about Gazouilloire's migration from Python2 & Mongo to Python3 & ElasticSearch in [Jules' report](https://github.com/farjasju/medialabInternshipReport).
 
