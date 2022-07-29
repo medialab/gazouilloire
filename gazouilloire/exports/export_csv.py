@@ -240,7 +240,8 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
             log.error("Query wrongly formatted. {}".format(str(e)))
             if lucene:
                 log.error(
-                    "Please read ElasticSearch's documentation regarding Lucene queries: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html")
+                    "Please read ElasticSearch's documentation regarding Lucene queries: "
+                    "https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html")
             sys.exit(1)
         if step:
             iterator = yield_csv(
@@ -252,7 +253,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         else:
             body["sort"] = sort_key
             iterator = yield_csv(
-                yield_scans(db, body, since, until, index),
+                yield_scans(db, body, since, until, index, sort_key),
                 fmt,
                 last_ids=last_ids
             )
@@ -277,7 +278,7 @@ def increment_steps(start_date, step):
     return start_date + relativedelta.relativedelta(**{step: 1})
 
 
-def get_relevant_indices(db, index_param, since, until):
+def get_relevant_indices(db, index_param, since, until, sort_key=["timestamp_utc"]):
     """
     return all open indices between since and until
     """
@@ -294,14 +295,22 @@ def get_relevant_indices(db, index_param, since, until):
             min_index = db.get_index_name(since)
         if until:
             max_index = db.get_index_name(until)
-        return [index for index in relevant_indices if min_index <= index <= max_index]
+        relevant_indices = [index for index in relevant_indices if min_index <= index <= max_index]
+        if sort_key == ["timestamp_utc"] or sort_key == ["_doc"] or len(relevant_indices) == 1:
+            return relevant_indices
+        if index_param and "," in index_param:
+            log.warning("Sorting cannot be performed on several indices, only the tweets from {} will be exported."
+                        .format(relevant_indices[0]))
+            return [relevant_indices[0]]
+        return [db.tweets + "*"]
+
     return [db.tweets]
 
 
 def yield_step_scans(db, step, global_since, until, query, exclude_threads, exclude_retweets, query_fields, index_param,
                      lucene, sort_key):
-    for index_name in get_relevant_indices(db, index_param, global_since, until):
-        if db.multi_index:
+    for index_name in get_relevant_indices(db, index_param, global_since, until, sort_key):
+        if db.multi_index and (sort_key == ["timestamp_utc"] or sort_key == ["_doc"]):
             index_expression = datetime.strptime(index_name, db.tweets + "_%Y_%m").strftime("%Y-%m")
         else:
             index_expression = None
@@ -312,8 +321,8 @@ def yield_step_scans(db, step, global_since, until, query, exclude_threads, excl
                 yield t
 
 
-def yield_scans(db, body, since, until, index_param):
-    for index_name in get_relevant_indices(db, index_param, since, until):
+def yield_scans(db, body, since, until, index_param, sort_key):
+    for index_name in get_relevant_indices(db, index_param, since, until, sort_key):
         for t in helpers.scan(client=db.client, index=index_name, query=body, preserve_order=True):
             yield t
 

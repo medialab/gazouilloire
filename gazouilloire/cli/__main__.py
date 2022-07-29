@@ -287,9 +287,8 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
 @click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
 @click.option("--resume", "-r", is_flag=True, help="Restart the export from the last id specified in --output file")
 @click.option("--lucene", is_flag=True, help="""Use lucene query syntax.
-                Usage:\n
-                    gazou export --lucene "user_location:('Sao Paulo' OR Tokyo)\n"
-                    gazou export --lucene "NOT(mentioned_names:*)"
+                Usage: 'gazou export --lucene "user_location:('Sao Paulo' OR Tokyo)'\n 'gazou export --lucene 
+                "NOT(mentioned_names:*)"'
                 """
               )
 @click.option('--index', '-i',
@@ -319,6 +318,11 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
     if list_fields:
         for field in TWEET_FIELDS:
             print(field)
+
+    if sort and "id" in sort:
+        log.error("Sorting by id is not a valid option.")
+        sys.exit(1)
+
     else:
         conf = load_conf(path)
         export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
@@ -350,8 +354,7 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
               help="In case of multi-index, specify the index to count from. Use `--index inactive` "
                    "to count tweets from the inactive indices (i. e. not used any more for indexing). "
                    "By default, count from all opened indices.")
-@click.option("--lucene", is_flag=True, help="""Use lucene query syntax.\n
-                Usage: gazou count --lucene "user_location:('Sao Paulo' OR Tokyo)"
+@click.option("--lucene", is_flag=True, help="""Use lucene query syntax. Usage: gazou count --lucene "user_location:('Sao Paulo' OR Tokyo)"
                 \ngazou count --lucene "NOT(mentioned_names:*)"
                 """
               )
