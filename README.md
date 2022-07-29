@@ -122,9 +122,27 @@ endpoint):
 ## Export the tweets in CSV format
 Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in CSV format:
 ```bash
-# Export all fields from all tweets:
+# Export all fields from all tweets, sorted in chronological order:
 gazou export
 ```
+
+### Sort tweets
+By default, tweets are sorted in chronological order, using the "timestamp_utc" field.
+However, you can speed-up the export by specifying than you do not need any sort order:
+```bash
+gazou export --sort no
+```
+You can also sort tweets using one or several other sorting keys:
+```bash
+gazou export --sort collection_time
+
+gazou export --sort user_location,user_id
+
+```
+
+However:
+- Sorting by "id" is not possible
+- Sorting by other id fields such as user_id or 
 
 ### Write into a file
 By default, the `export` command writes in stdout. You can also use the -o option to write into a file:
@@ -133,7 +151,8 @@ gazou export > my_tweets_file.csv
 # is equivalent to
 gazou export -o my_tweets_file.csv
 ```
-Although if you interrupt the export and need to resume it to complete in multiple sequences, only the -o option will work with the --resume option.
+Although if you interrupt the export and need to resume it to complete in multiple sequences, 
+only the -o option will work with the --resume option.
 
 ### Query specific keywords
 

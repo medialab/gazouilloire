@@ -179,6 +179,9 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
     threads = conf.get('grab_conversations', False)
 
     sort_key = check_elastic_fields(sort_key) if sort_key != "no" else ["_doc"]
+    if "id" in sort_key:
+        log.error("Sorting by id is not a valid option.")
+        sys.exit(1)
 
     query_fields = None
     if selection:

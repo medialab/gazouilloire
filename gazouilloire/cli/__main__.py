@@ -319,10 +319,6 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
         for field in TWEET_FIELDS:
             print(field)
 
-    if sort and "id" in sort:
-        log.error("Sorting by id is not a valid option.")
-        sys.exit(1)
-
     else:
         conf = load_conf(path)
         export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
