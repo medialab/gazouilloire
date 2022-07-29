@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 import sys
 import csv
+import gzip
 import json
 from datetime import datetime
 from dateutil import relativedelta
@@ -160,13 +162,12 @@ def find_potential_duplicate_ids(outputfile):
             outputfile
         ))
         sys.exit(1)
-    with open(outputfile, "r") as f:
+    with open_file(outputfile, "r") as f:
         rev_reader = reverse_reader(f)
         for row in rev_reader:
             if row[rev_reader.headers.local_time] == last_time:
                 last_ids.add(row[rev_reader.headers.id])
-            else:
-                return last_time, last_ids
+        return last_time, last_ids
 
 
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
@@ -197,7 +198,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         else:
             headers = TWEET_FIELDS_TCAT
     if resume:
-        with open(outputfile, "r") as f:
+        with open_file(outputfile, "r") as f:
             reader = csv.DictReader(f)
             fieldnames = reader.fieldnames
             if sorted(fieldnames) == sorted(headers):
@@ -265,9 +266,9 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         iterator = tqdm(iterator, total=count)
 
     if resume:
-        file = open(outputfile, 'a', newline='')
+        file = open_file(outputfile, 'a')
     else:
-        file = open(outputfile, 'w', newline='') if outputfile else sys.stdout
+        file = open_file(outputfile, 'w') if outputfile else sys.stdout
     writer = csv.DictWriter(file, fieldnames=headers, restval='', quoting=csv.QUOTE_MINIMAL, extrasaction='ignore')
     if not resume:
         writer.writeheader()
@@ -401,3 +402,12 @@ def check_elastic_fields(fields, sort=False):
             sys.exit(1)
 
     return field_list
+
+
+def open_file(outputfile, mode):
+    filename, file_extension = os.path.splitext(outputfile)
+    if file_extension == ".gz" or file_extension == ".gzip":
+        log.error("gzip format is not handled for now")
+        sys.exit(1)
+        return gzip.open(outputfile, mode+"t", newline='')
+    return open(outputfile, mode, newline='')
