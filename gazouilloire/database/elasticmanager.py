@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import calendar
+import warnings
 from elasticsearch import Elasticsearch, helpers, exceptions
 from datetime import datetime, timedelta
 import dateutil.relativedelta
@@ -9,6 +10,10 @@ from twitwi.constants import FORMATTED_TWEET_DATETIME_FORMAT
 import itertools
 from gazouilloire.config_format import log
 import click
+
+warnings.filterwarnings('ignore', message='Elasticsearch built-in security features are not enabled. '
+                                          'Without authentication, your cluster could be accessible to anyone'
+                        )
 
 INDEX_QUERIES = ["first", "last", "inactive"]
 
