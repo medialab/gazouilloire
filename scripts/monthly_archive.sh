@@ -52,6 +52,9 @@ pyenv activate "$CORPUSENV"
 gazou count --index inactive --step days > "collected_tweets_per_day_${TODAY}.csv"
 gazou export --index inactive --step hours > "monthly_export_${TODAY}.csv"
 
+#Compress the monthly export
+gzip "monthly_export_${TODAY}.csv"
+
 if [ "$?" = 0 ]; then
   # Close or delete inactive indices
   if [[ $CLOSE == "close" ]]; then
