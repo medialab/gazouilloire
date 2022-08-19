@@ -8,6 +8,7 @@ from gazouilloire.daemon import Daemon
 from gazouilloire.resolving_script import resolve_script
 from gazouilloire.exports.export_csv import export_csv, count_by_step, call_database
 from gazouilloire.database.elasticmanager import ElasticManager, INDEX_QUERIES
+from gazouilloire.manage_scripts import list_scripts, spawn_script
 from elasticsearch import exceptions
 from twitwi.constants import TWEET_FIELDS
 import shutil
@@ -221,7 +222,7 @@ def status(path, index, list_indices):
 
 
 @main.command(help="Resolve urls contained in a given ElasticSearch database. Usage: 'gazou resolve'")
-@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
+@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory where the config.json file can "
                                                                               "be found. By default, looks in the"
                                                                               "current directory. Usage: gazou resolve "
                                                                               "-p /path/to/directory/")
@@ -269,7 +270,7 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
 @click.option('--output', '-o', type=click.Path(exists=False), help="File to write the tweets in. By default, "
                                                                     "'export' writes in stdout. Usage: gazou export -o "
                                                                     "my_tweet_file.csv")
-@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
+@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory where the config.json file can "
                                                                               "be found. By default, looks in the"
                                                                               "current directory. Usage: gazou export "
                                                                               "-p /path/to/directory/")
@@ -287,7 +288,7 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
 @click.option("--list-fields", is_flag=True, help="Print the full list of available fields to export then quit.")
 @click.option("--resume", "-r", is_flag=True, help="Restart the export from the last id specified in --output file")
 @click.option("--lucene", is_flag=True, help="""Use lucene query syntax.
-                Usage: 'gazou export --lucene "user_location:('Sao Paulo' OR Tokyo)'\n 'gazou export --lucene 
+                Usage: 'gazou export --lucene "user_location:('Sao Paulo' OR Tokyo)'\n 'gazou export --lucene
                 "NOT(mentioned_names:*)"'
                 """
               )
@@ -337,7 +338,7 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
 @click.option('--output', '-o', type=click.Path(exists=False), help="File to write the report in. By default, "
                                                                     "'count' writes in stdout. Usage: gazou count -o "
                                                                     "my_count_report.csv")
-@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
+@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory where the config.json file can "
                                                                               "be found. By default, looks in the"
                                                                               "current directory. Usage: gazou count "
                                                                               "-p /path/to/directory/")
@@ -371,7 +372,7 @@ def check_valid_reset_option(element_list):
     return element_list
 
 @main.command(help="Delete collection: es_indices and current search state will be deleted")
-@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
+@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory where the config.json file can "
                                                                               "be found. By default, looks in the "
                                                                               "current directory. Usage: gazou reset "
                                                                               "-p /path/to/directory/")
@@ -440,10 +441,9 @@ def reset(path, yes, preserve, only):
 @click.option('--delete/--close', '-d/-c', default=False, help="Delete indices instead of closing them.")
 @click.option('--force/--', '-f/-', default=False, help="Force the closure/deletion even if some indices are newer "
                                                         "than the 'nb_past_months' limit")
-@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory were the config.json file can "
+@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory where the config.json file can "
                                                                               "be found. By default, looks in the "
-                                                                              "current directory. Usage: gazou reset "
-                                                                              "-p /path/to/directory/")
+                                                                              "current directory.")
 def close(path, delete, force, index):
     conf = load_conf(path)
     es = ElasticManager(**conf["database"])
@@ -467,3 +467,29 @@ def close(path, delete, force, index):
             sys.exit(1)
 
     es.close_indices(indices, delete, force)
+
+
+@main.command(help="Spawn useful shell scripts for collection maintenance")
+@click.argument('script_filename', nargs=-1)
+@click.option('--list', '-l', default=False, is_flag=True, help="List all available scripts.")
+@click.option('--all', '-a', default=False, is_flag=True, help="Spawn all available scripts.")
+@click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory where the config.json file can "
+                                                                              "be found and where to store the spawned "
+                                                                              "scripts. By default, looks in the current "
+                                                                              "directory.")
+def scripts(script_filename, list, all, path):
+    args = int(len(script_filename) > 0) + int(list) + int(all)
+    if args != 1:
+        log.error("Please use either:\n- gazou scripts --list\n- gazou scripts --all\n- gazou scripts script_filename.sh")
+        sys.exit(1)
+
+    conf = load_conf(path)
+
+    if list:
+        list_scripts(detailed=True)
+    elif all:
+        for script in list_scripts():
+            spawn_script(script, path)
+    else:
+        for script in script_filename:
+            spawn_script(script, path)
