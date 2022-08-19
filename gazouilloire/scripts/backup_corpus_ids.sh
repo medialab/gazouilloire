@@ -1,4 +1,5 @@
 #!/bin/bash
+#
 # - Description:
 #
 # Export a simple CSV of only the ids of all tweets from a gazouilloire collection

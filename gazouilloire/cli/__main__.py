@@ -8,7 +8,7 @@ from gazouilloire.daemon import Daemon
 from gazouilloire.resolving_script import resolve_script
 from gazouilloire.exports.export_csv import export_csv, count_by_step, call_database
 from gazouilloire.database.elasticmanager import ElasticManager, INDEX_QUERIES
-from gazouilloire.manage_scripts import list_scripts, spawn_script
+from gazouilloire.manage_scripts import list_scripts, spawn_script, get_script_infos
 from elasticsearch import exceptions
 from twitwi.constants import TWEET_FIELDS
 import shutil
@@ -472,15 +472,16 @@ def close(path, delete, force, index):
 @main.command(help="Spawn useful shell scripts for collection maintenance")
 @click.argument('script_filename', nargs=-1)
 @click.option('--list', '-l', default=False, is_flag=True, help="List all available scripts.")
+@click.option('--info', '-i', default=False, is_flag=True, help="Gives detailed documentation of the listed scripts.")
 @click.option('--all', '-a', default=False, is_flag=True, help="Spawn all available scripts.")
 @click.option('--path', '-p', type=click.Path(exists=True), default=".", help="Directory where the config.json file can "
                                                                               "be found and where to store the spawned "
                                                                               "scripts. By default, looks in the current "
                                                                               "directory.")
-def scripts(script_filename, list, all, path):
+def scripts(script_filename, list, info, all, path):
     args = int(len(script_filename) > 0) + int(list) + int(all)
     if args != 1:
-        log.error("Please use either:\n- gazou scripts --list\n- gazou scripts --all\n- gazou scripts script_filename.sh")
+        log.error("Please use either:\n- gazou scripts --list\n- gazou scripts --info script_filename.sh\n- gazou scripts --all\n- gazou scripts script_filename.sh")
         sys.exit(1)
 
     conf = load_conf(path)
@@ -492,4 +493,8 @@ def scripts(script_filename, list, all, path):
             spawn_script(script, path)
     else:
         for script in script_filename:
-            spawn_script(script, path)
+            if info:
+                print(script + " :\n" + "-" * (len(script) + 2) + "\n")
+                print(get_script_infos(script))
+            else:
+                spawn_script(script, path)
