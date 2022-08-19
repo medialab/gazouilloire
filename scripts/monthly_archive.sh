@@ -2,16 +2,12 @@
 
 # - Usage:
 # Place this script in your gazouilloire corpus directory
-# Run it by giving it the corpus name as argument, for instance:
-# ./monthly_export.sh mycorpus
+# Run it by giving it the corpus virtualenv as argument, for instance:
+# ./monthly_export.sh MYCORPUSENV
 #
-# It will automatically try to use pyenv to activate a virtualenv
-# named 'gazou-mycorpus' but you can force another env name like this:
-#   ./monthly_export.sh mycorpus myenv
-#
-# Set the third parameter to "close" or "delete"
+# Set the second parameter to "close" or "delete"
 # if you want to close or delete old indices after exporting their content, like this:
-#   ./monthly_export.sh mycorpus myenv delete
+#   ./monthly_export.sh MYCORPUSENV delete
 #
 # - Prerequisites:
 # This script supposes gazouilloire was installed within a python environment using PyEnv:
@@ -22,7 +18,7 @@
 # So a typical crontab would look something like the following:
 #
 # m  h dom mon dow   command
-# 00 4  1   *   *    bash /data/gazouilloire/monthly_export.sh CORPUSENV delete
+# 00 4  1   *   *    bash /data/gazouilloire/monthly_export.sh MYCORPUSENV delete
 
 TODAY=$(date --iso)
 
@@ -30,14 +26,11 @@ TODAY=$(date --iso)
 CORPUSDIR=$(dirname "$0")
 cd $CORPUSDIR
 
-# Corpus python environment assumed to be named gazou-CORPUSNAME if not input
+# Corpus python environment
 CORPUSENV=$1
 
 # Old indices will stay open if no input.
 CLOSE=$2
-if [ -z "$2" ]; then
-  CLOSE=""
-fi
 
 
 # Setup and activate Python environment using PyEnv
@@ -52,7 +45,7 @@ pyenv activate "$CORPUSENV"
 gazou count --index inactive --step days > "collected_tweets_per_day_${TODAY}.csv"
 gazou export --index inactive --step hours > "monthly_export_${TODAY}.csv"
 
-#Compress the monthly export
+# Compress the monthly export
 gzip "monthly_export_${TODAY}.csv"
 
 if [ "$?" = 0 ]; then
