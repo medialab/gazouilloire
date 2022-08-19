@@ -1,3 +1,4 @@
 include README.md
+include gazouilloire/scripts/*.sh
 recursive-include gazouilloire config.json.example
 recursive-include gazouilloire db_mappings.json
