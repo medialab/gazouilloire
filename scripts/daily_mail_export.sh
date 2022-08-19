@@ -1,25 +1,29 @@
 #!/bin/bash
-
+#
+# - Description:
+#
+# Build and send links by e-mail to daily CSV exports of all last day's tweets from a gazouilloire collection
+#
 # - Usage:
+#
 # Place this script in your gazouilloire corpus directory
-# Run it by giving it the corpus name as argument and
-# the directory where to place the data exports, as well as
-# the adress that will be used to send the e-mails and the 
-# adresses to which it should be sent, and finally the root url
-# of the server where the files will be for instance:
-# ./daily_mail_export.sh mycorpus my@email.fr "my@email.fr mycolleague@email.fr" "https://myserver.fr/path_where_exports_are_served"
+# Run it by giving as arguments the corpus name, the directory where to place the data exports, the e-mail that will be used to send the message and the e-mails to which it should be sent, and finally the root url of the server where the files will be served, for instance:
+#
+#   ./daily_mail_export.sh MYCORPUS EXPORTS_DIRECTORY MY@EMAIL.COM "MY@EMAIL.COM MYCOLLEAGUE@EMAIL.COM" "https://MYSERVER.FR/PATH_WHERE_EXPORTS_ARE_SERVED/"
 #
 # - Prerequisites:
-# This script supposes gazouilloire was installed within a python environment using PyEnv:
-# https://github.com/pyenv/pyenv-installer
+#
+# This script supposes gazouilloire was installed within a python environment using PyEnv: https://github.com/pyenv/pyenv-installer
+# It also requires that a mail server software such as postfix or exim is installed and properly configured.
+# It finally requires that a web server software such as apache2, httpd or nginx is installed and properly configured to serve the desired directory at the desired url.
 #
 # - Typical cronjob:
-# The main use of this script is to automate building daily exports
-# and send it by email every day.
+#
+# The main use of this script is to automate building daily exports and send them by email every day.
 # A typical crontab would look something like the following:
 #
 # m  h dom mon dow   command
-# 00 8  *   *   *    bash /data/gazouilloire/daily_mail_export.sh CORPUSNAME EXPORTS_DIRECTORY SENDER_EMAIL "RECEIVER_EMAIL_1 RECEIVER_EMAIL_2 ..." "SERVER_URL"
+# 00 8  *   *   *    bash /data/gazouilloire/daily_mail_export.sh MYCORPUS EXPORTS_DIRECTORY SENDER_EMAIL "RECEIVER_EMAIL_1 RECEIVER_EMAIL_2 ..." "SERVER_URL"
 
 
 # User arguments to adapt (TODO: transform into CLI args)

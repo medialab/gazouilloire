@@ -1,32 +1,40 @@
 #!/bin/bash
-
+#
+# - Description:
+#
+# Restart safely automatically a gazouilloire collection
+#
 # - Usage:
+#
 # Place this script in your gazouilloire corpus directory
 # Run it by giving it the corpus name as argument, for instance:
-#   ./restart.sh mycorpus
-# It will automatically try to use pyenv to activate a virtualenv
-# named 'gazou-mycorpus' but you can force another env name like this:
-#   ./restart.sh mycorpus myenv
-# If a third argument is given as an integer, ElasticSearch will be tested
-# before restarting gazouilloire. If ES is down, the script will try to 
-# restart it for this number of seconds. For instance:
-#   ./restart.sh mycorpus myenv 60
-# sudo rights with no password need to be given to the user running this script
-# for the specific ES restart command for this option to work properly.
-# For instance by adding a file to /etc/sudoers.d/:
+#
+#   ./restart.sh MYCORPUS
+#
+# It will automatically try to use pyenv to activate a virtualenv named 'gazou-MYCORPUS' but you can force another env name like this:
+#
+#   ./restart.sh MYCORPUS MYENV
+#
+# If a third argument is given as an integer, ElasticSearch will be tested before restarting gazouilloire. If ES is down, the script will try to restart it for this number of seconds. For instance:
+#
+#   ./restart.sh MYCORPUS MYENV 60
+#
+# The user running this script must be granted sudo rights with no password for the specific ES restart command so that this option can work properly.
+# You can do this for instance by adding a file to /etc/sudoers.d/:
+#
 #   sudo visudo -f /etc/sudoers.d/gazouilloire 
-# Then adding a line similar to the following within it:
+# Then add within it a line similar to the following:
+#
 #   username ALL=(ALL) NOPASSWD: /usr/sbin/service elasticsearch restart
 #
 # - Prerequisites:
-# This script supposes gazouilloire was installed within a python environment using PyEnv:
-# https://github.com/pyenv/pyenv-installer
+#
+# This script supposes gazouilloire was installed within a python environment using PyEnv: https://github.com/pyenv/pyenv-installer
 #
 # - Typical cronjobs:
-# The main use of this script is to automate restarts at server reboot
-# and every day in case of unexpected crashes (but ES autorestarts at reboot should not be
-# enabled if multiple gazouilloire are set on the same machine, otherwise it might try to
-# restart it in parallel multiple times which sounds like a bad idea.
+#
+# The main use of this script is to automate restarts at server reboot and every day in case of unexpected crashes.
+# ES autorestarts at reboot should not be enabled if multiple gazouilloire are set on the same machine, otherwise it might try to restart it in parallel multiple times which sounds like a bad idea.
 # So a typical crontab would look something like the following:
 #
 # m  h dom mon dow   command

@@ -1,12 +1,16 @@
 #!/bin/bash
 #
-# Run with
+# - Description:
 #
-# bash add_twitter_bearer_token_to_conf.sh PATH_TO_CONFIG/config.json
+# Complete config.json with Twitter API's bearer token for rare cases it requires it
+#
+# - Usage:
+#
+#   ./add_twitter_bearer_token_to_conf.sh PATH_TO_CONFIG/config.json
 #
 # or from the directory in which your config.json file relies:
 #
-# bash add_twitter_bearer_token_to_conf.sh
+#   ./add_twitter_bearer_token_to_conf.sh
 
 
 CONFIG_FILE="config.json"

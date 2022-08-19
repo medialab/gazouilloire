@@ -1,24 +1,32 @@
 #!/bin/bash
-
+#
+# - Description:
+#
+# [multi_index] Build monthly archive exports of inactive indices to close or delete them
+#
 # - Usage:
+#
 # Place this script in your gazouilloire corpus directory
 # Run it by giving it the corpus virtualenv as argument, for instance:
-# ./monthly_export.sh MYCORPUSENV
 #
-# Set the second parameter to "close" or "delete"
-# if you want to close or delete old indices after exporting their content, like this:
-#   ./monthly_export.sh MYCORPUSENV delete
+#   ./monthly_export.sh MYENV
+#
+# Set the second parameter to "close" or "delete" if you want to close or delete old indices after exporting their content, like this:
+#
+#   ./monthly_export.sh MYENV delete
 #
 # - Prerequisites:
-# This script supposes gazouilloire was installed within a python environment using PyEnv:
-# https://github.com/pyenv/pyenv-installer
+#
+# This script supposes gazouilloire was installed within a python environment using PyEnv: https://github.com/pyenv/pyenv-installer
 #
 # - Typical cronjobs:
-# The main use of this script is to automate export every month
+#
+# The main use of this script is to automate archives every month.
 # So a typical crontab would look something like the following:
 #
 # m  h dom mon dow   command
-# 00 4  1   *   *    bash /data/gazouilloire/monthly_export.sh MYCORPUSENV delete
+# 00 4  1   *   *    bash /data/gazouilloire/monthly_export.sh MYENV delete
+
 
 TODAY=$(date --iso)
 
