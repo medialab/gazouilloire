@@ -56,13 +56,13 @@ Using the --step parameter can speed up the process:
 ## Automatic csv export
 We recommand to program automatic exports of the last inactive index every month using cronjobs. 
 In order to do so, we propose a [monthly_archive.sh](/gazouilloire/scripts/monthly_archive.sh) script, which you can install in your corpus directory doing the following:
-    ```bash
-    gazou scripts monthly_archive.sh
-    ```
+```bash
+gazou scripts monthly_archive.sh
+```
 Usecases and cronjobs examples are proposed as comments at the top of the script. You can also consult them by doing:
-    ```bash
-    gazou scripts --info monthly_archive.sh
-    ```
+```bash
+gazou scripts --info monthly_archive.sh
+```
 
 ## Can I switch a corpus from mono-index to multi-index or reciprocally?
 Yes, but the past data (mono or multi-index) is then ignored by gazouilloire (for now). 

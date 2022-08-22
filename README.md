@@ -121,23 +121,24 @@ endpoint):
 
 ## Export the tweets in CSV format
 Data is stored in your ElasticSearch, which you can direcly query. But you can also export it easily in CSV format:
-    ```bash
-    # Export all fields from all tweets, sorted in chronological order:
-    gazou export
-    ```
+
+```bash
+# Export all fields from all tweets, sorted in chronological order:
+gazou export
+```
 
 ### Sort tweets
 By default, tweets are sorted in chronological order, using the "timestamp_utc" field.
 However, you can speed-up the export by specifying than you do not need any sort order:
-    ```bash
-    gazou export --sort no
-    ```
+```bash
+gazou export --sort no
+```
 You can also sort tweets using one or several other sorting keys:
-    ```bash
-    gazou export --sort collection_time
+```bash
+gazou export --sort collection_time
 
-    gazou export --sort user_id,user_screen_name
-    ```
+gazou export --sort user_id,user_screen_name
+```
 
 Please note that:
 - Sorting by "id" is not possible.
@@ -150,20 +151,20 @@ alphabetical order (100, 101, 1000, 99) and not numerical.
 
 ### Write into a file
 By default, the `export` command writes in stdout. You can also use the -o option to write into a file:
-    ```bash
-    gazou export > my_tweets_file.csv
-    # is equivalent to
-    gazou export -o my_tweets_file.csv
-    ```
+```bash
+gazou export > my_tweets_file.csv
+# is equivalent to
+gazou export -o my_tweets_file.csv
+```
 Although if you interrupt the export and need to resume it to complete in multiple sequences, 
 only the -o option will work with the --resume option.
 
 ### Query specific keywords
 
 Export all tweets containing "medialab" in the `text` field:
-    ```bash
-    gazou export medialab
-    ```
+```bash
+gazou export medialab
+```
 The search engine is not case sensitive and it escapes # or @: `gazou export sciencespo` will export
 tweets containing "@sciencespo" or "#SciencesPo". However, it **is** sensitive to accents: `gazou export medialab`
 will not return tweets containing "médialab".
@@ -198,52 +199,54 @@ with the `--lucene` option in order to write more complex queries:
 
 ### Other available options:
 
-    ```bash
-    # Get documentation for all options of gazou export (-h or --help)
-    gazou export -h
+```bash
 
-    # By default, the export will show a progressbar, which you can disable like this:
-    gazou export --quiet
+# Get documentation for all options of gazou export (-h or --help)
+gazou export -h
 
-    # Export a csv of all tweets between 2 dates or datetimes (--since is inclusive and --until exclusive):
-    gazou export --since 2021-03-24 --until 2021-03-25
-    # or
-    gazou export --since 2021-03-24T12:00:00 --until 2021-03-24T13:00:00
+# By default, the export will show a progressbar, which you can disable like this:
+gazou export --quiet
 
-    # List all available fields for each tweet:
-    gazou export --list-fields
+# Export a csv of all tweets between 2 dates or datetimes (--since is inclusive and --until exclusive):
+gazou export --since 2021-03-24 --until 2021-03-25
+# or
+gazou export --since 2021-03-24T12:00:00 --until 2021-03-24T13:00:00
 
-    # Export only a selection of fields (-c / --columns or -s / --select the xsv way):
-    gazou export -c id,user_screen_name,local_time,links
-    # or for example to export only the text of the tweets:
-    gazou export --select text
+# List all available fields for each tweet:
+gazou export --list-fields
 
-    # Exclude tweets collected via conversations or quotes (i.e. which do not match the keywords defined in config.json)
-    gazou export --exclude-threads
-  
-    # Exclude retweets from the export
-    gazou export --exclude-retweets
+# Export only a selection of fields (-c / --columns or -s / --select the xsv way):
+gazou export -c id,user_screen_name,local_time,links
+# or for example to export only the text of the tweets:
+gazou export --select text
 
-    # Export all tweets matching a specific ElasticSearch term query, for instance by user name:
-    gazou export '{"user_screen_name": "medialab_ScPo"}'
-  
-    # Take a csv file with an "id" column and export only the tweets whose ids are included in this file:
-    gazou export --export-tweets-from-file list_of_ids.csv
+# Exclude tweets collected via conversations or quotes (i.e. which do not match the keywords defined in config.json)
+gazou export --exclude-threads
 
-    # You can of course combine all of these options, for instance:
-    gazou export medialab --since 2021-03-24 --until 2021-03-25 -c text --exclude-threads --exclude-retweets -o medialab_tweets_210324_no_threads_no_rts.csv
+# Exclude retweets from the export
+gazou export --exclude-retweets
 
-    ```
+# Export all tweets matching a specific ElasticSearch term query, for instance by user name:
+gazou export '{"user_screen_name": "medialab_ScPo"}'
+
+# Take a csv file with an "id" column and export only the tweets whose ids are included in this file:
+gazou export --export-tweets-from-file list_of_ids.csv
+
+# You can of course combine all of these options, for instance:
+gazou export medialab --since 2021-03-24 --until 2021-03-25 -c text --exclude-threads --exclude-retweets -o medialab_tweets_210324_no_threads_no_rts.csv
+
+```
+
 ### Count collected tweets
 The Gazouilloire query system is also available for the `count` command. For example, you can count the number
 of tweets that are retweets:
-    ```bash
-    gazou count --lucene retweeted_id:*
-    ```
+```bash
+gazou count --lucene retweeted_id:*
+```
 You can also use the `--step` parameter to count the number of tweets per seconds/minutes/hours/days/months/years:
-    ```bash
-    gazou count medialab --step months --since 2018-01-01 --until 2022-01-01
-    ```
+```bash
+gazou count medialab --step months --since 2018-01-01 --until 2022-01-01
+```
 The result is written in CSV format.
 
 ### Export/Import data dumps directly with ElasticSearch
@@ -251,17 +254,17 @@ The result is written in CSV format.
 In order to run and reimport backups, you can also export or import data by dialoguing directly with ElasticSearch, with some of the many tools of the ecosystem built for this.
 
 We recommend using [elasticdump](https://github.com/elasticsearch-dump/elasticsearch-dump), which requires to install [NodeJs](https://nodejs.dev/):
-    ```bash
-    # Install the package
-    npm install -g elasticdump
-    ```
+```bash
+# Install the package
+npm install -g elasticdump
+```
 
 Then you can use it directly or via our shipped-in script [elasticdump.sh](gazouilloire/scripts/elasticdump.sh) to run simple exports/imports of your gazouilloire collection indices:
-    ```bash
-    gazou scripts elasticdump.sh
-    # and to read its documentation:
-    gazou scripts --info elasticdump.sh
-    ```
+```bash
+gazou scripts elasticdump.sh
+# and to read its documentation:
+gazou scripts --info elasticdump.sh
+```
 
 
 ## Advanced parameters
@@ -368,7 +371,7 @@ For production use and long term data collection, Gazouilloire can run as a daem
     ```bash
     gazou scripts restart.sh
     ```
-Usecases and cronjobs examples are proposed as comments at the top of the script. You can also consult them by doing:
+  Usecases and cronjobs examples are proposed as comments at the top of the script. You can also consult them by doing:
     ```bash
     gazou scripts --info restart.sh
     ```
