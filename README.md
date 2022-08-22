@@ -368,17 +368,30 @@ For production use and long term data collection, Gazouilloire can run as a daem
     ```bash
     gazou scripts restart.sh
     ```
-Usecases and cronjobs examples are proposed as comments at the top of the script. You can also consult it by doing:
+Usecases and cronjobs examples are proposed as comments at the top of the script. You can also consult them by doing:
     ```bash
     gazou scripts --info restart.sh
     ```
-
 
 - An example script [daily_mail_export.sh](gazouilloire/scripts/daily_mail_export.sh) is also proposed to perform daily tweets exports and get them by e-mail. Feel free to reuse and tailor it to your own needs the same way:
     ```bash
     gazou scripts daily_mail_export.sh
     # and to read its documentation:
     gazou scripts --info daily_mail_export.sh
+    ```
+
+- More similar practical scripts are available for diverse usecases:
+    ```bash
+    # You can list them all using --list or -l:
+    gazou scripts --list
+    # Read each script's documentation with --info or -i (for instance for "backup_corpus_ids.sh"):
+    gazou scripts --info backup_corpus_ids.sh
+    # And install it in the current directory with:
+    gazou scripts backup_corpus_ids.sh
+    # Or within a specific different directory using --path or -p:
+    gazou scripts backup_corpus_ids.sh -p PATH_TO_MY_GAZOUILLOIRE_COLLECTION_DIRECTORY
+    # Or even install all scripts at once using --all or -a (--path applicable as well)
+    gazou scripts --all
     ```
 
 
