@@ -129,7 +129,7 @@ gazou export
 
 ### Sort tweets
 By default, tweets are sorted in chronological order, using the "timestamp_utc" field.
-However, you can speed-up the export by specifying than you do not need any sort order:
+However, you can speed-up the export by specifying that you do not need any sort order:
 ```bash
 gazou export --sort no
 ```
