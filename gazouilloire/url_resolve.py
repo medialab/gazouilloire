@@ -89,7 +89,6 @@ def resolve_loop(batch_size, db, todo, skip, verbose, url_debug, retry_days=30):
                 if source != normalized_url:
                     done += 1
         except Exception as e:
-            log.error("CRASHED with %s (%s) while resolving batch, skipping it for now..." % (e, type(e)))
             log.error("CRASHED with %s (%s) while resolving %s" % (e, type(e), urls_to_clear))
             if url_debug:
                 for url in urls_to_clear:
