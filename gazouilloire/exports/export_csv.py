@@ -163,7 +163,7 @@ def find_potential_duplicate_ids(outputfile):
         ))
         sys.exit(1)
     with open_file(outputfile, "r") as f:
-        rev_reader = reverse_reader(f)
+        rev_reader = reverse_reader(f, ignore_null_bytes=True)
         for row in rev_reader:
             if row[rev_reader.headers.local_time] == last_time:
                 last_ids.add(row[rev_reader.headers.id])

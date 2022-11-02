@@ -27,7 +27,7 @@ setup(name='gazouilloire',
           "elasticsearch >= 7.10.1, < 8.0",
           "requests",
           "psutil",
-          "minet >= 0.61.4",
+          "minet >= 0.63.1",
           "future",
           "click",
           "tqdm"
