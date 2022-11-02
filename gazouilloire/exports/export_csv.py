@@ -167,7 +167,8 @@ def find_potential_duplicate_ids(outputfile):
         for row in rev_reader:
             if row[rev_reader.headers.local_time] == last_time:
                 last_ids.add(row[rev_reader.headers.id])
-        return last_time, last_ids
+            else:
+                return last_time, last_ids
 
 
 def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
