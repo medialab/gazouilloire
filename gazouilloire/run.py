@@ -886,13 +886,14 @@ def main(conf, path=".", max_id=0):
         )
         start_process(download, path)
     signal.signal(signal.SIGINT, default_handler)
-    stream = Process(
-        target=streamer,
-        args=(pile, pile_deleted, oauth, oauth2, conf, locale, language, streamgeocode, exit_event),
-        daemon=True,
-        name="streamer  "
-    )
-    start_process(stream, path)
+    if conf["start_stream"]:
+        stream = Process(
+            target=streamer,
+            args=(pile, pile_deleted, oauth, oauth2, conf, locale, language, streamgeocode, exit_event),
+            daemon=True,
+            name="streamer  "
+        )
+        start_process(stream, path)
     search = Process(
         target=searcher,
         args=(pile, oauth, oauth2, conf, locale, language, searchgeocode, exit_event, no_rollback, max_id),

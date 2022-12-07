@@ -67,7 +67,7 @@ def create_conf_example(dir_path):
         return False
 
 
-def check_api_keys(conf):
+def api_keys_support_stream(conf):
     try:
         oauth, oauth2 = get_oauth(conf)
     except Exception as e:
@@ -77,13 +77,15 @@ def check_api_keys(conf):
     args = {'filter_level': 'none', 'stall_warnings': 'true', 'track': ['the']}
     try:
         streamiter = streamco.statuses.filter(**args)
+        return True
     except TwitterHTTPError as e:
         if "Please use V2 filtered and sample volume stream as alternatives" in str(e):
-            log.error("Your Twitter API keys were probably created after April 29, 2022. "
-                      "Please use older API keys.")
+            log.warning("Your Twitter API keys were probably created after April 29, 2022. "
+                      "Gazouilloire will only use the 'search' Twitter API, and not the 'stream'.")
+            return False
         else:
             log.error("Error while accessing the Twitter API, please retry: {}".format(e))
-        sys.exit(1)
+            sys.exit(1)
 
 
 def required_format(conf):
@@ -134,7 +136,7 @@ def required_format(conf):
             )
             sys.exit(1)
 
-    check_api_keys(conf)
+    conf["start_stream"] = api_keys_support_stream(conf)
 
 
     if "download_media" in conf:
