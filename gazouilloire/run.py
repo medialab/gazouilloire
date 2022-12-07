@@ -30,7 +30,7 @@ from gazouilloire.multiprocessing import Queue
 from gazouilloire.exports.tweet_fields import TWEET_FIELDS
 import signal
 import psutil
-from twitter import Twitter, TwitterStream, OAuth, OAuth2, TwitterError, TwitterHTTPError
+from twitter import TwitterError, TwitterHTTPError
 from pytz import timezone, all_timezones
 from math import pi, sin, cos, acos
 import shutil
@@ -42,25 +42,11 @@ from gazouilloire.database.elasticmanager import ElasticManager, prepare_db, bul
 from elasticsearch import helpers, exceptions
 from gazouilloire.url_resolve import resolve_loop, count_and_log
 from gazouilloire.config_format import load_conf, log
+from gazouilloire.twitter_connexion import get_oauth, instantiate_clients
 
 DEPILER_BATCH_SIZE = 5000
 RESOLVER_BATCH_SIZE = 5000
 STOP_TIMEOUT = 15 # Time (in seconds) before killing the process after a keyboard interrupt.
-
-
-def instantiate_clients(oauth, oauth2):
-    common_kwargs = {
-        'domain': 'api.twitter.com',
-        'api_version': '1.1',
-        'format': 'json',
-        'secure': True
-    }
-
-    search = Twitter(auth=oauth, **common_kwargs)
-    search2 = Twitter(auth=oauth2, **common_kwargs)
-    stream = TwitterStream(domain="stream.twitter.com", api_version="1.1", auth=oauth, secure=True, block=False, timeout=10)
-
-    return search, search2, stream
 
 
 def get_timestamp(time, locale):
@@ -798,19 +784,17 @@ def generate_geoloc_strings(x1, y1, x2, y2):
     log.info('Search Disk: %s/%s, %.2fkm' % (x, y, d))
     return streamgeocode, searchgeocode
 
+
 def main(conf, path=".", max_id=0):
     if len(conf['keywords']) + len(conf['url_pieces']) > 400:
         log.error('Please limit yourself to a maximum of 400 keywords total (including url_pieces): you set up %s keywords and %s url_pieces.' % (len(conf['keywords']), len(conf['url_pieces'])))
         sys.exit(1)
     try:
-        oauth = OAuth(conf['twitter']['oauth_token'], conf['twitter']['oauth_secret'], conf['twitter']['key'], conf['twitter']['secret'])
-        if "bearer_token" in conf['twitter']:
-            oauth2 = OAuth2(bearer_token=conf['twitter']['bearer_token'])
-        else:
-            oauth2 = OAuth2(bearer_token=json.loads(Twitter(api_version=None, format="", secure=True, auth=OAuth2(conf['twitter']['key'], conf['twitter']['secret'])).oauth2.token(grant_type="client_credentials"))['access_token'])
+        oauth, oauth2 = get_oauth(conf)
     except Exception as e:
         log.error('Could not initiate connections to Twitter API: %s %s' % (type(e), e))
         sys.exit(1)
+
     try:
         locale = timezone(conf['timezone'])
     except Exception as e:

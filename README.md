@@ -17,6 +17,10 @@ gaps in the collection in case of connexion errors or reboots. It handles variou
 
 Python >= 3.7 compatible.
 
+Your Twitter API keys must have been created before **April 29, 2022**, in order to use Gazouilloire. 
+See [Twitter's documentation](https://developer.twitter.com/en/docs/twitter-api/v1/tweets/filter-realtime/overview)
+about this issue.
+
 ## Summary
 * [Installation](#installation)
 * [Quick start](#quick-start)

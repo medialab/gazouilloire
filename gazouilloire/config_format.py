@@ -5,6 +5,9 @@ from shutil import copyfile
 import logging
 from datetime import datetime
 import gzip
+from twitter.api import TwitterHTTPError
+
+from gazouilloire.twitter_connexion import get_oauth, instantiate_clients
 
 LOG_FORMAT = '%(asctime)s - %(processName)s [%(process)d] - %(levelname)s - %(message)s'
 
@@ -64,6 +67,25 @@ def create_conf_example(dir_path):
         return False
 
 
+def check_api_keys(conf):
+    try:
+        oauth, oauth2 = get_oauth(conf)
+    except Exception as e:
+        log.error('Could not initiate connections to Twitter API: %s %s' % (type(e), e))
+        sys.exit(1)
+    _, _, streamco = instantiate_clients(oauth, oauth2)
+    args = {'filter_level': 'none', 'stall_warnings': 'true', 'track': ['the']}
+    try:
+        streamiter = streamco.statuses.filter(**args)
+    except TwitterHTTPError as e:
+        if "Please use V2 filtered and sample volume stream as alternatives" in str(e):
+            log.error("Your Twitter API keys were probably created after April 29, 2022. "
+                      "Please use older API keys.")
+        else:
+            log.error("Error while accessing the Twitter API, please retry: {}".format(e))
+        sys.exit(1)
+
+
 def required_format(conf):
     subfields = {
         "twitter": ["key", "secret", "oauth_token", "oauth_secret"],
@@ -112,6 +134,7 @@ def required_format(conf):
             )
             sys.exit(1)
 
+    check_api_keys(conf)
 
 
     if "download_media" in conf:
