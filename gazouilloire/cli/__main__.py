@@ -6,7 +6,7 @@ from gazouilloire.run import STOP_TIMEOUT, find_running_processes, get_pids, sto
 from gazouilloire.config_format import create_conf_example, load_conf, log
 from gazouilloire.daemon import Daemon
 from gazouilloire.resolving_script import resolve_script
-from gazouilloire.exports.export_csv import export_csv, count_by_step, call_database
+from gazouilloire.exports.export import export_from_db, count_by_step, call_database
 from gazouilloire.database.elasticmanager import ElasticManager, INDEX_QUERIES
 from gazouilloire.manage_scripts import list_scripts, spawn_script, get_script_infos
 from elasticsearch import exceptions
@@ -292,6 +292,8 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
                 "NOT(mentioned_names:*)"'
                 """
               )
+@click.option("--json", is_flag=True, help="""Export in json format (instead of csv by default)."""
+              )
 @click.option('--index', '-i',
               help="In case of multi-index, monthly indices to export in format YYYY-MM, or relative positions such as "
                    "'last', 'first', 'inactive', separated by comma. Use `--index inactive` to export all inactive"
@@ -301,16 +303,20 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
                    "time. Defaults to 'timestamp_utc'. 'id' is not a valid option. Run 'gazou export --list-fields' "
                    "to see the full list of available fields.")
 def export(path, query, exclude_threads, exclude_retweets, verbose, export_threads_from_file, export_tweets_from_file,
-           columns, format, list_fields, output, resume, since, until, lucene, step, index, sort):
+           columns, format, list_fields, output, resume, since, until, lucene, step, index, sort, json):
     if output == "-":
         output = None
     if resume and not output:
         log.error("The --resume option requires to set a file name with --output")
         sys.exit(1)
 
-    if resume and not os.path.isfile(output):
-        log.error("The file {} could not be found".format(output))
-        sys.exit(1)
+    if resume:
+        if json:
+            log.error("--resume flag is not supported with json format")
+            sys.exit(1)
+        if not os.path.isfile(output):
+            log.error("The file {} could not be found".format(output))
+            sys.exit(1)
 
     if format == "tcat" and columns:
         log.error("The tcat format is not compatible with the --columns / --select option")
@@ -322,9 +328,9 @@ def export(path, query, exclude_threads, exclude_retweets, verbose, export_threa
 
     else:
         conf = load_conf(path)
-        export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
+        export_from_db(conf, query, exclude_threads, exclude_retweets, since, until,
                    verbose, export_threads_from_file, export_tweets_from_file, columns, format, output, resume, lucene,
-                   step, index, sort)
+                   step, index, sort, json)
 
 
 @main.command(help="Get a report about the number of tweets. Type 'gazou count' to get the number of collected tweets "

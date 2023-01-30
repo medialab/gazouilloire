@@ -33,7 +33,7 @@ def post_process_tweet_from_elastic(source):
     return source
 
 
-def yield_csv(queryiterator, fmt, last_ids=set(), export_list=False, query_fields=None):
+def filter_iterator(queryiterator, last_ids, export_list=False, query_fields=None):
     for t in queryiterator:
         try:
             source = t["_source"]
@@ -46,16 +46,26 @@ def yield_csv(queryiterator, fmt, last_ids=set(), export_list=False, query_field
         # ignore tweets only caught on deletion missing most fields
         # if export_list or (len(source) >= 10 and t["_id"] not in last_ids):
         if export_list or t["_id"] not in last_ids:
+            source["id"] = t["_id"]
+            yield post_process_tweet_from_elastic(source)
+
+
+def yield_formatted(queryiterator, fmt, last_ids=set(), export_list=False, query_fields=None, json_fmt=False):
+
+    filtered = filter_iterator(queryiterator, last_ids, export_list, query_fields)
+    if json_fmt:
+        for tweet in filtered:
+            yield tweet
+    else:
+        for tweet in filtered:
             if fmt == "tcat":
-                source = apply_tcat_format(post_process_tweet_from_elastic(source))
-            else:
-                source = post_process_tweet_from_elastic(source)
+                tweet = apply_tcat_format(tweet)
             transform_tweet_into_csv_dict(
-                source,
-                item_id=t["_id"],
+                tweet,
+                item_id=tweet["id"],
                 allow_erroneous_plurals=True
             )
-            yield source
+            yield tweet
 
 
 def build_body(query, exclude_threads, exclude_retweets, query_fields=None, since=None, until=None, resume=False,
@@ -170,17 +180,18 @@ def find_potential_duplicate_ids(outputfile):
             else:
                 return last_time, last_ids
 
-
-def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
+def export_from_db(conf, query, exclude_threads, exclude_retweets, since, until,
                verbose, export_threads_from_file, export_tweets_from_file, selection, fmt, outputfile, resume,
                lucene,
                step=None,
                index=None,
-               sort_key="timestamp_utc"
+               sort_key="timestamp_utc",
+               json_fmt=False
                ):
     threads = conf.get('grab_conversations', False)
 
     sort_key = check_elastic_fields(sort_key, sort=True) if sort_key != "no" else ["_doc"]
+
     if "id" in sort_key:
         log.error("Sorting by id is not a valid option.")
         sys.exit(1)
@@ -233,6 +244,7 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
     if export_threads_from_file or export_tweets_from_file:
         count = len(body)
         iterator = yield_csv(db.multi_get(body, index), fmt, export_list=True)
+
     else:
         last_ids = set()
         if resume:
@@ -249,19 +261,22 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
                     "https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html")
             sys.exit(1)
         if step:
-            iterator = yield_csv(
+            iterator = yield_formatted(
                 yield_step_scans(db, step, since, until, query, exclude_threads, exclude_retweets, query_fields, index,
                                  lucene, sort_key),
                 fmt,
-                last_ids=last_ids
+                last_ids=last_ids,
+                json_fmt=json_fmt
             )
         else:
             body["sort"] = sort_key
-            iterator = yield_csv(
+            iterator = yield_formatted(
                 yield_scans(db, body, since, until, index, sort_key),
                 fmt,
-                last_ids=last_ids
+                last_ids=last_ids,
+                json_fmt=json_fmt
             )
+
     if verbose:
         from tqdm import tqdm
         iterator = tqdm(iterator, total=count)
@@ -270,11 +285,17 @@ def export_csv(conf, query, exclude_threads, exclude_retweets, since, until,
         file = open_file(outputfile, 'a')
     else:
         file = open_file(outputfile, 'w') if outputfile else sys.stdout
-    writer = csv.DictWriter(file, fieldnames=headers, restval='', quoting=csv.QUOTE_MINIMAL, extrasaction='ignore')
-    if not resume:
-        writer.writeheader()
-    for t in iterator:
-        writer.writerow(t)
+
+    if json_fmt:
+        for t in iterator:
+            json.dump(t, file)
+            file.write('\n')
+    else:
+        writer = csv.DictWriter(file, fieldnames=headers, restval='', quoting=csv.QUOTE_MINIMAL, extrasaction='ignore')
+        if not resume:
+            writer.writeheader()
+        for t in iterator:
+            writer.writerow(t)
     file.close()
     iterator.close()
 
