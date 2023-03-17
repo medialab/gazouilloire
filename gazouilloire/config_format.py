@@ -67,25 +67,28 @@ def create_conf_example(dir_path):
         return False
 
 
-def api_keys_support_stream(conf):
-    try:
-        oauth, oauth2 = get_oauth(conf)
-    except Exception as e:
-        log.error('Could not initiate connections to Twitter API: %s %s' % (type(e), e))
-        sys.exit(1)
-    _, _, streamco = instantiate_clients(oauth, oauth2)
-    args = {'filter_level': 'none', 'stall_warnings': 'true', 'track': ['the']}
-    try:
-        streamiter = streamco.statuses.filter(**args)
-        return True
-    except TwitterHTTPError as e:
-        if "Please use V2 filtered and sample volume stream as alternatives" in str(e):
-            log.warning("Your Twitter API keys were probably created after April 29, 2022. "
-                      "Gazouilloire will only use the 'search' Twitter API, and not the 'stream'.")
-            return False
-        else:
-            log.error("Error while accessing the Twitter API, please retry: {}".format(e))
-            sys.exit(1)
+# def api_keys_support_stream(conf):
+#     """
+#     v1.1 streaming statuses/filter endpoint is now deprecated
+#     """
+#     try:
+#         oauth, oauth2 = get_oauth(conf)
+#     except Exception as e:
+#         log.error('Could not initiate connections to Twitter API: %s %s' % (type(e), e))
+#         sys.exit(1)
+#     _, _, streamco = instantiate_clients(oauth, oauth2)
+#     args = {'filter_level': 'none', 'stall_warnings': 'true', 'track': ['the']}
+#     try:
+#         streamiter = streamco.statuses.filter(**args)
+#         return True
+#     except TwitterHTTPError as e:
+#         if "Please use V2 filtered and sample volume stream as alternatives" in str(e):
+#             log.warning("Your Twitter API keys were probably created after April 29, 2022. "
+#                       "Gazouilloire will only use the 'search' Twitter API, and not the 'stream'.")
+#             return False
+#         else:
+#             log.error("Error while accessing the Twitter API, please retry: {}".format(e))
+#             sys.exit(1)
 
 
 def required_format(conf):
@@ -136,7 +139,7 @@ def required_format(conf):
             )
             sys.exit(1)
 
-    conf["start_stream"] = api_keys_support_stream(conf)
+    conf["start_stream"] = False
 
 
     if "download_media" in conf:
