@@ -29,6 +29,7 @@
 
 
 TODAY=$(date --iso)
+TIMESTAMP=`date +%s`
 
 # Corpus directory assumed to be the same as the script's
 CORPUSDIR=$(dirname "$0")
@@ -50,11 +51,11 @@ eval "$(pyenv virtualenv-init -)"
 pyenv activate "$CORPUSENV"
 
 # Export inactive indices (older than the value of nb_past_months set in config.json)
-gazou count --index inactive --step days > "collected_tweets_per_day_${TODAY}.csv"
-gazou export --index inactive --step hours > "monthly_export_${TODAY}.csv"
+gazou count --index inactive --step days > "collected_tweets_per_day_${TODAY}_${TIMESTAMP}.csv"
+gazou export --index inactive --step hours > "monthly_export_${TODAY}_${TIMESTAMP}.csv"
 
 # Compress the monthly export
-gzip "monthly_export_${TODAY}.csv"
+gzip "monthly_export_${TODAY}_${TIMESTAMP}.csv"
 
 if [ "$?" = 0 ]; then
   # Close or delete inactive indices
