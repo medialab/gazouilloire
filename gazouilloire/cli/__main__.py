@@ -248,6 +248,8 @@ def resolve(path, batch_size, verbose, url_debug, host, port, db_name, index):
         database_params["port"] = port
     if db_name:
         database_params["db_name"] = db_name
+    if "nb_past_months" in database_params:
+        del(database_params["nb_past_months"])
     resolve_script(**database_params, batch_size=batch_size, verbose=verbose, url_debug=url_debug, index=index)
 
 
