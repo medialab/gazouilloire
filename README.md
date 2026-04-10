@@ -489,7 +489,13 @@ All three queues are backed up on filesystem in `pile_***.json` files to be relo
 
 ### Publications using Gazouilloire
 
+- FACCIN, Mauro, SCHULTZ, Emilien, et GARGIULO, Floriana. "[Temporal and geographic analysis of the Hydroxychloroquine controversy in the French Twittosphere](https://doi.org/10.48550/arXiv.2304.14075)". arXiv preprint arXiv:2304.14075, 2023. DOI: 10.48550/arXiv.2304.14075
+
+- FACCIN, Mauro, GARGIULO, Floriana, ATLANI-DUAULT, Laëtitia, et al. "[Assessing the influence of French vaccine critics during the two first years of the COVID-19 pandemic](https://doi.org/10.1371/journal.pone.0271157)". PLoS One, 2022, vol. 17, no 8, p. e0271157. DOI: 10.1371/journal.pone.0271157 
+
 - CASTALDO Maria, VENTURINI Tommaso, FRASCA Paolo, GARGIULO Floriana, "[The Rhythms of the Night: increase in online night activity and emotional resilience during the Covid-19 lockdown](https://arxiv.org/pdf/2007.09353.pdf)"  (2020). arXiv preprint arXiv:2007.09353.
+
+- GARGIULO, Floriana, CAFIERO, Florian, GUILLE-ESCURET, Paul, et al. "[Asymmetric participation of defenders and critics of vaccines to debates on French-speaking Twitter](https://doi.org/10.1038/s41598-020-62880-5)". Scientific reports, 2020, vol. 10, no 1, p. 6599. DOI: 10.1038/s41598-020-62880-5
 
 - WARD Jeremy K, GUILLE-ESCURET Paul, ALAPETITE Clément, "[Les « antivaccins », figure de l’anti-Science](https://www.cairn.info/revue-deviance-et-societe-2019-2-page-221.htm)" (2019), in Déviance et Société, 2019/2 (Vol. 43), p. 221-251. DOI: 10.3917/ds.432.0221
 
